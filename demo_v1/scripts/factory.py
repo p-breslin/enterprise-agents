@@ -1,7 +1,7 @@
 from typing import List
 
-from base_agent import BaseAgent
-from state import OverallState
+from .state import OverallState
+from agents.base_agent import BaseAgent
 from agents.agent_check_database import DatabaseAgent
 from agents.agent_generate_queries import QueryGenerationAgent
 from agents.agent_web_search import WebSearchAgent

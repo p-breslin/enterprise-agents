@@ -1,7 +1,7 @@
 import abc
 import logging
-from events import Event
-from state import OverallState
+from scripts.events import Event
+from scripts.state import OverallState
 
 """
 ========
