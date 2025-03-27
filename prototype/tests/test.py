@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from factory import run_research_pipeline
+from scripts.factory import run_research_pipeline
 
 
 def main():

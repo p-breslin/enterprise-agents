@@ -2,10 +2,10 @@ import logging
 import asyncio
 from typing import Dict
 
-from events import Event, EventType
-from state import OverallState
-from factory import create_agents
-from base_agent import BaseAgent
+from .events import Event, EventType
+from .state import OverallState
+from .factory import create_agents
+from agents.base_agent import BaseAgent
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 

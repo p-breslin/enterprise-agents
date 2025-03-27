@@ -1,10 +1,10 @@
 import asyncio
 from tavily import AsyncTavilyClient
+from .base_agent import BaseAgent
 
-from utils import filter_searches
-from base_agent import BaseAgent
-from config import Configuration
-from events import Event, EventType
+from scripts.config import Configuration
+from scripts.events import Event, EventType
+from utilities.helpers import filter_searches
 
 
 class WebSearchAgent(BaseAgent):
