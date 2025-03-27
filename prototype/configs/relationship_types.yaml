@@ -1,0 +1,47 @@
+- attributes: priority:string,marketShare:number
+  description: Indicates product is sold in a geographic region
+  extraction_patterns: 'sold_in_pattern: "product is (?:sold|available) in ([\w\s]+)"'
+  inference_rules: If Product and Region are mentioned together, infer sold_in relationship
+  name: sold_in
+  source: Product
+  target: Region
+- attributes: importance:string
+  description: Region contains specific countries
+  extraction_patterns: 'contains_pattern: "([\w\s]+) region includes ([\w\s,]+)"'
+  inference_rules: If Country is mentioned within discussion of a Region, infer contains
+    relationship
+  name: contains
+  source: Region
+  target: Country
+- attributes: coverage:number,userBase:number
+  description: Country has telecom operators
+  extraction_patterns: 'operator_pattern: "([\w\s]+) (?:has|with) operators like ([\w\s,&]+)"'
+  inference_rules: If Enterprise is described as operating in a Country, infer has_operator
+    relationship
+  name: has_operator
+  source: Country
+  target: Enterprise
+- attributes: competitivePosition:string
+  description: Product competes with other companies
+  extraction_patterns: 'competitor_pattern: "competitors include ([\w\s,&]+)"'
+  inference_rules: If a company is described with strengths/weaknesses in the same
+    domain, infer competes_with relationship
+  name: competes_with
+  source: Product
+  target: Competitor
+- attributes: impactLevel:string,timeframe:string
+  description: Product is influenced by market trends
+  extraction_patterns: 'trend_impact_pattern: "trend ([\w\s-]+) affects ([\w\s]+)"'
+  inference_rules: If a trend is described in the context of the product domain, infer
+    influenced_by relationship
+  name: influenced_by
+  source: Product
+  target: MarketTrend
+- attributes: customerBase:number,revenue:number
+  description: Enterprise resells the product
+  extraction_patterns: 'reseller_pattern: "([\w\s&]+) (?:resells|offers) ([\w\s]+)"'
+  inference_rules: If Enterprise is described as a provider or reseller, infer resells
+    relationship
+  name: resells
+  source: Enterprise
+  target: Product

@@ -1,0 +1,30 @@
+- applicable_types: Region,Country,Enterprise,Competitor
+  parameters: 'use_patterns_from_config: true, case_sensitive: false'
+  strategy_name: regex_extraction
+  technique: Regular expression pattern matching
+  validation_rules: Match against known names, validate numeric values are in expected
+    ranges
+- applicable_types: All
+  parameters: 'fail_on_invalid_json: false, fallback_to_text: true'
+  strategy_name: json_parsing
+  technique: Direct JSON parsing when LLM returns JSON
+  validation_rules: Validate against schema for each entity type
+- applicable_types: Region,Competitor,MarketTrend
+  parameters: 'section_delimiters: ["##", ":", "
+
+
+    "], extract_subsections: true'
+  strategy_name: section_parsing
+  technique: Extract content from identified sections in text
+  validation_rules: Ensure all required attributes are extracted from each section
+- applicable_types: All relationships
+  parameters: 'confidence_threshold: 0.7, require_explicit_mention: false'
+  strategy_name: relationship_inference
+  technique: Infer relationships based on context and proximity
+  validation_rules: Validate source and target entities exist, confirm relationship
+    matches schema
+- applicable_types: Country,Enterprise,Competitor strengths/weaknesses
+  parameters: 'list_markers: ["1.", "2.", "•", "-"], nested_lists: true'
+  strategy_name: structured_list_extraction
+  technique: Extract items from numbered or bulleted lists
+  validation_rules: Validate list items match expected format for the attribute

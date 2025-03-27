@@ -1,0 +1,17 @@
+- output_format: JSON with regions, countries and enterprises
+  purpose: Extract market information in JSON format
+  required_inputs: product_name,product_description,target_regions
+  template_id: JSON_MARKET
+  template_name: JSON Market Analysis
+  template_text: "Analyze the market potential for {product_name} ({product_description})\
+    \ in the following regions: {target_regions}\n\nFor each region, please provide:\n\
+    1. Estimated market size (in number of potential users)\n2. Top 5 countries within\
+    \ each region with the highest potential\n3. Key enterprises in each country that\
+    \ would be potential customers\n\nReturn your response in JSON format using this\
+    \ structure:\n{\n  \"regions\": [\n    {\n      \"name\": \"Region name\",\n \
+    \     \"market_size\": number,\n      \"countries\": [\n        {\n          \"\
+    name\": \"Country name\",\n          \"potential_users\": number,\n          \"\
+    enterprises\": [\"Enterprise 1\", \"Enterprise 2\", ...]\n        },\n       \
+    \ ...\n      ]\n    },\n    ...\n  ]\n}\n\n\nReturn your response **strictly as\
+    \ valid JSON** without any additional text, explanation, or formatting outside\
+    \ of the JSON format. Make sure all elements are correctly structured."

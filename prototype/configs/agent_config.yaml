@@ -1,0 +1,63 @@
+- agent_description: Extracts high-level market information
+  agent_id: MARKET_OVERVIEW
+  agent_name: Market Overview Agent
+  agent_type: Extraction
+  dependencies: none
+  input_prompt_templates: MARKET_ANALYSIS,JSON_MARKET
+  output_entity_types: Region,Country,Enterprise
+  output_relationship_types: sold_in,contains,has_operator
+  system_prompt_id: MARKET_EXPERT
+- agent_description: Identifies potential competitors
+  agent_id: COMPETITOR_ID
+  agent_name: Competitor Identification Agent
+  agent_type: Extraction
+  dependencies: none
+  input_prompt_templates: COMPETITOR_IDENTIFICATION
+  output_entity_types: Competitor
+  output_relationship_types: none
+  system_prompt_id: COMPETITOR_ANALYST
+- agent_description: Analyzes specific competitors in depth
+  agent_id: COMPETITOR_DETAIL
+  agent_name: Competitor Detail Agent
+  agent_type: Analysis
+  dependencies: COMPETITOR_ID
+  input_prompt_templates: COMPETITOR_DETAILS
+  output_entity_types: Competitor
+  output_relationship_types: competes_with
+  system_prompt_id: COMPETITOR_ANALYST
+- agent_description: Identifies and analyzes market trends
+  agent_id: TREND_ANALYZER
+  agent_name: Market Trend Analyzer
+  agent_type: Analysis
+  dependencies: none
+  input_prompt_templates: TREND_ANALYSIS
+  output_entity_types: MarketTrend
+  output_relationship_types: influenced_by
+  system_prompt_id: TREND_FORECASTER
+- agent_description: Extracts structured region data
+  agent_id: REGION_EXTRACTOR
+  agent_name: Region Data Extractor
+  agent_type: Extraction
+  dependencies: MARKET_OVERVIEW
+  input_prompt_templates: REGION_EXTRACTION
+  output_entity_types: Region,Country
+  output_relationship_types: contains
+  system_prompt_id: DATA_EXTRACTOR
+- agent_description: Maps relationships between entities
+  agent_id: RELATIONSHIP_AGENT
+  agent_name: Relationship Mapping Agent
+  agent_type: Integration
+  dependencies: MARKET_OVERVIEW,COMPETITOR_DETAIL,TREND_ANALYZER,REGION_EXTRACTOR
+  input_prompt_templates: RELATIONSHIP_EXTRACTION
+  output_entity_types: none
+  output_relationship_types: all
+  system_prompt_id: RELATIONSHIP_MAPPER
+- agent_description: Extracts high-level market information
+  agent_id: JSON_MARKET
+  agent_name: Market Overview Agent
+  agent_type: Extraction
+  dependencies: none
+  input_prompt_templates: JSON_MARKET
+  output_entity_types: Region,Country,Enterprise
+  output_relationship_types: sold_in,contains,has_operator
+  system_prompt_id: MARKET_EXPERT
