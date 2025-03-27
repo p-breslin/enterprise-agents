@@ -1,6 +1,6 @@
-from ..base_agent import BaseAgent
-from ..events import Event, EventType
-from app.main.embedding_search import EmbeddingSearch
+from base_agent import BaseAgent
+from events import Event, EventType
+from vector_search import EmbeddingSearch
 
 
 class DatabaseAgent(BaseAgent):

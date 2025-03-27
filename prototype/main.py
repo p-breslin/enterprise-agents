@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import streamlit as st
-from features.multi_agent.orchestrator import run_research_pipeline
+from orchestrator import run_research_pipeline
 
 # logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 
@@ -37,7 +37,7 @@ def main():
     logger.addHandler(handler)
 
     st.write("""
-    Enter a company name below. Tthe agentic workflow will spawn agents to check the database and extract a response. If there is no relevant stored data, new search queries qill be generated to fetch new data, compile research notes, and extract a structured JSON response.
+    Enter a company name below. The agentic workflow will spawn agents to check the database and extract a response. If there is no relevant stored data, new search queries qill be generated to fetch new data, compile research notes, and extract a structured JSON response.
     """)
 
     company_name = st.text_input("Company Name")

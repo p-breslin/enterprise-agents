@@ -1,11 +1,11 @@
 import json
 import logging
-from features.multi_agent.LLM import call_llm
 
-from ..config import Configuration
-from ..base_agent import BaseAgent
-from ..events import Event, EventType
-from ..prompts import EXTRACTION_PROMPT
+from LLM import call_llm
+from config import Configuration
+from base_agent import BaseAgent
+from events import Event, EventType
+from prompts import EXTRACTION_PROMPT
 
 
 class ExtractionAgent(BaseAgent):

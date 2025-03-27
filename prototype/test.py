@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from features.multi_agent.factory import run_research_pipeline
+from factory import run_research_pipeline
 
 
 def main():

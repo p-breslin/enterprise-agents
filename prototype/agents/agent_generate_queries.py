@@ -1,11 +1,11 @@
 import re
 import json
-from features.multi_agent.LLM import call_llm
 
-from ..config import Configuration
-from ..base_agent import BaseAgent
-from ..events import Event, EventType
-from ..prompts import QUERY_LIST_PROMPT, QUERY_GENERATOR_PROMPT
+from LLM import call_llm
+from config import Configuration
+from base_agent import BaseAgent
+from events import Event, EventType
+from prompts import QUERY_LIST_PROMPT, QUERY_GENERATOR_PROMPT
 
 
 class QueryGenerationAgent(BaseAgent):

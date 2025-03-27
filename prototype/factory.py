@@ -1,12 +1,12 @@
 from typing import List
 
-from .base_agent import BaseAgent
-from .state import OverallState
-from .agents.agent_check_database import DatabaseAgent
-from .agents.agent_generate_queries import QueryGenerationAgent
-from .agents.agent_web_search import WebSearchAgent
-from .agents.agent_compile_research import ResearchAgent
-from .agents.agent_extract_schema import ExtractionAgent
+from base_agent import BaseAgent
+from state import OverallState
+from agents.agent_check_database import DatabaseAgent
+from agents.agent_generate_queries import QueryGenerationAgent
+from agents.agent_web_search import WebSearchAgent
+from agents.agent_compile_research import ResearchAgent
+from agents.agent_extract_schema import ExtractionAgent
 
 """
 Centralizes creation of agent instances. Each specialized agent is imported and instantiated, then returns them as a list to the orchestrator.

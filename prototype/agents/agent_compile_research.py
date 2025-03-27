@@ -1,10 +1,10 @@
 from features.multi_agent.LLM import call_llm
 
-from ..config import Configuration
-from ..base_agent import BaseAgent
-from ..events import Event, EventType
-from ..prompts import RESEARCH_PROMPT
-from ..utility import format_results
+from config import Configuration
+from base_agent import BaseAgent
+from events import Event, EventType
+from prompts import RESEARCH_PROMPT
+from utils import format_results
 
 
 class ResearchAgent(BaseAgent):
