@@ -1,21 +1,22 @@
 import json
 import asyncio
 import logging
-from scripts.factory import run_research_pipeline
+from scripts.orchestrator import run_research_pipeline
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
 
     company_name = "Tesla"
-    state = asyncio.run(run_research_pipeline(company_name))
+    final_output = asyncio.run(run_research_pipeline(company_name))
 
     print("\n=== Final Structured Output ===")
-    if state.final_output:
-        print(json.dumps(state.final_output, indent=2))
+    if final_output:
+        print(json.dumps(final_output, indent=2))
     else:
         print("No final output was produced.")
 
 
 if __name__ == "__main__":
     main()
+    # PYTHONPATH=$(pwd) python3 tests/test.py
