@@ -1,30 +1,24 @@
 - attributes: id:string,name:string,description:string,category:string,targetMarkets:string[]
   description: The product being analyzed
   examples: '{"name": "Clarity", "category": "Voice Processing"}'
-  extraction_patterns: N/A (defined in product_definition)
   name: Product
 - attributes: id:string,name:string,marketSize:number,countries:string[]
   description: Geographic regions for market analysis
   examples: '{"name": "Americas", "marketSize": 120000000}'
-  extraction_patterns: 'region_pattern: "Region: (\w+).*market size.*?([\d,]+) million"'
   name: Region
 - attributes: id:string,name:string,population:number,potentialUsers:number
   description: Individual countries within regions
   examples: '{"name": "United States", "potentialUsers": 50000000}'
-  extraction_patterns: 'country_pattern: "(?:in|within) ([\w\s,]+)"'
   name: Country
 - attributes: id:string,name:string,type:string,operatingCountries:string[],userBase:number
   description: Potential business customers/resellers
   examples: '{"name": "Verizon", "type": "Telecom", "userBase": 30000000}'
-  extraction_patterns: 'enterprise_pattern: "(?:companies|providers) like ([\w\s,&]+)"'
   name: Enterprise
 - attributes: id:string,name:string,productOfferings:string[],strengths:string[],weaknesses:string[]
   description: Companies offering competing products
   examples: '{"name": "AudioClear", "strengths": ["Established partnerships"]}'
-  extraction_patterns: 'competitor_section: "[\d\.]+\s+(\w+)[:\n]"'
   name: Competitor
 - attributes: id:string,name:string,description:string,timeframe:string,impact:string
   description: Emerging trends affecting the product
   examples: '{"name": "Edge-based processing", "timeframe": "1-2 years"}'
-  extraction_patterns: 'trend_pattern: "trend[s]?:?\s*([\w\s-]+)"'
   name: MarketTrend
