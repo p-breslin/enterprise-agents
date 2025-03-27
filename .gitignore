@@ -1,5 +1,9 @@
 __pycache__
-metatool-app
 .DS_Store
 *.pyc
 .env
+
+# Folders
+rw
+data
+metatool-app
