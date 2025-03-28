@@ -1,13 +1,15 @@
 import logging
 import asyncio
-from typing import Dict
+from typing import Dict, Any
 
-from .events import Event, EventType
 from .state import OverallState
 from .factory import create_agents
+from .events import Event, EventType
+from .config_loader import ConfigLoader
 from agents.base_agent import BaseAgent
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+# Module-specific logger
+logger = logging.getLogger(__name__)
 
 
 class Orchestrator:
@@ -20,11 +22,24 @@ class Orchestrator:
 
     def __init__(self, company: str):
         self.company = company
+        try:
+            self.loader = ConfigLoader()
+            self.cfg: Dict[str, Any] = self.loader.get_all_configs()
+        except FileNotFoundError:
+            logger.critical(
+                "Config directory not found. Orchestrator cannot initialize.",
+                exc_info=True,
+            )
+            raise
+        except Exception as e:
+            logger.critical(f"Failed to load configurations: {e}", exc_info=True)
+            raise
+
         self.state = OverallState(company=company)
         self.event_queue = asyncio.Queue()
 
         # Agent will not access the event queue; only the orchestrator
-        self.agents = create_agents(state=self.state)
+        self.agents = create_agents(state=self.state, config=self.cfg)
 
         # Dictionary to map each EventType to each agent
         self.agent_map: Dict[EventType, BaseAgent] = {}
