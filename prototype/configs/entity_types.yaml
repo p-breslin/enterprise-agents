@@ -27,3 +27,10 @@
   description: Emerging trends affecting the product
   examples: '{"name": "Edge-based processing", "timeframe": "1-2 years"}'
   name: MarketTrend
+
+- name: Company
+  description: Represents the primary business entity being researched or a competitor.
+  attributes: 
+    name: string
+    description: string
+  examples: '{"name": "Nvidia Corporation", "description": "Designs GPUs for gaming and professional markets..."}'
