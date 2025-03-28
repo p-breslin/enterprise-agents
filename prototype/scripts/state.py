@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Dict, Annotated
+from typing import Any, Dict, Annotated, Optional
 from dataclasses import dataclass, field
 
 
@@ -20,10 +20,10 @@ class OverallState:
     # Output schema will be injected by the orchestrator
     output_schema: Dict[str, Any]
 
-    # Generated search queries for finding new information
-    search_queries: list[str] = field(default=None)
+    # State for external data gathering
+    search_queries: Optional[list[str]] = field(default=None)
 
-    # Results from the Tavily searches
+    # Stores Tavily search results from EITHER vector DB OR web search
     search_results: list[Dict] = field(default=None)
 
     # LLM research; Annotated[...] ensures items are added instead of replaced, default_factory ensures each instance gets a new copy
