@@ -3,6 +3,11 @@ import asyncio
 import streamlit as st
 from scripts.orchestrator import run_research_pipeline
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(levelname)s - %(message)s",
+)
+
 # logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 
 
