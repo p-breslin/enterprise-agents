@@ -15,6 +15,7 @@ CFG_LIST_TO_DICT_KEYS: Dict[str, str] = {
     "prompt_templates": "template_id",
     "relationship_types": "name",
     "system_prompts": "system_prompt_id",
+    "output_schemas": "schema_id",
 }
 
 
@@ -27,12 +28,12 @@ class ConfigLoader:
         cfgs (Dict[str, Any]): A dictionary holding the loaded and processed configuration data, keyed by filename stem.
     """
 
-    def __init__(self, cfg_dir: str = "prototype/configs"):
+    def __init__(self, cfg_dir: str = "configs"):
         """
         Initializes the ConfigLoader, loads, and processes all YAML files.
 
         Args:
-            cfg_dir (str): The path to the directory containing .yaml files. Defaults to "prototype/configs".
+            cfg_dir (str): The path to the directory containing .yaml files. Defaults to "configs".
 
         Raises:
             FileNotFoundError: If the specified cfg_dir does not exist.
