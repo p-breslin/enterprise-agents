@@ -24,7 +24,7 @@ class Orchestrator:
         self.company = company
         try:
             self.loader = ConfigLoader()
-            self.cfg: Dict[str, Any] = self.loader.get_all_configs()
+            self.config: Dict[str, Any] = self.loader.get_all_configs()
         except FileNotFoundError:
             logger.critical(
                 "Config directory not found. Orchestrator cannot initialize.",
@@ -39,7 +39,7 @@ class Orchestrator:
         self.event_queue = asyncio.Queue()
 
         # Agent will not access the event queue; only the orchestrator
-        self.agents = create_agents(state=self.state, config=self.cfg)
+        self.agents = create_agents(state=self.state, config=self.config)
 
         # Dictionary to map each EventType to each agent
         self.agent_map: Dict[EventType, BaseAgent] = {}

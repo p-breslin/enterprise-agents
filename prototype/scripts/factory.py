@@ -12,6 +12,7 @@ from agents.agent_extract_schema import ExtractionAgent
 """
 Centralizes creation of agent instances. Each specialized agent is imported and instantiated, then returns them as a list to the orchestrator.
 """
+logger = logging.getLogger(__name__)
 
 
 def create_agents(state: OverallState, config: Dict[str, Any]) -> List[BaseAgent]:

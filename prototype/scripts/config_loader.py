@@ -194,6 +194,7 @@ if __name__ == "__main__":
         agent_config = loader.get_config("agent_config")
         prompts = loader.get_config("prompt_templates")
         workflows = loader.get_config("agent_workflows")
+        settings = loader.get_config("runtime_settings")
 
         # Print structure of a processed config
         if agent_config:
@@ -216,6 +217,13 @@ if __name__ == "__main__":
             logger.info(
                 f"Workflow 'INITIAL_ANALYSIS': {workflows.get('INITIAL_ANALYSIS')}"
             )
+
+        if settings:
+            logger.info(f"\nLoaded {len(settings)} runtime settings.")
+            logger.info(
+                f"tavily_search_params': {settings.get('tavily_search_params')}"
+            )
+            logger.info(f"N_searches': {settings.get('N_searches')}")
 
     except FileNotFoundError:
         logger.error("Failed to initialize ConfigLoader due to missing directory.")

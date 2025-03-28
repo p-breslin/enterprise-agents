@@ -6,7 +6,7 @@ tavily_search_params:
   include_raw_content: True
 
 # Number of search queries per company
-N_searches: int = 1
+N_searches: 1
 
 # Number of revisions to the final output
-N_revisions: int = 0
+N_revisions: 0

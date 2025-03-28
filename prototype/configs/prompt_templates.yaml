@@ -10,7 +10,7 @@
   purpose: Provide context and schema for query generation.
   required_inputs: company, schema, N_searches
   output_format: Used as input context for LLM
-  template_text: |  # Using | for multi-line readability
+  template_text: |
     Here is the company you are researching: {company}
 
     Generate at most {N_searches} search queries that will help gather the following information:
