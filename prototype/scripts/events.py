@@ -28,6 +28,7 @@ class EventType(str, enum.Enum):
     GRAPH_UPDATE_COMPLETE = "GRAPH_UPDATE_COMPLETE"
 
     # System events
+    ERROR_OCCURRED = "ERROR_OCCURRED"
     SHUTDOWN = "SHUTDOWN"
 
 
