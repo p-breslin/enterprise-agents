@@ -1,3 +1,82 @@
+- template_id: QUERY_LIST_PROMPT
+  template_name: Query List Generator Instruction
+  purpose: Instruct LLM to generate a list of search queries.
+  required_inputs: N_searches
+  output_format: Plain text list of queries
+  template_text: "Generate a list of simple search queries related to the schema that you want to populate. Do not include descriptions about your generated search queries - your response should ONLY be a list of {N_searches} search queries and nothing else."
+
+- template_id: QUERY_GENERATOR_PROMPT
+  template_name: Query Generator Context
+  purpose: Provide context and schema for query generation.
+  required_inputs: company, schema, N_searches
+  output_format: Used as input context for LLM
+  template_text: |  # Using | for multi-line readability
+    Here is the company you are researching: {company}
+
+    Generate at most {N_searches} search queries that will help gather the following information:
+
+    <schema>
+    {schema}
+    </schema>
+
+    Your query should:
+    1. Focus on finding factual, up-to-date company information
+    2. Target official sources, news, and reliable business databases
+    3. Prioritize finding information that matches the schema requirements
+    4. Include the company name and relevant business terms
+    5. Be specific enough to avoid irrelevant results but simple enough to be short and concise
+
+    Create a focused query that will maximize the chances of finding schema-relevant information.
+
+- template_id: RESEARCH_PROMPT
+  template_name: Research Notes Compiler
+  purpose: Instruct LLM to compile notes from scraped web content based on a schema.
+  required_inputs: company, schema, context
+  output_format: Plain text research notes
+  template_text: |
+    You are doing research on a company, {company}.
+
+    The following schema shows the type of information we're interested in:
+
+    <schema>
+    {schema}
+    </schema>
+
+    You have just scraped website content. Your task is to take clear, organized notes about the company, focusing on topics relevant to our interests. You will do this using the scraped website content ONLY.
+
+    <Website contents>
+    {context}
+    </Website contents>
+
+    Please provide detailed research notes that:
+    1. Are well-organized and easy to read
+    2. Focus on topics mentioned in the schema
+    3. Include specific facts, dates, and figures when available
+    4. Maintain accuracy of the original content
+    5. Note when important information appears to be missing or unclear
+
+    Remember: Don't try to format the output to match the schema - just take clear notes that capture all relevant information.
+
+- template_id: EXTRACTION_PROMPT
+  template_name: Schema Extractor
+  purpose: Instruct LLM to extract structured data from research notes based on a schema.
+  required_inputs: schema, research
+  output_format: JSON matching the provided schema
+  template_text: |
+    Your task is to take notes gathered from web research and extract them into the following schema.
+
+    <schema>
+    {schema}
+    </schema>
+
+    Here are all the notes from research, you are only allowed to use this information ONLY:
+
+    <web_research_notes>
+    {research}
+    </web_research_notes>
+
+    Ensure the output is strictly valid JSON conforming to the provided schema, with no additional text or explanations.
+
 - output_format: JSON with regions, countries and enterprises
   purpose: Extract market information in JSON format
   required_inputs: product_name,product_description,target_regions

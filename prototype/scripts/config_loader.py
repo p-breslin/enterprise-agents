@@ -184,7 +184,7 @@ class ConfigLoader:
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(name)s - %(levelname)s - %(message)s",
+        format="%(levelname)s - %(message)s",
     )
 
     try:
