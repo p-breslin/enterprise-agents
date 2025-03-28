@@ -74,7 +74,8 @@ class Orchestrator:
 
         # –– Select and prepare output schema ––
         try:
-            schema_id_to_use = "COMPANY_OVERVIEW_GRAPH"  # should put in config
+            runtime_settings = self.cfg.get("runtime_settings", {})
+            schema_id_to_use = runtime_settings.get("schema_id_to_use")
             logger.info(f"Using output schema ID: {schema_id_to_use}")
 
             # Fetch the schema entry from the loaded config
