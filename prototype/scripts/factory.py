@@ -1,4 +1,5 @@
-from typing import List
+import logging
+from typing import List, Dict, Any
 
 from .state import OverallState
 from agents.base_agent import BaseAgent
@@ -13,16 +14,19 @@ Centralizes creation of agent instances. Each specialized agent is imported and 
 """
 
 
-def create_agents(state: OverallState) -> List[BaseAgent]:
+def create_agents(state: OverallState, config: Dict[str, Any]) -> List[BaseAgent]:
     """
-    Instantiates and configures all agent classes with the shared state.
+    Instantiates and configures all agent classes with the shared state and necessary configuration.
     """
+    logger = logging.getLogger(__name__)
+    logger.info("Creating agents...")
 
     agents: List[BaseAgent] = [
         DatabaseAgent(name="DatabaseAgent", state=state),
-        QueryGenerationAgent(name="QueryGenerationAgent", state=state),
+        QueryGenerationAgent(name="QueryGenerationAgent", state=state, config=config),
         WebSearchAgent(name="WebSearchAgent", state=state),
-        ResearchAgent(name="ResearchAgent", state=state),
-        ExtractionAgent(name="ExtractionAgent", state=state),
+        ResearchAgent(name="ResearchAgent", state=state, config=config),
+        ExtractionAgent(name="ExtractionAgent", state=state, config=config),
     ]
+    logger.info(f"Created {len(agents)} agents.")
     return agents
