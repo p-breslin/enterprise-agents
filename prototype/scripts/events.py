@@ -7,13 +7,27 @@ class EventType(str, enum.Enum):
     """Defines a set of named, constant values."""
 
     START_RESEARCH = "START_RESEARCH"
+
+    # Graph query results
+    GRAPH_DATA_FOUND = "GRAPH_DATA_FOUND"
+
+    # Vector DB (no longer needed)
     DB_CHECK_DONE = "DB_CHECK_DONE"
     NEED_QUERIES = "NEED_QUERIES"
+
+    # Need for external data gathering
+    NEED_EXTERNAL_DATA = "NEED_EXTERNAL_DATA"
     QUERIES_GENERATED = "QUERIES_GENERATED"
     SEARCH_RESULTS_READY = "SEARCH_RESULTS_READY"
+
+    # Processing and enrichment
     RESEARCH_COMPILED = "RESEARCH_COMPILED"
     EXTRACTION_COMPLETE = "EXTRACTION_COMPLETE"
-    ERROR_OCCURRED = "ERROR_OCCURRED"
+
+    # Graph update result
+    GRAPH_UPDATE_COMPLETE = "GRAPH_UPDATE_COMPLETE"
+
+    # System events
     SHUTDOWN = "SHUTDOWN"
 
 
