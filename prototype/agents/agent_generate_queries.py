@@ -1,11 +1,15 @@
 import re
 import json
+import logging
+from typing import Dict, Any
 from .base_agent import BaseAgent
 
 from utilities.LLM import call_llm
-from scripts.config import Configuration
+from scripts.secrets import ToolKeys
+from scripts.state import OverallState
 from scripts.events import Event, EventType
-from scripts.prompts import QUERY_LIST_PROMPT, QUERY_GENERATOR_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 class QueryGenerationAgent(BaseAgent):
@@ -14,6 +18,10 @@ class QueryGenerationAgent(BaseAgent):
     2.  Generates queries via the LLM and stores them in state.search_queries.
     3.  Publishes QUERIES_GENERATED.
     """
+
+    def __init__(self, name: str, state: OverallState, config: Dict[str, Any]):
+        super().__init__(name, state)
+        self.cfg = config
 
     async def handle_event(self, event: Event, event_queue) -> None:
         """
@@ -28,25 +36,69 @@ class QueryGenerationAgent(BaseAgent):
         Generates search queries using LLM.
         """
         self.log(f"Generating search queries for {self.state.company}.")
-        cfg = Configuration()
 
-        instructions = QUERY_GENERATOR_PROMPT.format(
+        # Runtime settings from config
+        runtime_settings = self.cfg.get("runtime_settings", {})
+        n_searches = runtime_settings.get("N_searches", 1)
+        self.log(f"Using N_searches = {n_searches}")
+
+        try:
+            system_prompt_text = self.cfg["system_prompts"]["QUERY_GENERATOR"][
+                "prompt_text"
+            ]
+            query_gen_template = self.cfg["prompt_templates"]["QUERY_GENERATOR_PROMPT"][
+                "template_text"
+            ]
+            query_list_template = self.cfg["prompt_templates"]["QUERY_LIST_PROMPT"][
+                "template_text"
+            ]
+
+        except KeyError as e:
+            logger.error(
+                f"Missing required prompt configuration key: {e}", exc_info=True
+            )
+            return
+
+        # Messages for LLM
+        context_instructions = query_gen_template.format(
             company=self.state.company,
             schema=json.dumps(self.state.output_schema, indent=2),
-            N_searches=cfg.N_searches,
+            N_searches=n_searches,
         )
+        output_format_instructions = query_list_template.format(N_searches=n_searches)
+
         messages = [
-            {"role": "system", "content": instructions},
-            {
-                "role": "user",
-                "content": QUERY_LIST_PROMPT.format(N_searches=cfg.N_searches),
-            },
+            {"role": "system", "content": system_prompt_text},
+            {"role": "user", "content": context_instructions},
+            {"role": "user", "content": output_format_instructions},
         ]
-        output = call_llm(cfg.OPENAI_API_KEY, messages)
 
-        search_queries = re.findall(r'"\s*(.*?)\s*"', output)  # clean if needed
-        self.state.search_queries = search_queries
-        self.log(f"Generated search queries: {self.state.search_queries}")
+        # Get API key
+        try:
+            api_keys = ToolKeys()
+            openai_api_key = api_keys.OPENAI_API_KEY
+            if not openai_api_key:
+                raise ValueError("OPENAI_API_KEY is not set in environment variables.")
+        except Exception as e:
+            logger.error(f"Failed to get OpenAI API Key: {e}", exc_info=True)
+            return
 
-        self.log("Publishing QUERIES_GENERATED.")
-        await event_queue.put(Event(EventType.QUERIES_GENERATED))
+        # Call LLM
+        try:
+            output = call_llm(openai_api_key, messages=messages)
+            if "LLM Error:" in output or "ChatGPT Error:" in output:
+                raise Exception(f"LLM call failed: {output}")
+
+            # Clean search queries from output (not necessary for good models)
+            search_queries = re.findall(r'"\s*(.*?)\s*"', output)
+            self.state.search_queries = search_queries
+            self.log(f"Generated search queries: {self.state.search_queries}")
+
+            self.log("Publishing QUERIES_GENERATED.")
+            await event_queue.put(Event(EventType.QUERIES_GENERATED))
+
+        except Exception as e:
+            logger.error(
+                f"Error during query generation LLM call or processing: {e}",
+                exc_info=True,
+            )
