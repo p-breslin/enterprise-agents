@@ -25,7 +25,7 @@ def create_agents(state: OverallState, config: Dict[str, Any]) -> List[BaseAgent
     agents: List[BaseAgent] = [
         DatabaseAgent(name="DatabaseAgent", state=state),
         QueryGenerationAgent(name="QueryGenerationAgent", state=state, config=config),
-        WebSearchAgent(name="WebSearchAgent", state=state),
+        WebSearchAgent(name="WebSearchAgent", state=state, config=config),
         ResearchAgent(name="ResearchAgent", state=state, config=config),
         ExtractionAgent(name="ExtractionAgent", state=state, config=config),
     ]
