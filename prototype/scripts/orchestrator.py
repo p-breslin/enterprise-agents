@@ -8,7 +8,7 @@ from .events import Event, EventType
 from .config_loader import ConfigLoader
 from agents.base_agent import BaseAgent
 from .secrets import Secrets
-from ..utilities.graph_db import ArangoDBManager
+from utilities.graph_db import ArangoDBManager
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -55,10 +55,8 @@ class Orchestrator:
                 pwd=self.secrets.ARANGO_PWD,
             )
             # Fetch entity/relationship definitions from loaded config
-            entity_types = list(self.config.get("entity_types", {}).values())
-            relationship_types = list(
-                self.config.get("relationship_types", {}).values()
-            )
+            entity_types = list(self.cfg.get("entity_types", {}).values())
+            relationship_types = list(self.cfg.get("relationship_types", {}).values())
             # Ensure collections exist based on config
             self.arangodb_manager.ensure_collections(entity_types, relationship_types)
 

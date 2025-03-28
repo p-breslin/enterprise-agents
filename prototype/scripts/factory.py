@@ -8,7 +8,7 @@ from agents.agent_generate_queries import QueryGenerationAgent
 from agents.agent_web_search import WebSearchAgent
 from agents.agent_compile_research import ResearchAgent
 from agents.agent_extract_schema import ExtractionAgent
-from ..utilities.graph_db import ArangoDBManager
+from utilities.graph_db import ArangoDBManager
 
 
 """
@@ -37,6 +37,7 @@ def create_agents(
     ]
     logger.info(f"Created {len(agents)} agents.")
     return agents
+
 
 # --- To be added ---
 # GraphUpdateAgent(name="GraphUpdateAgent", state=state, config=config, arangodb_manager=arangodb_manager),
