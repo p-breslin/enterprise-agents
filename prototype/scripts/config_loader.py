@@ -1,7 +1,7 @@
 import yaml
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, List, Any, Optional
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -180,6 +180,76 @@ class ConfigLoader:
         """
         return self.cfgs
 
+    def load_workflow_sequence(
+        self, workflow_id: str, config: Dict[str, Any]
+    ) -> List[str]:
+        """
+        Retrieves and parses the agent sequence string for a given workflow ID.
+
+        Args:
+            workflow_id (str): The unique identifier for the desired workflow.
+            config (Dict[str, Any]): The fully loaded configuration dictionary (output of ConfigLoader.get_all_configs()).
+
+        Returns:
+            List[str]: An ordered list of agent IDs for the workflow sequence. Returns an empty list if the workflow ID is not found or the sequence is missing/empty.
+        """
+        agent_ids: List[str] = []
+        try:
+            # agent_workflows is processed into a dict with workflow_id key
+            workflows_dict = config.get("agent_workflows", {})
+            if not isinstance(workflows_dict, dict):
+                logger.warning(
+                    "'agent_workflows' configuration is not a dictionary. Cannot load sequence."
+                )
+                return []
+
+            workflow_data = workflows_dict.get(workflow_id)
+
+            if not workflow_data:
+                logger.warning(
+                    f"Workflow ID '{workflow_id}' not found in agent_workflows configuration."
+                )
+                return []
+
+            if not isinstance(workflow_data, dict):
+                logger.warning(
+                    f"Workflow data for ID '{workflow_id}' is not a dictionary. Cannot load sequence."
+                )
+                return []
+
+            sequence_str = workflow_data.get("agent_sequence", "")
+
+            if not sequence_str or not isinstance(sequence_str, str):
+                logger.warning(
+                    f"'agent_sequence' key is missing, empty, or not a string for workflow ID '{workflow_id}'."
+                )
+                return []
+
+            # Basic parsing using '>' as a separator, stripping whitespace
+            agent_ids = [
+                agent_id.strip()
+                for agent_id in sequence_str.split(">")
+                if agent_id.strip()
+            ]
+
+            if not agent_ids:
+                logger.warning(
+                    f"Parsed agent sequence for workflow ID '{workflow_id}' is empty."
+                )
+
+            logger.info(
+                f"Loaded agent sequence for workflow '{workflow_id}': {agent_ids}"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"An error occurred loading the workflow sequence for ID '{workflow_id}': {e}",
+                exc_info=True,
+            )
+            return []
+
+        return agent_ids
+
 
 # Test usage
 if __name__ == "__main__":
@@ -225,6 +295,19 @@ if __name__ == "__main__":
                 f"tavily_search_params': {settings.get('tavily_search_params')}"
             )
             logger.info(f"N_searches': {settings.get('N_searches')}")
+
+        # Workflow sequences
+        configs = loader.get_all_configs()
+
+        # Should work
+        test_workflow_id = "INITIAL_ANALYSIS"
+        sequence = loader.load_workflow_sequence(test_workflow_id, configs)
+        logger.info(f"Sequence for '{test_workflow_id}': {sequence}")
+
+        # Should not work
+        test_workflow_id = "NON_EXISTENT_WORKFLOW"
+        sequence = loader.load_workflow_sequence(test_workflow_id, configs)
+        logger.info(f"Sequence for '{test_workflow_id}': {sequence}")
 
     except FileNotFoundError:
         logger.error("Failed to initialize ConfigLoader due to missing directory.")
