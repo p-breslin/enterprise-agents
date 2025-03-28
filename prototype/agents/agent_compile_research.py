@@ -1,9 +1,15 @@
+import json
+import logging
+from typing import Dict, Any
+
 from .base_agent import BaseAgent
 from utilities.LLM import call_llm
 from utilities.helpers import format_results
-from scripts.config import Configuration
+from scripts.secrets import ToolKeys
+from scripts.state import OverallState
 from scripts.events import Event, EventType
-from scripts.prompts import RESEARCH_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 class ResearchAgent(BaseAgent):
@@ -11,6 +17,10 @@ class ResearchAgent(BaseAgent):
     1.  Listens for either DB_CHECK_DONE (if DB had data) or SEARCH_RESULTS_READY (if we had to do a web search).
     2.  Compiles research notes and publishes RESEARCH_COMPILED.
     """
+
+    def __init__(self, name: str, state: OverallState, config: Dict[str, Any]):
+        super().__init__(name, state)
+        self.cfg = config
 
     async def handle_event(self, event: Event, event_queue) -> None:
         """
@@ -22,20 +32,58 @@ class ResearchAgent(BaseAgent):
 
     async def compile_research(self, event_queue) -> None:
         self.log("Compiling research notes.")
-        cfg = Configuration()
+        if not self.state.search_results:
+            logger.warning("No search results available to compile research from.")
+            return
 
+        # Fetch prompts
+        try:
+            system_prompt_text = self.config["system_prompts"]["RESEARCH_COMPILER"][
+                "prompt_text"
+            ]
+            research_template = self.config["prompt_templates"]["RESEARCH_PROMPT"][
+                "template_text"
+            ]
+        except KeyError as e:
+            logger.error(
+                f"Missing required prompt configuration key: {e}", exc_info=True
+            )
+            return
+
+        # LLM context
         context_str = format_results(self.state.search_results)
-        instructions = RESEARCH_PROMPT.format(
+        instructions = research_template.format(
             company=self.state.company,
-            schema=self.state.output_schema,
+            schema=json.dumps(self.state.output_schema, indent=2),
             context=context_str,
         )
+        messages = [
+            {"role": "system", "content": system_prompt_text},
+            {"role": "user", "content": instructions},
+        ]
 
-        research_notes = call_llm(
-            cfg.OPENAI_API_KEY, messages=[{"role": "user", "content": instructions}]
-        )
-        self.state.research.append(research_notes)
-        self.log("Reesearch notes completed.")
+        # API key
+        try:
+            api_keys = ToolKeys()
+            openai_api_key = api_keys.OPENAI_API_KEY
+            if not openai_api_key:
+                raise ValueError("OPENAI_API_KEY is not set in environment variables.")
+        except Exception as e:
+            logger.error(f"Failed to get OpenAI API Key: {e}", exc_info=True)
+            return
 
-        self.log("Publishing RESEARCH_COMPILED.")
-        await event_queue.put(Event(EventType.RESEARCH_COMPILED))
+        # Call LLM
+        try:
+            output = call_llm(openai_api_key, messages=messages)
+            if "LLM Error:" in output or "ChatGPT Error:" in output:
+                raise Exception(f"LLM call failed: {output}")
+
+            self.state.research.append(output)
+            self.log("Reesearch notes completed.")
+            self.log("Publishing RESEARCH_COMPILED.")
+            await event_queue.put(Event(EventType.RESEARCH_COMPILED))
+
+        except Exception as e:
+            logger.error(
+                f"Error during research compilation LLM call: {e}", exc_info=True
+            )
