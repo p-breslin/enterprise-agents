@@ -81,7 +81,9 @@ class ExtractionAgent(BaseAgent):
         # Call LLM
         try:
             output = call_llm(
-                openai_api_key, messages=messages, schema=self.state.output_schema
+                openai_api_key,
+                messages=messages,
+                json_mode=True,
             )
             if "LLM Error:" in output or "ChatGPT Error:" in output:
                 raise Exception(f"LLM call failed: {output}")
