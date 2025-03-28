@@ -1,0 +1,33 @@
+# prototype/configs/output_schemas.yaml
+- schema_id: COMPANY_INFO_BASIC
+  description: Basic company name and product description.
+  schema:
+    type: object
+    properties:
+      company_name:
+        type: string
+        description: Official name of the company being researched.
+      product_description:
+        type: string
+        description: Brief summary of the company's main product, service, or core business focus.
+    required:
+      - company_name
+      - product_description
+    additionalProperties: False
+
+# - schema_id: COMPETITOR_PROFILE
+#   description: Schema for detailed competitor information.
+#   schema:
+#     type: object
+#     properties:
+#       competitor_name:
+#         type: string
+#         description: Name of the competitor company.
+#       strengths:
+#         type: array
+#         items:
+#           type: string
+#         description: List of key strengths.
+#       # ... other fields
+#     required:
+#       - competitor_name
