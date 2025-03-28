@@ -133,8 +133,9 @@ class Orchestrator:
         Event routing: the orchestrator will act as the central coordinator and dispatch events to the appropiate agent.
         """
         logger.debug("Setting up static event routing map...")
+        self.agent_map = {}  # Clear any previous map
         for agent in self.agents:
-            if agent.name == "DatabaseAgent":
+            if agent.name == "GraphQueryAgent":
                 self.agent_map[EventType.START_RESEARCH] = agent
 
             elif agent.name == "QueryGenerationAgent":
@@ -152,8 +153,11 @@ class Orchestrator:
 
             else:
                 logger.warning(f"Agent '{agent.name}' not included in static routing.")
+
+        # Log the final map
+        mapped_events = list(self.agent_map.keys())
         logger.debug(
-            f"Agent map populated: { {k.name: v.name for k, v in self.agent_map.items()} }"
+            f"Agent map populated. Handling events: {[e.name for e in mapped_events]}"
         )
 
     async def start_system(self):
@@ -175,9 +179,30 @@ class Orchestrator:
                 logger.info("Extraction complete. Shutting down.")
                 break
 
+            if event.type == EventType.GRAPH_DATA_FOUND:
+                logger.info(
+                    "Graph data found. Pipeline finished (No update needed/implemented)."
+                )
+                self.state.final_output = {
+                    "status": "Data found in graph",
+                    "results": self.state.graph_query_results,
+                }
+                self.state.complete = True
+                break
+
+            # # Yet to implement this
+            # if event.type == EventType.ERROR_OCCURRED:
+            #     logger.error(f"Pipeline halting due to error event: {event.payload}")
+            #     self.state.final_output = {
+            #         "error": f"Pipeline Error: {event.payload.get('error', 'Unknown')}"
+            #     }
+            #     self.state.complete = False
+            #     break
+
             # Dispatch event to whichever agent handles it
             await self.dispatch_event(event)
 
+        logger.info("Agentic System Shutdown.")
         return self.state.final_output
 
     async def dispatch_event(self, event: Event):

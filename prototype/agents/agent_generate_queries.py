@@ -27,7 +27,7 @@ class QueryGenerationAgent(BaseAgent):
         """
         Overrides handle_event from BaseAgent.
         """
-        if event.type == EventType.NEED_QUERIES:
+        if event.type == EventType.NEED_EXTERNAL_DATA:
             self.log(f"Received {event.type.name} event.")
             await self.generate_queries(event_queue)
 
