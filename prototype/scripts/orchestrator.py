@@ -74,7 +74,7 @@ class Orchestrator:
 
         # –– Select and prepare output schema ––
         try:
-            schema_id_to_use = "COMPANY_INFO_BASIC"  # should put in a config
+            schema_id_to_use = "COMPANY_OVERVIEW_GRAPH"  # should put in config
             logger.info(f"Using output schema ID: {schema_id_to_use}")
 
             # Fetch the schema entry from the loaded config

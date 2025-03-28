@@ -59,23 +59,30 @@
 
 - template_id: EXTRACTION_PROMPT
   template_name: Schema Extractor
-  purpose: Instruct LLM to extract structured data from research notes based on a schema.
+  purpose: Instruct LLM to extract structured data (entities, relationships) from research notes based on a specific graph-oriented schema.
   required_inputs: schema, research
   output_format: JSON matching the provided schema
   template_text: |
-    Your task is to take notes gathered from web research and extract them into the following schema.
+    You are an AI data extraction specialist. Your task is to meticulously read the following research notes and extract information to populate a knowledge graph structure defined by the JSON schema below.
 
+    Focus on identifying distinct entities (like the main Company, its Products, mentioned Competitors, and Operating Regions/Countries) and their attributes based *only* on the provided notes.
+
+    Target Schema:
     <schema>
     {schema}
     </schema>
 
-    Here are all the notes from research, you are only allowed to use this information ONLY:
-
+    Research Notes:
     <web_research_notes>
     {research}
     </web_research_notes>
 
-    Ensure the output is strictly valid JSON conforming to the provided schema, with no additional text or explanations.
+    **Instructions:**
+    1.  Adhere strictly to the target schema structure, data types, and required fields.
+    2.  Extract information *only* from the provided Research Notes. Do not infer or add external knowledge.
+    3.  If information for a field is not present in the notes, omit the field (unless it's required, in which case use `null` or an appropriate placeholder if allowed by the schema, otherwise note the omission if possible within the schema design, e.g., an empty list).
+    4.  Ensure arrays contain items matching the specified item schema (e.g., `products` should be a list of product objects).
+    5.  Your entire response must be **only** the valid JSON object conforming to the schema. Do not include any introductory text, explanations, apologies, markdown formatting (` ```json ... ``` `), or concluding remarks outside the JSON structure itself.
 
 - output_format: JSON with regions, countries and enterprises
   purpose: Extract market information in JSON format
