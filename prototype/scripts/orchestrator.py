@@ -24,7 +24,7 @@ class Orchestrator:
         self.company = company
         try:
             self.loader = ConfigLoader()
-            self.config: Dict[str, Any] = self.loader.get_all_configs()
+            self.cfg: Dict[str, Any] = self.loader.get_all_configs()
         except FileNotFoundError:
             logger.critical(
                 "Config directory not found. Orchestrator cannot initialize.",
@@ -35,11 +35,34 @@ class Orchestrator:
             logger.critical(f"Failed to load configurations: {e}", exc_info=True)
             raise
 
-        self.state = OverallState(company=company)
+        # Select and prepare output schema
+        try:
+            schema_id_to_use = "COMPANY_INFO_BASIC"  # should put in a config
+            logger.info(f"Using output schema ID: {schema_id_to_use}")
+
+            # Fetch the schema entry from the loaded config
+            schema_entry = self.cfg.get("output_schemas", {}).get(schema_id_to_use)
+            if not schema_entry:
+                raise ValueError(
+                    f"Output schema with ID '{schema_id_to_use}' not found in configuration."
+                )
+
+            # Extract the actual schema definition part
+            schema = schema_entry.get("schema")
+            if not schema or not isinstance(schema, dict):
+                raise ValueError(
+                    f"Schema definition missing or invalid for schema ID '{schema_id_to_use}'."
+                )
+
+        except Exception as e:
+            logger.critical(f"Failed to prepare output schema: {e}", exc_info=True)
+            raise ValueError(f"Schema preparation failed: {e}") from e
+
+        self.state = OverallState(company=company, output_schema=schema)
         self.event_queue = asyncio.Queue()
 
         # Agent will not access the event queue; only the orchestrator
-        self.agents = create_agents(state=self.state, config=self.config)
+        self.agents = create_agents(state=self.state, config=self.cfg)
 
         # Dictionary to map each EventType to each agent
         self.agent_map: Dict[EventType, BaseAgent] = {}
