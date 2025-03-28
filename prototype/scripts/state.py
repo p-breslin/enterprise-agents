@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Dict, List, Annotated
+from typing import Any, Dict, Annotated
 from dataclasses import dataclass, field
 
 # # Specific to OpenAI API
@@ -41,17 +41,17 @@ class OverallState:
     # Company to research as inputted by the user
     company: str
 
-    # Output schema is injected by the orchestrator
+    # Output schema will be injected by the orchestrator
     output_schema: Dict[str, Any]
 
     # Generated search queries for finding new information
-    search_queries: List[str] = field(default=None)
+    search_queries: list[str] = field(default=None)
 
     # Results from the Tavily searches
-    search_results: List[Dict] = field(default=None)
+    search_results: list[Dict] = field(default=None)
 
     # LLM research; Annotated[...] ensures items are added instead of replaced, default_factory ensures each instance gets a new copy
-    research: Annotated[List, operator.add] = field(default_factory=List)
+    research: Annotated[list, operator.add] = field(default_factory=list)
 
     # Structured output
     final_output: Dict[str, Any] = field(default=None)
@@ -71,4 +71,4 @@ class OutputState:
     final_output: Dict[str, Any]
 
     # Results from the Tavily searches
-    search_results: List[Dict] = field(default=None)
+    search_results: list[Dict] = field(default=None)
