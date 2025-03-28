@@ -89,13 +89,12 @@ class GraphUpdateAgent(BaseAgent):
             if not company_doc:
                 raise ValueError("Failed to process main company entity.")
 
-            product_docs = await self._process_products(extracted_data, company_doc)
-            competitor_docs = await self._process_competitors(
-                extracted_data, company_doc
-            )
-            region_docs = await self._process_regions(extracted_data, company_doc)
+            # process product_docs, competitor_docs, region_docs
+            await self._process_products(extracted_data, company_doc)
+            await self._process_competitors(extracted_data, company_doc)
+            await self._process_regions(extracted_data, company_doc)
 
-            # --- Mark state as complete and publish success ---
+            # –– Mark state as complete and publish success ––
             self.state.complete = True
             self.log("Graph update process finished successfully.")
             await event_queue.put(Event(EventType.GRAPH_UPDATE_COMPLETE))
