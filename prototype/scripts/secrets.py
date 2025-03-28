@@ -13,7 +13,7 @@ class Secrets:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
     # ArangoDB Connection Details
-    ARANGO_PORT: str = field(default=os.getenv("ARANGO_PORT"))
+    ARANGO_HOST: str = field(default=os.getenv("ARANGO_HOST"))
     ARANGO_DB: str = field(default=os.getenv("ARANGO_DB"))
     ARANGO_USR: str = field(default=os.getenv("ARANGO_USR"))
     ARANGO_PWD: str = field(default=os.getenv("ARANGO_PWD"))
