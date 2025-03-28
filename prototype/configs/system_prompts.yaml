@@ -36,7 +36,6 @@
 
     When asked to return data in a specific format, adhere strictly to that format.
  
-
 - system_prompt_id: DATA_EXTRACTOR
   description: Persona for structured data extraction
   name: Data Extraction Specialist
