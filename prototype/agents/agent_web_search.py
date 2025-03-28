@@ -4,7 +4,7 @@ from typing import Dict, Any
 from tavily import AsyncTavilyClient
 
 from .base_agent import BaseAgent
-from scripts.secrets import ToolKeys
+from scripts.secrets import Secrets
 from scripts.state import OverallState
 from scripts.events import Event, EventType
 from utilities.helpers import filter_searches
@@ -39,7 +39,7 @@ class WebSearchAgent(BaseAgent):
 
         # Tavily API key
         try:
-            api_keys = ToolKeys()
+            api_keys = Secrets()
             tavily_api_key = api_keys.TAVILY_API_KEY
             if not tavily_api_key:
                 raise ValueError("TAVILY_API_KEY is not set in environment variables.")
