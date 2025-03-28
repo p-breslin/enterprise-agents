@@ -1,6 +1,9 @@
 import ollama
 import logging
 from openai import OpenAI
+from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 def call_local_llm(messages):
@@ -20,31 +23,50 @@ def call_local_llm(messages):
         return f"LLM Error: {str(e)}"
 
 
-def call_llm(api_key, messages, schema=False):
+def call_llm(
+    api_key: str,
+    messages: List[Dict[str, str]],
+    model: str = "gpt-4o-mini-2024-07-18",
+    json_mode: bool = False,
+) -> str:
     """
-    Sends a list of messages (role + content) to ChatGPT.
+    Sends a list of messages (role + content) to an OpenAI LLM.
+
+    Args:
+        api_key: The OpenAI API key.
+        messages: A list of message dictionaries (e.g., [{"role": "user", "content": "..."}]).
+        model: The OpenAI model to use.
+        json_mode: If True, requests JSON output format from the API.
+
+    Returns:
+        The content of the LLM's response as a string.
     """
     client = OpenAI(api_key=api_key)
+    response_format_param = None
+    if json_mode:
+        logger.debug("Requesting JSON mode from OpenAI API.")
+        response_format_param = {"type": "json_object"}
+
     try:
-        if schema:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini-2024-07-18",
-                messages=messages,
-                response_format=schema,
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format=response_format_param,
+        )
+        content = response.choices[0].message.content
+
+        if json_mode:
+            logger.debug(
+                f"OpenAI structured response received (length: {len(content)})."
             )
-            content = response.choices[0].message.content
-            logging.debug(f"ChatGPT structured response: {content}")
-            logging.debug(f"Token usage: {response.usage.total_tokens}")
-            return content
         else:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini-2024-07-18", messages=messages
+            logger.debug(
+                f"OpenAI unstructured response received (length: {len(content)})."
             )
-            content = response.choices[0].message.content
-            logging.debug(f"ChatGPT unstructured response: {content}")
-            logging.debug(f"Token usage: {response.usage.total_tokens}")
-            return content
+
+        logger.debug(f"Token usage: {response.usage.total_tokens}")
+        return content.strip()
 
     except Exception as e:
-        logging.error(f"ChatGPT request failed: {e}")
+        logger.error(f"ChatGPT request failed: {e}")
         return f"ChatGPT Error: {str(e)}"
