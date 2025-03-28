@@ -152,6 +152,10 @@ class Orchestrator:
             elif agent.name == "ExtractionAgent":
                 self.agent_map[EventType.RESEARCH_COMPILED] = agent
 
+            # Route EXTRACTION_COMPLETE to GraphUpdateAgent
+            elif agent.name == "GraphUpdateAgent":
+                self.agent_map[EventType.EXTRACTION_COMPLETE] = agent
+
             else:
                 logger.warning(f"Agent '{agent.name}' not included in static routing.")
 
@@ -170,35 +174,46 @@ class Orchestrator:
         # –– Initiate the pipeline ––
         await self.event_queue.put(Event(EventType.START_RESEARCH))
 
+        final_event_types = {
+            # Normal completion after enrichment
+            EventType.GRAPH_UPDATE_COMPLETE,
+            # Completion if graph had sufficient data initially
+            EventType.GRAPH_DATA_FOUND,
+            # Completion on error
+            EventType.ERROR_OCCURRED,
+        }
+
         # The orchestrator will ontinuously consume events from the queue
         while True:
             event = await self.event_queue.get()
             logger.info(f"[Orchestrator] Received event: {event.type.name}")
 
-            # Shutdown process when extraction is complete
-            if event.type == EventType.EXTRACTION_COMPLETE:
-                logger.info("Extraction complete. Shutting down.")
-                break
+            # –– Check for end conditions ––
+            if event.type in final_event_types:
+                if event.type == EventType.GRAPH_UPDATE_COMPLETE:
+                    logger.info(
+                        "Graph update complete. Pipeline finished successfully."
+                    )
 
-            if event.type == EventType.GRAPH_DATA_FOUND:
-                logger.info(
-                    "Graph data found. Pipeline finished (No update needed/implemented)."
-                )
-                self.state.final_output = {
-                    "status": "Data found in graph",
-                    "results": self.state.graph_query_results,
-                }
-                self.state.complete = True
-                break
+                elif event.type == EventType.GRAPH_DATA_FOUND:
+                    logger.info(
+                        "Graph data found. Pipeline finished (No update needed/implemented)."
+                    )
+                    self.state.final_output = {
+                        "status": "Data found in graph",
+                        "results": self.state.graph_query_results,
+                    }
+                    self.state.complete = True
 
-            # # Yet to implement this
-            # if event.type == EventType.ERROR_OCCURRED:
-            #     logger.error(f"Pipeline halting due to error event: {event.payload}")
-            #     self.state.final_output = {
-            #         "error": f"Pipeline Error: {event.payload.get('error', 'Unknown')}"
-            #     }
-            #     self.state.complete = False
-            #     break
+                elif event.type == EventType.ERROR_OCCURRED:
+                    logger.error(
+                        f"Pipeline halting due to error event: {event.payload}"
+                    )
+                    self.state.final_output = {
+                        "error": f"Pipeline Error: {event.payload.get('error', 'Unknown')}"
+                    }
+                    self.state.complete = False
+                break
 
             # Dispatch event to whichever agent handles it
             await self.dispatch_event(event)
