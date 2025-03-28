@@ -1,4 +1,4 @@
-# prototype/configs/output_schemas.yaml
+# --- Schema for basic company research ---
 - schema_id: COMPANY_INFO_BASIC
   description: Basic company name and product description.
   schema:
@@ -15,19 +15,49 @@
       - product_description
     additionalProperties: False
 
-# - schema_id: COMPETITOR_PROFILE
-#   description: Schema for detailed competitor information.
-#   schema:
-#     type: object
-#     properties:
-#       competitor_name:
-#         type: string
-#         description: Name of the competitor company.
-#       strengths:
-#         type: array
-#         items:
-#           type: string
-#         description: List of key strengths.
-#       # ... other fields
-#     required:
-#       - competitor_name
+# --- Schema for graph population ---
+- schema_id: COMPANY_OVERVIEW_GRAPH
+  description: Extracts core company info, products, competitors, and regions for graph population.
+  schema:
+    type: object
+    properties:
+      company_name:
+        type: string
+        description: "The official, full legal name of the company being researched."
+      company_description:
+        type: string
+        description: "A concise (1-3 sentence) overview of the company's primary business, mission, or market focus."
+      products:
+        type: array
+        description: "A list of major products or services offered by the company."
+        items:
+          type: object
+          properties:
+            product_name:
+              type: string
+              description: "The specific name of the product or service."
+            product_description:
+              type: string
+              description: "A brief (1-2 sentence) description of what the product or service does."
+          required:
+            - product_name
+      competitors:
+        type: array
+        description: "A list of key competitor companies mentioned in the research."
+        items:
+          type: object
+          properties:
+             competitor_name:
+               type: string
+               description: "The official name of the competitor company."
+          required:
+            - competitor_name
+      operating_regions:
+        type: array
+        description: "A list of major geographic regions (e.g., Americas, EMEA, Asia Pacific) or specific countries where the company has significant operations or sales, as mentioned in the text."
+        items:
+          type: string
+          description: "Name of the region or country."
+    required:
+      - company_name
+    additionalProperties: False
