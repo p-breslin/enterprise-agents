@@ -38,10 +38,10 @@ class ResearchAgent(BaseAgent):
 
         # Fetch prompts
         try:
-            system_prompt_text = self.config["system_prompts"]["RESEARCH_COMPILER"][
+            system_prompt_text = self.cfg["system_prompts"]["RESEARCH_COMPILER"][
                 "prompt_text"
             ]
-            research_template = self.config["prompt_templates"]["RESEARCH_PROMPT"][
+            research_template = self.cfg["prompt_templates"]["RESEARCH_PROMPT"][
                 "template_text"
             ]
         except KeyError as e:

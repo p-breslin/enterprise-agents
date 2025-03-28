@@ -1,11 +1,14 @@
 import json
 import logging
-from .base_agent import BaseAgent
+from typing import Dict, Any
 
+from .base_agent import BaseAgent
 from utilities.LLM import call_llm
-from scripts.config import Configuration
+from scripts.secrets import ToolKeys
+from scripts.state import OverallState
 from scripts.events import Event, EventType
-from scripts.prompts import EXTRACTION_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 class ExtractionAgent(BaseAgent):
@@ -14,6 +17,10 @@ class ExtractionAgent(BaseAgent):
     2.  Finalizes the JSON extraction.
     3.  Publishes EXTRACTION_COMPLETE.
     """
+
+    def __init__(self, name: str, state: OverallState, config: Dict[str, Any]):
+        super().__init__(name, state)
+        self.cfg = config
 
     async def handle_event(self, event: Event, event_queue) -> None:
         """
@@ -25,30 +32,83 @@ class ExtractionAgent(BaseAgent):
 
     async def extract_schema(self, event_queue) -> None:
         self.log("Extracting notes into JSON schema.")
-        cfg = Configuration()
 
         if not self.state.research:
-            self.log("No research notes available; cannot extract.")
+            # Handle empty research notes
+            self.state.final_output = {}
+            self.state.complete = True
+            logger.warning(
+                "No research notes found, setting final output to empty dict."
+            )
+            await event_queue.put(Event(EventType.EXTRACTION_COMPLETE))
             return
 
-        instructions = EXTRACTION_PROMPT.format(
-            schema=self.state.output_schema, research=self.state.research
+        # Fetch prompts
+        try:
+            system_prompt_text = self.cfg["system_prompts"]["SCHEMA_EXTRACTOR"][
+                "prompt_text"
+            ]
+            extraction_template = self.cfg["prompt_templates"]["EXTRACTION_PROMPT"][
+                "template_text"
+            ]
+        except KeyError as e:
+            logger.error(
+                f"Missing required prompt configuration key: {e}", exc_info=True
+            )
+            return
+
+        # LLM context
+        instructions = extraction_template.format(
+            schema=json.dumps(self.state.output_schema, indent=2),
+            research=self.state.research,
         )
 
-        output = call_llm(
-            cfg.OPENAI_API_KEY,
-            messages=[{"role": "user", "content": instructions}],
-            schema=self.state.output_schema,
-        )
+        messages = [
+            {"role": "system", "content": system_prompt_text},
+            {"role": "user", "content": instructions},
+        ]
+
+        # API key
         try:
-            data = json.loads(output)
-            self.state.final_output = data
-            self.state.complete = True
-            self.log("Final output successfully parsed as JSON.")
-        except json.JSONDecodeError:
-            self.log("Failed to parse JSON from LLM response.")
-            logging.debug("Failed LLM response as JSON: {output}")
-            self.state.final_output = {}
+            api_keys = ToolKeys()
+            openai_api_key = api_keys.OPENAI_API_KEY
+            if not openai_api_key:
+                raise ValueError("OPENAI_API_KEY is not set in environment variables.")
+        except Exception as e:
+            logger.error(f"Failed to get OpenAI API Key: {e}", exc_info=True)
+            return
+
+        # Call LLM
+        try:
+            output = call_llm(
+                openai_api_key, messages=messages, schema=self.state.output_schema
+            )
+            if "LLM Error:" in output or "ChatGPT Error:" in output:
+                raise Exception(f"LLM call failed: {output}")
+
+            try:
+                data = json.loads(output)
+                self.state.final_output = data
+                self.state.complete = True
+                self.log("Final output successfully parsed as JSON.")
+
+            except json.JSONDecodeError as json_err:
+                logger.error(f"Failed to parse JSON from LLM response: {json_err}")
+                logger.debug(f"Failed LLM response content: {output}")
+                self.state.final_output = {
+                    "error": "Failed to parse LLM output as JSON",
+                    "raw_output": output,
+                }
+                self.state.complete = False
+                await event_queue.put(Event(EventType.EXTRACTION_COMPLETE))
+                return
+
+        except Exception as e:
+            logger.error(f"Error during schema extraction LLM call: {e}", exc_info=True)
+            self.state.final_output = {"error": f"Schema Extraction Failed: {e}"}
+            self.state.complete = False
+            await event_queue.put(Event(EventType.EXTRACTION_COMPLETE))
+            return
 
         self.log("Publishing EXTRACTION_COMPLETE.")
         await event_queue.put(Event(EventType.EXTRACTION_COMPLETE))
