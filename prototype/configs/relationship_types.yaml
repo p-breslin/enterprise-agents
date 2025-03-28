@@ -4,38 +4,38 @@
   name: sold_in
   source: Product
   target: Region
+
 - attributes: importance:string
   description: Region contains specific countries
-  inference_rules: If Country is mentioned within discussion of a Region, infer contains
-    relationship
+  inference_rules: If Country is mentioned within discussion of a Region, infer contains relationship
   name: contains
   source: Region
   target: Country
+
 - attributes: coverage:number,userBase:number
   description: Country has telecom operators
-  inference_rules: If Enterprise is described as operating in a Country, infer has_operator
-    relationship
+  inference_rules: If Enterprise is described as operating in a Country, infer has_operator relationship
   name: has_operator
   source: Country
   target: Enterprise
+
 - attributes: competitivePosition:string
   description: Product competes with other companies
-  inference_rules: If a company is described with strengths/weaknesses in the same
-    domain, infer competes_with relationship
+  inference_rules: If a company is described with strengths/weaknesses in the same domain, infer competes_with relationship
   name: competes_with
   source: Product
   target: Competitor
+
 - attributes: impactLevel:string,timeframe:string
   description: Product is influenced by market trends
-  inference_rules: If a trend is described in the context of the product domain, infer
-    influenced_by relationship
+  inference_rules: If a trend is described in the context of the product domain, infer influenced_by relationship
   name: influenced_by
   source: Product
   target: MarketTrend
+
 - attributes: customerBase:number,revenue:number
   description: Enterprise resells the product
-  inference_rules: If Enterprise is described as a provider or reseller, infer resells
-    relationship
+  inference_rules: If Enterprise is described as a provider or reseller, infer resells relationship
   name: resells
   source: Enterprise
   target: Product

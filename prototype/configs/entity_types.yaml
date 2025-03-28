@@ -2,22 +2,27 @@
   description: The product being analyzed
   examples: '{"name": "Clarity", "category": "Voice Processing"}'
   name: Product
+  
 - attributes: id:string,name:string,marketSize:number,countries:string[]
   description: Geographic regions for market analysis
   examples: '{"name": "Americas", "marketSize": 120000000}'
   name: Region
+  
 - attributes: id:string,name:string,population:number,potentialUsers:number
   description: Individual countries within regions
   examples: '{"name": "United States", "potentialUsers": 50000000}'
   name: Country
+  
 - attributes: id:string,name:string,type:string,operatingCountries:string[],userBase:number
   description: Potential business customers/resellers
   examples: '{"name": "Verizon", "type": "Telecom", "userBase": 30000000}'
   name: Enterprise
+  
 - attributes: id:string,name:string,productOfferings:string[],strengths:string[],weaknesses:string[]
   description: Companies offering competing products
   examples: '{"name": "AudioClear", "strengths": ["Established partnerships"]}'
   name: Competitor
+  
 - attributes: id:string,name:string,description:string,timeframe:string,impact:string
   description: Emerging trends affecting the product
   examples: '{"name": "Edge-based processing", "timeframe": "1-2 years"}'
