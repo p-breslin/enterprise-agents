@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 
 from .state import OverallState
 from agents.base_agent import BaseAgent
-from agents.agent_check_database import DatabaseAgent
+from agents.agent_query_graph import GraphQueryAgent
 from agents.agent_generate_queries import QueryGenerationAgent
 from agents.agent_web_search import WebSearchAgent
 from agents.agent_compile_research import ResearchAgent
@@ -29,7 +29,9 @@ def create_agents(
     logger.info("Creating agents...")
 
     agents: List[BaseAgent] = [
-        DatabaseAgent(name="DatabaseAgent", state=state),
+        GraphQueryAgent(
+            name="GraphQueryAgent", state=state, arangodb_manager=arangodb_manager
+        ),
         QueryGenerationAgent(name="QueryGenerationAgent", state=state, config=config),
         WebSearchAgent(name="WebSearchAgent", state=state, config=config),
         ResearchAgent(name="ResearchAgent", state=state, config=config),
