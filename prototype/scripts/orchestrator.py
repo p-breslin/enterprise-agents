@@ -139,7 +139,7 @@ class Orchestrator:
                 self.agent_map[EventType.START_RESEARCH] = agent
 
             elif agent.name == "QueryGenerationAgent":
-                self.agent_map[EventType.NEED_QUERIES] = agent
+                self.agent_map[EventType.NEED_EXTERNAL_DATA] = agent
 
             elif agent.name == "WebSearchAgent":
                 self.agent_map[EventType.QUERIES_GENERATED] = agent
