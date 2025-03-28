@@ -1,12 +1,14 @@
 import logging
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from .state import OverallState
 from .factory import create_agents
 from .events import Event, EventType
 from .config_loader import ConfigLoader
 from agents.base_agent import BaseAgent
+from .secrets import Secrets
+from ..utilities.graph_db import ArangoDBManager
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -23,7 +25,10 @@ class Orchestrator:
     def __init__(self, company: str, workflow_id: str):
         self.company = company
         self.workflow_id = workflow_id
+        self.arangodb_manager: Optional[ArangoDBManager] = None
+
         try:
+            self.secrets = Secrets()
             self.loader = ConfigLoader()
             self.cfg: Dict[str, Any] = self.loader.get_all_configs()
         except FileNotFoundError:
@@ -32,11 +37,44 @@ class Orchestrator:
                 exc_info=True,
             )
             raise
+        except ValueError as e:
+            logger.critical(f"Secrets configuration error: {e}", exc_info=True)
+            raise
         except Exception as e:
-            logger.critical(f"Failed to load configurations: {e}", exc_info=True)
+            logger.critical(
+                f"Failed to load configurations or secrets: {e}", exc_info=True
+            )
             raise
 
-        # Select and prepare output schema
+        # –– Initialize ArangoDB manager and ensure collections ––
+        try:
+            self.arangodb_manager = ArangoDBManager(
+                host=self.secrets.ARANGO_HOST,
+                db_name=self.secrets.ARANGO_DB,
+                usr=self.secrets.ARANGO_USR,
+                pwd=self.secrets.ARANGO_PWD,
+            )
+            # Fetch entity/relationship definitions from loaded config
+            entity_types = list(self.config.get("entity_types", {}).values())
+            relationship_types = list(
+                self.config.get("relationship_types", {}).values()
+            )
+            # Ensure collections exist based on config
+            self.arangodb_manager.ensure_collections(entity_types, relationship_types)
+
+        except ConnectionError as e:
+            logger.critical(
+                f"Failed to initialize ArangoDBManager: {e}. Graph features disabled.",
+                exc_info=True,
+            )
+            raise RuntimeError(f"ArangoDB connection failed: {e}") from e
+        except Exception as e:
+            logger.critical(
+                f"Unexpected error during ArangoDB setup: {e}", exc_info=True
+            )
+            raise RuntimeError(f"ArangoDB setup failed: {e}") from e
+
+        # –– Select and prepare output schema ––
         try:
             schema_id_to_use = "COMPANY_INFO_BASIC"  # should put in a config
             logger.info(f"Using output schema ID: {schema_id_to_use}")
@@ -59,10 +97,10 @@ class Orchestrator:
             logger.critical(f"Failed to prepare output schema: {e}", exc_info=True)
             raise ValueError(f"Schema preparation failed: {e}") from e
 
-        # Initialize state
+        # –– Initialize state ––
         self.state = OverallState(company=company, output_schema=schema)
 
-        # Load the workflow sequence
+        # –– Load the workflow sequence ––
         self.agent_sequence_ids: list[str] = self.loader.load_workflow_sequence(
             self.workflow_id, self.cfg
         )
@@ -78,17 +116,19 @@ class Orchestrator:
             )
             # raise ValueError(f"Workflow '{self.workflow_id}' defines no agents.")
 
-        # Setup the event queue
-        self.event_queue = asyncio.Queue()
+        # –– Setup agents ––
+        self.agents = create_agents(
+            state=self.state, config=self.cfg, arangodb_manager=self.arangodb_manager
+        )
 
-        # Agent will not access the event queue; only the orchestrator
-        self.agents = create_agents(state=self.state, config=self.cfg)
+        # –– Setup the event queue and routing ––
+        self.event_queue = asyncio.Queue()
 
         # Dictionary to map each EventType to each agent
         self.agent_map: Dict[EventType, BaseAgent] = {}
 
         # route_event() will determine what event goes to what agent
-        self.route_event()
+        self.route_event()  # Static routing needs update for new agents/events
 
     def route_event(self):
         """
@@ -124,7 +164,7 @@ class Orchestrator:
         """
         logger.info("Agentic System Initiating...")
 
-        # Initiate the pipeline
+        # –– Initiate the pipeline ––
         await self.event_queue.put(Event(EventType.START_RESEARCH))
 
         # The orchestrator will ontinuously consume events from the queue
@@ -169,7 +209,7 @@ async def run_research_pipeline(company: str, workflow_id: str) -> Dict[str, Any
 
 
 if __name__ == "__main__":
-    # local testing
+    # –– Local testing ––
     company_to_research = "Nvidia"
     default_workflow = "INITIAL_ANALYSIS"
     print(
