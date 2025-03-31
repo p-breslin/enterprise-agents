@@ -8,6 +8,11 @@ from secrets import Secrets
 Deletes the ArangoDB database.
 """
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s - %(message)s",
+)
+
 # Load environment variables
 load_dotenv()
 secrets = Secrets()
@@ -27,7 +32,10 @@ try:
             sys_db.delete_database(db_name)
             logging.info(f"Database '{db_name}' deleted successfully.")
         else:
-            logging.info(f"Database '{db_name}' does not exist.")
+            logging.error(f"Database '{db_name}' does not exist.")
+
+        sys_db.create_database(db_name)
+        logging.info(f"New database '{db_name}' created successfully.")
 
     except Exception as e:
         logging.error(f"Failed to authenticate with root: {e}")
