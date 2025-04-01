@@ -1,4 +1,5 @@
 import logging
+from scripts.secrets import Secrets
 
 
 """
@@ -78,3 +79,17 @@ def get_prompt(cfg: dict, system_id: str, template_id: str) -> tuple[str, str]:
     system_prompt = cfg["system_prompts"][system_id]["prompt_text"]
     template = cfg["prompt_templates"][template_id]["template_text"]
     return system_prompt, template
+
+
+def get_api_key(service: str) -> str:
+    """
+    Fetches an API key from the environment using the convention: {SERVICE}_API_KEY.
+    """
+    api_keys = Secrets()
+    env_key = f"{service.upper()}_API_KEY"
+
+    key = api_keys[env_key]
+    if not key:
+        raise ValueError(f"Missing environment variable: {env_key}")
+
+    return key

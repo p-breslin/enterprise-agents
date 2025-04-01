@@ -4,8 +4,7 @@ from typing import Dict, Any
 
 from .base_agent import BaseAgent
 from utilities.LLM import call_llm
-from utilities.helpers import format_results, get_prompt
-from scripts.secrets import Secrets
+from utilities.helpers import format_results, get_prompt, get_api_key
 from scripts.state import OverallState
 from scripts.events import Event, EventType
 
@@ -61,14 +60,7 @@ class ResearchAgent(BaseAgent):
         ]
 
         # API key
-        try:
-            api_keys = Secrets()
-            openai_api_key = api_keys.OPENAI_API_KEY
-            if not openai_api_key:
-                raise ValueError("OPENAI_API_KEY is not set in environment variables.")
-        except Exception as e:
-            logger.error(f"Failed to get OpenAI API Key: {e}", exc_info=True)
-            return
+        openai_api_key = get_api_key(service="OPENAI")
 
         # Call LLM
         try:
