@@ -1,6 +1,11 @@
 import logging
 
 
+"""
+Helper functions to reduce redundancy and keep code tidy.
+"""
+
+
 def filter_searches(results: dict | list[dict]) -> list[dict]:
     """
     Removes duplicate search results from Tavily API response(s).
@@ -64,3 +69,12 @@ def format_results(sources: list[dict], max_tokens: int = 1000) -> str:
         )
 
     return formatted_text.strip()
+
+
+def get_prompt(cfg: dict, system_id: str, template_id: str) -> tuple[str, str]:
+    """
+    Prompt retrieval.
+    """
+    system_prompt = cfg["system_prompts"][system_id]["prompt_text"]
+    template = cfg["prompt_templates"][template_id]["template_text"]
+    return system_prompt, template

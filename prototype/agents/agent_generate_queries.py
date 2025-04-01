@@ -5,6 +5,7 @@ from typing import Dict, Any
 from .base_agent import BaseAgent
 
 from utilities.LLM import call_llm
+from utilities.helpers import get_prompt
 from scripts.secrets import Secrets
 from scripts.state import OverallState
 from scripts.events import Event, EventType
@@ -43,15 +44,13 @@ class QueryGenerationAgent(BaseAgent):
         self.log(f"Using N_searches = {n_searches}")
 
         try:
-            system_prompt_text = self.cfg["system_prompts"]["QUERY_GENERATOR"][
-                "prompt_text"
-            ]
-            query_gen_template = self.cfg["prompt_templates"]["QUERY_GENERATOR_PROMPT"][
-                "template_text"
-            ]
-            query_list_template = self.cfg["prompt_templates"]["QUERY_LIST_PROMPT"][
-                "template_text"
-            ]
+            system_prompt_text = get_prompt(self.cfg, system_id="QUERY_GENERATOR")
+
+            query_gen_template = get_prompt(
+                self.cfg, system_id="QUERY_GENERATOR_PROMPT"
+            )
+
+            query_list_template = get_prompt(self.cfg, system_id="QUERY_LIST_PROMPT")
 
         except KeyError as e:
             logger.error(

@@ -4,7 +4,7 @@ from typing import Dict, Any
 
 from .base_agent import BaseAgent
 from utilities.LLM import call_llm
-from utilities.helpers import format_results
+from utilities.helpers import format_results, get_prompt
 from scripts.secrets import Secrets
 from scripts.state import OverallState
 from scripts.events import Event, EventType
@@ -38,12 +38,10 @@ class ResearchAgent(BaseAgent):
 
         # Fetch prompts
         try:
-            system_prompt_text = self.cfg["system_prompts"]["RESEARCH_COMPILER"][
-                "prompt_text"
-            ]
-            research_template = self.cfg["prompt_templates"]["RESEARCH_PROMPT"][
-                "template_text"
-            ]
+            system_prompt_text = get_prompt(self.cfg, system_id="RESEARCH_COMPILER")
+
+            research_template = get_prompt(self.cfg, system_id="RESEARCH_PROMPT")
+
         except KeyError as e:
             logger.error(
                 f"Missing required prompt configuration key: {e}", exc_info=True
