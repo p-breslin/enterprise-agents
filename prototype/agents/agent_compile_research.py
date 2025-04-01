@@ -37,9 +37,9 @@ class ResearchAgent(BaseAgent):
 
         # Fetch prompts
         try:
-            system_prompt_text = get_prompt(self.cfg, system_id="RESEARCH_COMPILER")
-
-            research_template = get_prompt(self.cfg, system_id="RESEARCH_PROMPT")
+            system_prompt_text, research_template = get_prompt(
+                self.cfg, system_id="RESEARCH_COMPILER", template_id="RESEARCH_PROMPT"
+            )
 
         except KeyError as e:
             logger.error(

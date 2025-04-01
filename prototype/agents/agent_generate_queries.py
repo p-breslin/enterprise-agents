@@ -42,14 +42,17 @@ class QueryGenerationAgent(BaseAgent):
         n_searches = runtime_settings.get("N_searches", 1)
         self.log(f"Using N_searches = {n_searches}")
 
+        # Fetch prompts (two user prompts; separating context from constraints)
         try:
-            system_prompt_text = get_prompt(self.cfg, system_id="QUERY_GENERATOR")
-
-            query_gen_template = get_prompt(
-                self.cfg, system_id="QUERY_GENERATOR_PROMPT"
+            system_prompt_text, query_gen_template = get_prompt(
+                self.cfg,
+                system_id="QUERY_GENERATOR",
+                template_id="QUERY_GENERATOR_PROMPT",
             )
 
-            query_list_template = get_prompt(self.cfg, system_id="QUERY_LIST_PROMPT")
+            _, query_list_template = get_prompt(
+                self.cfg, template_id="QUERY_LIST_PROMPT"
+            )
 
         except KeyError as e:
             logger.error(

@@ -45,9 +45,9 @@ class ExtractionAgent(BaseAgent):
 
         # Fetch prompts
         try:
-            system_prompt_text = get_prompt(self.cfg, system_id="SCHEMA_EXTRACTOR")
-
-            extraction_template = get_prompt(self.cfg, system_id="EXTRACTION_PROMPT")
+            system_prompt_text, extraction_template = get_prompt(
+                self.cfg, system_id="SCHEMA_EXTRACTOR", template_id="EXTRACTION_PROMPT"
+            )
 
         except KeyError as e:
             logger.error(
