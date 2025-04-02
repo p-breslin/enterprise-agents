@@ -1,5 +1,4 @@
 import time
-import json
 import queue
 import logging
 import asyncio
@@ -72,7 +71,6 @@ def format_update_message(update: Dict[str, Any]) -> Optional[str]:
     agent_name = update.get("agent_name", "")
     message = update.get("message", "")
     event_type = update.get("event_type", "")
-    payload = update.get("payload", {})  # Can be used for more detail later
 
     icon_map = {
         "event": "📬",
@@ -122,10 +120,13 @@ def format_update_message(update: Dict[str, Any]) -> Optional[str]:
         # Generic fallback
         formatted += f"{update_type}: {message or event_type}"
 
-    # Avoid displaying empty messages
-    if formatted.strip() == icon:
+    # Final check to prevent returning just an icon
+    if formatted.strip() == icon_map.get(update_type, "➡️"):
+        logger.warning(
+            f"Skipping effectively empty formatted message for update: {update}"
+        )
         return None
-    return formatted
+    return formatted.strip()  # Remove leading/trailing whitespace
 
 
 def pipeline_thread_target(company: str, workflow_id: str, q: queue.Queue):
@@ -192,7 +193,6 @@ def main():
     # Load config and workflows
     config_loader = get_config_loader()
     workflow_options, workflows_cfg = load_workflows(config_loader)
-
     if not workflow_options:
         st.warning("No workflows available to select.")
         st.stop()
@@ -244,9 +244,7 @@ def main():
         else:
             # Start the pipeline
             st.session_state.is_running = True
-            st.session_state.status_messages = [
-                "🚀 Workflow initiated..."
-            ]  # Start fresh
+            st.session_state.status_messages = []  # Start completely fresh
             st.session_state.final_result = None
             st.session_state.update_queue = queue.Queue()
 
@@ -270,84 +268,67 @@ def main():
             st.rerun()
 
     # Display Area for updates and results
-    status_container = st.container()
-    result_container = st.container()
+    status_col, result_col = st.columns(2)
 
-    # Status display logic
-    with status_container:
-        if st.session_state.is_running:
-            st.subheader("Live Workflow Status")
-        elif not st.session_state.is_running and st.session_state.status_messages:
-            st.subheader("Workflow Status (Completed)")
+    with status_col:
+        st.subheader("Workflow Status")
 
-        # Display accumulated messages in chronological order
-        if st.session_state.status_messages:
-            for msg in st.session_state.status_messages:
-                st.markdown(msg)  # Markdown for formatting
+        # Use a container to group the spinner and the messages
+        status_display_container = st.container()
 
-        # Spinner and queue processing logic (only when running)
-        if st.session_state.is_running:
-            with st.spinner(f"Workflow '{selected_wf_name}' running..."):
-                new_messages = False
+        # Show spinner above the log while running
+        with status_display_container:
+            if st.session_state.is_running:
+                st.spinner(f"Workflow '{selected_wf_name}' running...")
 
-                # Process updates from the queue
-                while not st.session_state.update_queue.empty():
-                    try:
-                        update = st.session_state.update_queue.get_nowait()
-                        formatted_msg = format_update_message(update)
-                        if formatted_msg:
-                            st.session_state.status_messages.append(formatted_msg)
-                            new_messages = True
+            # Display messages using markdown - ensure it redraws correctly
+            status_markdown = "  \n".join(st.session_state.status_messages)
+            st.markdown(status_markdown, unsafe_allow_html=True)
 
-                        # Check for pipeline end message
-                        if update.get("type") == "pipeline_end":
-                            logger.info("Received pipeline_end signal in UI.")
-                            st.session_state.is_running = False
-                            st.session_state.final_result = update.get(
-                                "result", {"status": "completed but no result provided"}
-                            )
+    with result_col:
+        st.subheader("Final Output")
+        result_placeholder = st.empty()  # Placeholder for the result
 
-                            # Clean up thread and queue references
-                            st.session_state.pipeline_thread = None
-                            st.session_state.update_queue = None
-                            new_messages = True  # Force final update display
-                            break  # Exit queue processing loop
+    # Update processing and display loop (runs on each rerun)
+    new_messages_processed = False
 
-                    except queue.Empty:
-                        break  # No more messages for now
-                    except Exception as e:
-                        logger.error(
-                            f"Error processing update queue: {e}", exc_info=True
-                        )
-                        st.session_state.status_messages.append(
-                            f"❌ Error processing UI update: {e}"
-                        )
-                        new_messages = True
+    # Process updates from the queue while running
+    if st.session_state.is_running and st.session_state.update_queue:
+        while not st.session_state.update_queue.empty():
+            try:
+                update = st.session_state.update_queue.get_nowait()
+                formatted_msg = format_update_message(update)
+                if formatted_msg:
+                    st.session_state.status_messages.append(formatted_msg)
+                    new_messages_processed = True
 
-                # If still running, schedule a re-run to check the queue again
-                if st.session_state.is_running:
-                    time.sleep(0.2)  # Small delay to prevent excessive CPU usage
-                    st.rerun()
+                if update.get("type") == "pipeline_end":
+                    logger.info("Received pipeline_end signal in UI.")
+                    st.session_state.is_running = False
+                    st.session_state.final_result = update.get(
+                        "result", {"status": "completed but no result provided"}
+                    )
+                    st.session_state.pipeline_thread = None  # Clean thread ref
+                    st.session_state.update_queue = None  # Clean queue ref
+                    new_messages_processed = True  # Ensure final state is shown
+                    break
 
-                # If we processed new messages OR the pipeline just finished, rerun immediately
-                elif new_messages:
-                    st.rerun()
+            except queue.Empty:
+                break
+            except Exception as e:
+                logger.error(f"Error processing update queue: {e}", exc_info=True)
+                st.session_state.status_messages.append(
+                    f"❌ Error processing UI update: {e}"
+                )
+                new_messages_processed = True
 
-        # elif not st.session_state.is_running and st.session_state.status_messages:
-        #     # Show final status if not running but messages exist (previous run)
-        #     st.subheader("Workflow Status (Completed)")
-        #     for msg in reversed(st.session_state.status_messages):
-        #         st.markdown(msg)
-
-    with result_container:
-        if st.session_state.final_result:
-            st.divider()
-            st.subheader("Final Output")
+    # Display final result (only when not running and result exists)
+    with result_placeholder.container():
+        if not st.session_state.is_running and st.session_state.final_result:
             final_output = st.session_state.final_result
             if isinstance(final_output, dict):
                 if "error" in final_output:
                     st.error(f"Workflow ended with error: {final_output.get('error')}")
-                    # Optionally show raw output if provided on error
                     if "raw_output" in final_output:
                         st.text_area(
                             "Raw Output (on error):",
@@ -358,11 +339,21 @@ def main():
                     st.success("Workflow completed successfully.")
                     st.json(final_output)
             else:
-                # Handle unexpected final result format
                 st.warning("Workflow completed, but final output format is unexpected.")
                 st.write(final_output)
+        elif st.session_state.is_running:
+            st.info("Waiting for workflow to complete...")
+
+    # Trigger re-run if needed
+    if st.session_state.is_running:
+        # If running, schedule a rerun to check the queue again
+        time.sleep(0.2)
+        st.rerun()
+    elif new_messages_processed:
+        # If not running, but we just processed messages (likely the final ones), rerun one last time to ensure the final state (result/error) is displayed correctly
+        st.rerun()
 
 
-# --- Run the App ---
+# Run the app
 if __name__ == "__main__":
     main()
