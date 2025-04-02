@@ -279,11 +279,11 @@ def main():
         # Show spinner above the log while running
         with status_display_container:
             if st.session_state.is_running:
-                st.spinner(f"Workflow '{selected_wf_name}' running...")
+                st.markdown(f"⏳ Workflow '{selected_wf_name}' running...")
 
             # Display messages using markdown - ensure it redraws correctly
-            status_markdown = "  \n".join(st.session_state.status_messages)
-            st.markdown(status_markdown, unsafe_allow_html=True)
+            status_markdown = " \n\n".join(st.session_state.status_messages)
+            st.markdown(status_markdown, unsafe_allow_html=False)
 
     with result_col:
         st.subheader("Final Output")
