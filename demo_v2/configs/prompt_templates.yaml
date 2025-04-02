@@ -1,0 +1,103 @@
+- template_id: QUERY_LIST_PROMPT
+  template_name: Query List Generator Instruction
+  purpose: Instruct LLM to generate a list of search queries.
+  required_inputs: N_searches
+  output_format: Plain text list of queries
+  template_text: "Generate a list of simple search queries related to the schema that you want to populate. Do not include descriptions about your generated search queries - your response should ONLY be a list of {N_searches} search queries and nothing else."
+
+- template_id: QUERY_GENERATOR_PROMPT
+  template_name: Query Generator Context
+  purpose: Provide context and schema for query generation.
+  required_inputs: company, schema, N_searches
+  output_format: Used as input context for LLM
+  template_text: |
+    Here is the company you are researching: {company}
+
+    Generate at most {N_searches} search queries that will help gather the following information:
+
+    <schema>
+    {schema}
+    </schema>
+
+    Your query should:
+    1. Focus on finding factual, up-to-date company information
+    2. Target official sources, news, and reliable business databases
+    3. Prioritize finding information that matches the schema requirements
+    4. Include the company name and relevant business terms
+    5. Be specific enough to avoid irrelevant results but simple enough to be short and concise
+
+    Create a focused query that will maximize the chances of finding schema-relevant information.
+
+- template_id: RESEARCH_PROMPT
+  template_name: Research Notes Compiler
+  purpose: Instruct LLM to compile notes from scraped web content based on a schema.
+  required_inputs: company, schema, context
+  output_format: Plain text research notes
+  template_text: |
+    You are doing research on a company, {company}.
+
+    The following schema shows the type of information we're interested in:
+
+    <schema>
+    {schema}
+    </schema>
+
+    You have just scraped website content. Your task is to take clear, organized notes about the company, focusing on topics relevant to our interests. You will do this using the scraped website content ONLY.
+
+    <Website contents>
+    {context}
+    </Website contents>
+
+    Please provide detailed research notes that:
+    1. Are well-organized and easy to read
+    2. Focus on topics mentioned in the schema
+    3. Include specific facts, dates, and figures when available
+    4. Maintain accuracy of the original content
+    5. Note when important information appears to be missing or unclear
+
+    Remember: Don't try to format the output to match the schema - just take clear notes that capture all relevant information.
+
+- template_id: EXTRACTION_PROMPT
+  template_name: Schema Extractor
+  purpose: Instruct LLM to extract structured data (entities, relationships) from research notes based on a specific graph-oriented schema.
+  required_inputs: schema, research
+  output_format: JSON matching the provided schema
+  template_text: |
+    You are an AI data extraction specialist. Your task is to meticulously read the following research notes and extract information to populate a knowledge graph structure defined by the JSON schema below.
+
+    Focus on identifying distinct entities (like the main Company, its Products, mentioned Competitors, and Operating Regions/Countries) and their attributes based *only* on the provided notes.
+
+    Target Schema:
+    <schema>
+    {schema}
+    </schema>
+
+    Research Notes:
+    <web_research_notes>
+    {research}
+    </web_research_notes>
+
+    **Instructions:**
+    1.  Adhere strictly to the target schema structure, data types, and required fields.
+    2.  Extract information *only* from the provided Research Notes. Do not infer or add external knowledge.
+    3.  If information for a field is not present in the notes, omit the field (unless it's required, in which case use `null` or an appropriate placeholder if allowed by the schema, otherwise note the omission if possible within the schema design, e.g., an empty list).
+    4.  Ensure arrays contain items matching the specified item schema (e.g., `products` should be a list of product objects).
+    5.  Your entire response must be **only** the valid JSON object conforming to the schema. Do not include any introductory text, explanations, apologies, markdown formatting (` ```json ... ``` `), or concluding remarks outside the JSON structure itself.
+
+- output_format: JSON with regions, countries and enterprises
+  purpose: Extract market information in JSON format
+  required_inputs: product_name,product_description,target_regions
+  template_id: JSON_MARKET
+  template_name: JSON Market Analysis
+  template_text: "Analyze the market potential for {product_name} ({product_description})\
+    \ in the following regions: {target_regions}\n\nFor each region, please provide:\n\
+    1. Estimated market size (in number of potential users)\n2. Top 5 countries within\
+    \ each region with the highest potential\n3. Key enterprises in each country that\
+    \ would be potential customers\n\nReturn your response in JSON format using this\
+    \ structure:\n{\n  \"regions\": [\n    {\n      \"name\": \"Region name\",\n \
+    \     \"market_size\": number,\n      \"countries\": [\n        {\n          \"\
+    name\": \"Country name\",\n          \"potential_users\": number,\n          \"\
+    enterprises\": [\"Enterprise 1\", \"Enterprise 2\", ...]\n        },\n       \
+    \ ...\n      ]\n    },\n    ...\n  ]\n}\n\n\nReturn your response **strictly as\
+    \ valid JSON** without any additional text, explanation, or formatting outside\
+    \ of the JSON format. Make sure all elements are correctly structured."

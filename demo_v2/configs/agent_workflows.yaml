@@ -1,0 +1,34 @@
+- agent_sequence: MARKET_OVERVIEW > COMPETITOR_ID > COMPETITOR_DETAIL > TREND_ANALYZER > RELATIONSHIP_AGENT
+  description: First-time analysis of product market
+  output_destination: Market Intelligence Graph
+  trigger_condition: Product definition updated OR Manual trigger
+  workflow_id: INITIAL_ANALYSIS
+  workflow_name: Initial Market Intelligence
+
+- agent_sequence: COMPETITOR_ID > COMPETITOR_DETAIL > RELATIONSHIP_AGENT
+  description: Update competitor information
+  output_destination: Competitor nodes in graph
+  trigger_condition: Weekly schedule OR New competitor detected
+  workflow_id: COMPETITOR_UPDATE
+  workflow_name: Competitor Intelligence Update
+
+- agent_sequence: MARKET_OVERVIEW > REGION_EXTRACTOR > RELATIONSHIP_AGENT
+  description: Update regional market information
+  output_destination: Region and Country nodes in graph
+  trigger_condition: Monthly schedule OR Market change detected
+  workflow_id: MARKET_UPDATE
+  workflow_name: Market Information Update
+
+- agent_sequence: TREND_ANALYZER > RELATIONSHIP_AGENT
+  description: Update market trend information
+  output_destination: MarketTrend nodes in graph
+  trigger_condition: Quarterly schedule OR New trend detected
+  workflow_id: TREND_UPDATE
+  workflow_name: Market Trend Update
+  
+- agent_sequence: All agents in sequence
+  description: Complete refresh of all market intelligence
+  output_destination: Entire Market Intelligence Graph
+  trigger_condition: Semi-annual schedule OR Major market disruption
+  workflow_id: FULL_REFRESH
+  workflow_name: Complete Intelligence Refresh

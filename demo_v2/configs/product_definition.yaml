@@ -1,0 +1,5 @@
+- category: Voice Processing
+  description: Processes voice in the network so that it is more intelligible to the people who are in the conversation. Since the processing is done in the network, the end user does not need any special app/device.
+  name: Clarity
+  target_customer: Telecom service providers
+  target_regions: Americas, Asia, EMEA

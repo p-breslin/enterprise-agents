@@ -1,0 +1,29 @@
+- agent_id: MARKET_OVERVIEW
+  priority: high
+  prompt_template: MARKET_ANALYSIS
+  target_entity: Region,Country,Enterprise
+  task_type: market_analysis
+
+- agent_id: COMPETITOR_DETAIL
+  priority: high
+  prompt_template: COMPETITOR_ANALYSIS
+  target_entity: Competitor
+  task_type: competitor_analysis
+
+- agent_id: TREND_ANALYZER
+  priority: medium
+  prompt_template: TREND_ANALYSIS
+  target_entity: MarketTrend
+  task_type: trend_analysis
+
+- agent_id: MARKET_OVERVIEW
+  priority: high
+  prompt_template: JSON_MARKET
+  target_entity: Region,Country,Enterprise
+  task_type: json_market_analysis
+  
+- agent_id: RELATIONSHIP_AGENT
+  priority: medium
+  prompt_template: RELATIONSHIP_EXTRACTION
+  target_entity: All relationship types
+  task_type: relationship_mapping
