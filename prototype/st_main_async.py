@@ -7,6 +7,7 @@ import streamlit as st
 from typing import Dict, Any, Optional, Tuple
 from scripts.config_loader import ConfigLoader
 from scripts.orchestrator import run_research_pipeline
+from utilities.helpers import format_agent_message
 
 
 logging.basicConfig(
@@ -16,11 +17,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# --- Streamlit Page Configuration ---
+# –– Streamlit Page Configuration ––
 st.set_page_config(page_title="Enterprise Agents", layout="wide")
 
 
-# --- Helper Functions ---
+# Streamlit caching
 @st.cache_resource
 def get_config_loader() -> ConfigLoader:
     """
@@ -67,66 +68,8 @@ def format_update_message(update: Dict[str, Any]) -> Optional[str]:
     """
     Formats the update dictionary into a user-friendly string.
     """
-    update_type = update.get("type", "unknown")
-    agent_name = update.get("agent_name", "")
-    message = update.get("message", "")
-    event_type = update.get("event_type", "")
-
-    icon_map = {
-        "event": "📬",
-        "dispatch": "🚚",
-        "agent_action": "🧠",
-        "agent_log": "ℹ️",
-        "warning": "⚠️",
-        "error": "❌",
-        "pipeline_end": "🏁",
-    }
-    icon = icon_map.get(update_type, "➡️")
-    formatted = f"{icon} "
-
-    # EVENT
-    if update_type == "event":
-        formatted += f"**Event:** `{event_type}`"
-
-    # DSIPATCH
-    elif update_type == "dispatch":
-        formatted += f"Dispatching `{event_type}` to **{agent_name}**..."
-
-    # ACTION
-    elif update_type == "agent_action":
-        formatted += f"**{agent_name}**: {message}"
-
-    # MESSAGE
-    elif update_type == "agent_log":
-        formatted += f"*{agent_name} Log*: {message}"
-
-    # WARNING
-    elif update_type == "warning":
-        formatted += f"**Warning:** {message}"
-
-    # ERROR
-    elif update_type == "error":
-        formatted += f"**ERROR:** {message}"
-
-    # COMPLETION
-    elif update_type == "pipeline_end":
-        status = update.get("status")
-        end_message = update.get("message", "Workflow ended.")
-        if status == "success":
-            formatted += f"✅ **Workflow Success:** {end_message}"
-        else:
-            formatted += f"❌ **Workflow Failed:** {end_message}"
-    else:
-        # Generic fallback
-        formatted += f"{update_type}: {message or event_type}"
-
-    # Final check to prevent returning just an icon
-    if formatted.strip() == icon_map.get(update_type, "➡️"):
-        logger.warning(
-            f"Skipping effectively empty formatted message for update: {update}"
-        )
-        return None
-    return formatted.strip()  # Remove leading/trailing whitespace
+    formatted = format_agent_message(update)
+    return formatted
 
 
 def pipeline_thread_target(company: str, workflow_id: str, q: queue.Queue):
@@ -279,11 +222,11 @@ def main():
         # Show spinner above the log while running
         with status_display_container:
             if st.session_state.is_running:
-                st.markdown(f"⏳ Workflow '{selected_wf_name}' running...")
+                st.markdown(f"Workflow '{selected_wf_name}' running...")
 
-            # Display messages using markdown - ensure it redraws correctly
-            status_markdown = " \n\n".join(st.session_state.status_messages)
-            st.markdown(status_markdown, unsafe_allow_html=False)
+            # Display messages using markdown
+            status_html = "<br>".join(st.session_state.status_messages)
+            st.markdown(status_html, unsafe_allow_html=True)
 
     with result_col:
         st.subheader("Final Output")
@@ -318,7 +261,7 @@ def main():
             except Exception as e:
                 logger.error(f"Error processing update queue: {e}", exc_info=True)
                 st.session_state.status_messages.append(
-                    f"❌ Error processing UI update: {e}"
+                    f"Error processing UI update: {e}"
                 )
                 new_messages_processed = True
 

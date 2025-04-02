@@ -98,3 +98,68 @@ def get_api_key(service: str) -> str:
     if not key:
         raise ValueError(f"Missing environment variable: {env_key}")
     return key
+
+
+def agent_color_code(agent_name):
+    """
+    Defines a HTML color for the agent / process in the UI display.
+    """
+    AGENT_COLORS = {
+        "Orchestrator": "#0066cc",
+        "GraphQueryAgent": "#1b8a5a",
+        "QueryGenerationAgent": "#c57f00",
+        "WebSearchAgent": "#8e44ad",
+        "ResearchAgent": "#d35400",
+        "ExtractionAgent": "#2c3e50",
+        "GraphUpdateAgent": "#e74c3c",
+    }
+    color = AGENT_COLORS.get(agent_name, "#333")
+    return f'<span style="color:{color}; font-weight:600;">{agent_name}</span>'
+
+
+def format_agent_message(update):
+    """
+    Formats the agent messages as nice HTML for the UI display.
+    """
+    update_type = update.get("type", "unknown")
+    agent_name = update.get("agent_name", "")
+    message = update.get("message", "")
+    event_type = update.get("event_type", "")
+    status = update.get("status", "")
+
+    agent_html = agent_color_code(agent_name)
+
+    # EVENT
+    if update_type == "event":
+        return f"<div><strong>Event:</strong> <code>{event_type}</code></div>"
+
+    # DISPATCH
+    elif update_type == "dispatch":
+        return f"<div>Dispatching <code>{event_type}</code> to {agent_html}...</div>"
+
+    # ACTION
+    elif update_type == "agent_action":
+        return f"<div>{agent_html}: {message}</div>"
+
+    # LOG
+    elif update_type == "agent_log":
+        return f"<div><em>{agent_html} Log:</em> {message}</div>"
+
+    # WARNING
+    elif update_type == "warning":
+        return f'<div style="color:orange;"><strong>Warning:</strong> {message}</div>'
+
+    # ERROR
+    elif update_type == "error":
+        return f'<div style="color:red;"><strong>ERROR:</strong> {message}</div>'
+
+    # COMPLETION
+    elif update_type == "pipeline_end":
+        if status == "success":
+            return f'<div style="color:green;"><strong>Workflow Success:</strong> {update.get("message", "")}</div>'
+        else:
+            return f'<div style="color:red;"><strong>Workflow Failed:</strong> {update.get("message", "")}</div>'
+
+    # Fallback
+    if message or event_type:
+        return f"<div>{message or event_type}</div>"
