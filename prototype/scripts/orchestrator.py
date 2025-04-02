@@ -246,10 +246,7 @@ class Orchestrator:
         Reports status via the UI callbacks.
         """
 
-        # Report initial trigger
-        self._send_ui_update({"type": "event", "event_type": "START_RESEARCH"})
-
-        # –– Initiate the pipeline ––
+        # Initiate the pipeline
         logger.info("Agentic System Initiating...")
         await self.event_queue.put(Event(EventType.START_RESEARCH))
 
