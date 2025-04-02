@@ -82,8 +82,8 @@ class BaseAgent:
         """
         Helper method to publish an event to the queue and report the action via the UI callback.
         """
-        # Report the intention BEFORE putting on queue
-        self.report_status(
-            ui_callback, f"Publishing event: {event.type.name}", type="event"
-        )
+        # Report the intention BEFORE putting on queue (redundant repetition)
+        # self.report_status(
+        #     ui_callback, f"Publishing event: {event.type.name}", type="event"
+        # )
         await event_queue.put(event)
