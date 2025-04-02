@@ -117,7 +117,7 @@ def agent_color_code(agent_name):
     return f'<span style="color:{color}; font-weight:600;">{agent_name}</span>'
 
 
-def format_agent_message(update):
+def format_agent_message(update, logs=False):
     """
     Formats the agent messages as nice HTML for the UI display.
     """
@@ -131,19 +131,26 @@ def format_agent_message(update):
 
     # EVENT
     if update_type == "event":
-        return f"<div><strong>Event:</strong> <code>{event_type}</code></div>"
+        # horizontal line above event
+        return (
+            "<hr style='border: none; border-top: 1px dashed #ccc; margin-top: 1.5em;' />"
+            f"<div><strong>Event:</strong> <code>{event_type}</code></div>"
+        )
 
     # DISPATCH
     elif update_type == "dispatch":
-        return f"<div>Dispatching <code>{event_type}</code> to {agent_html}...</div>"
+        return f"<div style='margin-left: 1em;'><em>Dispatching</em>  <code>{event_type}</code> to {agent_html}...</div>"
 
     # ACTION
     elif update_type == "agent_action":
-        return f"<div>{agent_html}: {message}</div>"
+        return f"<div style='margin-left: 1em;'>{agent_html}: {message}</div>"
 
     # LOG
     elif update_type == "agent_log":
-        return f"<div><em>{agent_html} Log:</em> {message}</div>"
+        if logs:
+            return f"<div style='margin-left: 1em;'><em>{agent_html} Log:</em> {message}</div>"
+        else:
+            return None
 
     # WARNING
     elif update_type == "warning":
