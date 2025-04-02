@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, Optional, Callable, List
+from typing import Dict, Any, Optional, Callable
 
 from .base_agent import BaseAgent
 from scripts.events import Event, EventType

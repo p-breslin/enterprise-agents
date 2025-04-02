@@ -3,7 +3,7 @@ from .base_agent import BaseAgent
 from scripts.state import OverallState
 from scripts.events import Event, EventType
 from utilities.graph_db import ArangoDBManager
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Optional, Callable
 
 
 logger = logging.getLogger(__name__)
