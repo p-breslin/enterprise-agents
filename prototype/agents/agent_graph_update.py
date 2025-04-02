@@ -113,14 +113,14 @@ class GraphUpdateAgent(BaseAgent):
 
         try:
             self.report_status(ui_callback, "Starting graph update process...")
-            company_doc = await self._process_company(extracted_data)
+            company_doc = await self._process_company(extracted_data, ui_callback)
             if not company_doc:
                 raise ValueError("Failed to process main company entity.")
 
             # process product_docs, competitor_docs, region_docs
-            await self._process_products(extracted_data, company_doc)
-            await self._process_competitors(extracted_data, company_doc)
-            await self._process_regions(extracted_data, company_doc)
+            await self._process_products(extracted_data, company_doc, ui_callback)
+            await self._process_competitors(extracted_data, company_doc, ui_callback)
+            await self._process_regions(extracted_data, company_doc, ui_callback)
 
             # If all successful, mark state as complete and publish success
             self.state.complete = True
