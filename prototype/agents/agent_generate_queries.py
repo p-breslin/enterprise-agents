@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional, Callable
 from .base_agent import BaseAgent
 
 from utilities.LLM import call_llm
-from utilities.helpers import get_prompt, get_api_key
+from utilities.helpers import get_prompt
 from scripts.state import OverallState
 from scripts.events import Event, EventType
 
@@ -98,13 +98,10 @@ class QueryGenerationAgent(BaseAgent):
             {"role": "user", "content": output_format_instructions},
         ]
 
-        # Get API key
-        openai_api_key = get_api_key(service="OPENAI")
-
         # Call LLM
         try:
             self.report_status(ui_callback, "Calling LLM for query generation...")
-            output = call_llm(openai_api_key, messages=messages)
+            output = call_llm(messages=messages)
             if "LLM Error:" in output or "ChatGPT Error:" in output:
                 raise Exception(f"LLM call failed: {output}")
 

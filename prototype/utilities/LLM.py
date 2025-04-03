@@ -1,7 +1,12 @@
 import ollama
 import logging
-from openai import OpenAI
 from typing import List, Dict
+from utilities.helpers import get_api_key
+
+from openai import OpenAI
+from google import genai
+from google.genai import types
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,49 +29,67 @@ def call_local_llm(messages):
 
 
 def call_llm(
-    api_key: str,
     messages: List[Dict[str, str]],
-    model: str = "gpt-4o-mini-2024-07-18",
+    provider: str = "OPENAI",
+    model: str = None,
     json_mode: bool = False,
 ) -> str:
     """
-    Sends a list of messages (role + content) to an OpenAI LLM.
-
-    Args:
-        api_key: The OpenAI API key.
-        messages: A list of message dictionaries (e.g., [{"role": "user", "content": "..."}]).
-        model: The OpenAI model to use.
-        json_mode: If True, requests JSON output format from the API.
-
-    Returns:
-        The content of the LLM's response as a string.
+    Sends a list of messages (role + content) to an LLM provider (OpenAI or Google). Returns the content of the LLM's response as a string.
     """
-    client = OpenAI(api_key=api_key)
-    response_format_param = None
-    if json_mode:
-        logger.debug("Requesting JSON mode from OpenAI API.")
-        response_format_param = {"type": "json_object"}
+    api_key = get_api_key(service=provider.upper())
 
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_format=response_format_param,
-        )
-        content = response.choices[0].message.content
+    if provider.lower() == "openai":
+        model = model or "gpt-4o-mini-2024-07-18"
+        client = OpenAI(api_key=api_key)
 
+        response_format_param = {"type": "json_object"} if json_mode else None
+
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                response_format=response_format_param,
+            )
+            content = response.choices[0].message.content
+            logger.debug(
+                f"OpenAI response received (tokens used: {response.usage.total_tokens})"
+            )
+            return content.strip()
+        except Exception as e:
+            logger.error(f"OpenAI request failed: {e}")
+            return f"OpenAI Error: {str(e)}"
+
+    elif provider.lower() == "google":
+        model = model or "gemini-2.0-flash"
+        client = genai.Client(api_key=api_key)
+
+        system_instruction = None
+        contents = []
+        for m in messages:
+            if m["role"] == "system":
+                system_instruction = m["content"]
+            else:
+                contents.append(
+                    types.Content(role=m["role"], parts=[types.Part(text=m["content"])])
+                )
+
+        config = types.GenerateContentConfig()
+        if system_instruction:
+            config.system_instruction = system_instruction
         if json_mode:
-            logger.debug(
-                f"OpenAI structured response received (length: {len(content)})."
-            )
-        else:
-            logger.debug(
-                f"OpenAI unstructured response received (length: {len(content)})."
-            )
+            config.response_mime_type = "application/json"
 
-        logger.debug(f"Token usage: {response.usage.total_tokens}")
-        return content.strip()
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+            return response.candidates[0].content.parts[0].text.strip()
+        except Exception as e:
+            logger.error(f"Gemini request failed: {e}")
+            return f"Google Gemini Error: {str(e)}"
 
-    except Exception as e:
-        logger.error(f"ChatGPT request failed: {e}")
-        return f"ChatGPT Error: {str(e)}"
+    else:
+        raise ValueError("Invalid provider specified. Must be 'openai' or 'google'.")

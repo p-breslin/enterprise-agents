@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional, Callable
 
 from .base_agent import BaseAgent
 from utilities.LLM import call_llm
-from utilities.helpers import get_prompt, get_api_key
+from utilities.helpers import get_prompt
 from scripts.state import OverallState
 from scripts.events import Event, EventType
 
@@ -110,12 +110,8 @@ class ExtractionAgent(BaseAgent):
                 {"role": "user", "content": instructions},
             ]
 
-            # API key
-            openai_api_key = get_api_key(service="OPENAI")
-
             # Call LLM
             output = call_llm(
-                openai_api_key,
                 messages=messages,
                 json_mode=True,
             )
