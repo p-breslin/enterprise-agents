@@ -60,7 +60,7 @@ def call_llm(
             logger.error(f"OpenAI request failed: {e}")
             return f"OpenAI Error: {str(e)}"
 
-    elif provider.lower() == "google":
+    elif provider.lower() == "gemini":
         model = model or "gemini-2.0-flash"
         client = genai.Client(api_key=api_key)
 

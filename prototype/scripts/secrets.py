@@ -11,6 +11,7 @@ class Secrets:
 
     TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
     # ArangoDB Connection Details
     ARANGO_HOST: str = field(default=os.getenv("ARANGO_HOST"))
