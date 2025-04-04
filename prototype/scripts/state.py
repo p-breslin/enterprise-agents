@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 class OverallState:
     """
     The dynamically changing overall state of the system.
+    default_factory ensures each instance gets a new copy.
     """
 
     # Company to research as inputted by the user
@@ -21,7 +22,7 @@ class OverallState:
     # Stores results from web search tool
     search_results: list[Dict] = field(default_factory=list)
 
-    # LLM research; Annotated[...] ensures items are added instead of replaced, default_factory ensures each instance gets a new copy
+    # LLM research; Annotated[...] ensures items are added instead of replaced
     research: Annotated[list, operator.add] = field(default_factory=list)
 
     # Structured output
