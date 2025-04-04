@@ -124,6 +124,7 @@ class Orchestrator:
             config=self.cfg,
             arangodb_manager=self.arangodb_manager,
         )
+        self._log(f"Created {len(self.agents)} agents.")
 
         # Build the routing map between EventType and the corresponding agent
         self.agent_map = self._map_events_to_agents(self.agents)
