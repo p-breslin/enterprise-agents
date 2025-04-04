@@ -4,16 +4,14 @@ from dataclasses import dataclass, field
 
 
 class EventType(str, enum.Enum):
-    """Defines a set of named, constant values."""
+    """
+    Defines all recognized event types in the pipeline.
+    """
 
     START_RESEARCH = "START_RESEARCH"
 
     # Graph query results
     GRAPH_DATA_FOUND = "GRAPH_DATA_FOUND"
-
-    # Vector DB (no longer needed)
-    DB_CHECK_DONE = "DB_CHECK_DONE"
-    NEED_QUERIES = "NEED_QUERIES"
 
     # Need for external data gathering
     NEED_EXTERNAL_DATA = "NEED_EXTERNAL_DATA"
@@ -34,7 +32,9 @@ class EventType(str, enum.Enum):
 
 @dataclass
 class Event:
-    """Stores event data."""
+    """
+    A message passed between agents in the system (stores event info).
+    """
 
     # Identifier for the type of event
     type: EventType
