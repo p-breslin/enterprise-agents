@@ -1,41 +1,79 @@
-- attributes: priority:string,marketShare:number
-  description: Indicates product is sold in a geographic region
-  inference_rules: If Product and Region are mentioned together, infer sold_in relationship
-  name: sold_in
+- name: sold_in
   source: Product
   target: Region
+  description: Indicates product is sold in a geographic region
+  inference_rules: If Product and Region are mentioned together, infer sold_in relationship
+  attributes:
+    - name: priority
+      type: string
+    - name: marketShare
+      type: number
 
-- attributes: importance:string
-  description: Region contains specific countries
-  inference_rules: If Country is mentioned within discussion of a Region, infer contains relationship
-  name: contains
+- name: contains
   source: Region
   target: Country
+  description: Region contains specific countries
+  inference_rules: If Country is mentioned within discussion of a Region, infer contains relationship
+  attributes:
+    - name: importance
+      type: string
 
-- attributes: coverage:number,userBase:number
-  description: Country has telecom operators
-  inference_rules: If Enterprise is described as operating in a Country, infer has_operator relationship
-  name: has_operator
+- name: has_operator
   source: Country
   target: Enterprise
+  description: Country has telecom operators
+  inference_rules: If Enterprise is described as operating in a Country, infer has_operator relationship
+  attributes:
+    - name: coverage
+      type: number
+    - name: userBase
+      type: number
 
-- attributes: competitivePosition:string
-  description: Product competes with other companies
-  inference_rules: If a company is described with strengths/weaknesses in the same domain, infer competes_with relationship
-  name: competes_with
+- name: competes_with
   source: Product
   target: Competitor
+  description: Product competes with other companies
+  inference_rules: If a company is described with strengths/weaknesses in the same domain, infer competes_with relationship
+  attributes:
+    - name: competitivePosition
+      type: string
 
-- attributes: impactLevel:string,timeframe:string
-  description: Product is influenced by market trends
-  inference_rules: If a trend is described in the context of the product domain, infer influenced_by relationship
-  name: influenced_by
+- name: influenced_by
   source: Product
   target: MarketTrend
+  description: Product is influenced by market trends
+  inference_rules: If a trend is described in the context of the product domain, infer influenced_by relationship
+  attributes:
+    - name: impactLevel
+      type: string
+    - name: timeframe
+      type: string
 
-- attributes: customerBase:number,revenue:number
-  description: Enterprise resells the product
-  inference_rules: If Enterprise is described as a provider or reseller, infer resells relationship
-  name: resells
+- name: resells
   source: Enterprise
   target: Product
+  description: Enterprise resells the product
+  inference_rules: If Enterprise is described as a provider or reseller, infer resells relationship
+  attributes:
+    - name: customerBase
+      type: number
+    - name: revenue
+      type: number
+
+- name: develops
+  source: Company
+  target: Product
+  description: Company develops the product
+  inference_rules: If a company is listed as building a product, infer develops relationship
+  attributes:
+    - name: year_developed
+      type: number
+
+- name: operates_in
+  source: Company
+  target: Region
+  description: Company operates in a region
+  inference_rules: If company presence in a country or region is mentioned, infer operates_in relationship
+  attributes:
+    - name: presence_level
+      type: string

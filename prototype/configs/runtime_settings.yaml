@@ -13,3 +13,17 @@ N_revisions: 0
 
 # Choice of output schema to use
 schema_id_to_use: "COMPANY_OVERVIEW_GRAPH"
+
+# Define mappings from schema keys to graph collection names 
+# Should match 'name' field in entity_types.yaml and relationship_types.yaml
+collection_mappings:
+  entities:
+    company: Company
+    product: Product
+    competitor: Competitor
+    region: Region
+    
+  relationships:
+    develops: develops
+    competes_with: competes_with
+    operates_in: operates_in

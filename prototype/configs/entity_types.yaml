@@ -1,36 +1,94 @@
-- attributes: id:string,name:string,description:string,category:string,targetMarkets:string[]
+- name: Product
   description: The product being analyzed
   examples: '{"name": "Clarity", "category": "Voice Processing"}'
-  name: Product
-  
-- attributes: id:string,name:string,marketSize:number,countries:string[]
+  attributes:
+    - name: id
+      type: string
+    - name: name
+      type: string
+    - name: description
+      type: string
+    - name: category
+      type: string
+    - name: targetMarkets
+      type: string[]
+
+- name: Region
   description: Geographic regions for market analysis
   examples: '{"name": "Americas", "marketSize": 120000000}'
-  name: Region
-  
-- attributes: id:string,name:string,population:number,potentialUsers:number
+  attributes:
+    - name: id
+      type: string
+    - name: name
+      type: string
+    - name: marketSize
+      type: number
+    - name: countries
+      type: string[]
+
+- name: Country
   description: Individual countries within regions
   examples: '{"name": "United States", "potentialUsers": 50000000}'
-  name: Country
-  
-- attributes: id:string,name:string,type:string,operatingCountries:string[],userBase:number
+  attributes:
+    - name: id
+      type: string
+    - name: name
+      type: string
+    - name: population
+      type: number
+    - name: potentialUsers
+      type: number
+
+- name: Enterprise
   description: Potential business customers/resellers
   examples: '{"name": "Verizon", "type": "Telecom", "userBase": 30000000}'
-  name: Enterprise
-  
-- attributes: id:string,name:string,productOfferings:string[],strengths:string[],weaknesses:string[]
+  attributes:
+    - name: id
+      type: string
+    - name: name
+      type: string
+    - name: type
+      type: string
+    - name: operatingCountries
+      type: string[]  # list of country names
+    - name: userBase
+      type: number
+
+- name: Competitor
   description: Companies offering competing products
   examples: '{"name": "AudioClear", "strengths": ["Established partnerships"]}'
-  name: Competitor
-  
-- attributes: id:string,name:string,description:string,timeframe:string,impact:string
+  attributes:
+    - name: id
+      type: string
+    - name: name
+      type: string
+    - name: productOfferings
+      type: string[]
+    - name: strengths
+      type: string[]
+    - name: weaknesses
+      type: string[]
+
+- name: MarketTrend
   description: Emerging trends affecting the product
   examples: '{"name": "Edge-based processing", "timeframe": "1-2 years"}'
-  name: MarketTrend
+  attributes:
+    - name: id
+      type: string
+    - name: name
+      type: string
+    - name: description
+      type: string
+    - name: timeframe
+      type: string
+    - name: impact
+      type: string
 
 - name: Company
   description: Represents the primary business entity being researched or a competitor.
-  attributes: 
-    name: string
-    description: string
   examples: '{"name": "Nvidia Corporation", "description": "Designs GPUs for gaming and professional markets..."}'
+  attributes:
+    - name: name
+      type: string
+    - name: description
+      type: string

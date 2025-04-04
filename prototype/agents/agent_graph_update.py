@@ -9,19 +9,6 @@ from utilities.helpers import normalize_unique_items
 
 logger = logging.getLogger(__name__)
 
-# Define mappings from schema keys to graph collection names (could load from config later). These should match the 'name' field in entity_types.yaml and relationship_types.yaml
-ENTITY_COLLECTION_MAP = {
-    "company": "Company",
-    "product": "Product",
-    "competitor": "Competitor",
-    "region": "Region",
-}
-RELATIONSHIP_COLLECTION_MAP = {
-    "develops": "develops",  # Company -> Product
-    "competes_with": "competes_with",  # Company -> Competitor
-    "operates_in": "operates_in",  # Company -> Region
-}
-
 
 class GraphUpdateAgent(BaseAgent):
     """
@@ -47,6 +34,12 @@ class GraphUpdateAgent(BaseAgent):
         self.arangodb_manager = arangodb_manager
         self.entity_types = self.config.get("entity_types", {})
         self.relationship_types = self.config.get("relationship_types", {})
+
+        # Load entity and relationship mappings from runtime_settings
+        runtime_settings = self.config.get("runtime_settings", {})
+        collection_mappings = runtime_settings.get("collection_mappings", {})
+        self.entity_map = collection_mappings.get("entities", {})
+        self.relationship_map = collection_mappings.get("relationships", {})
 
     async def handle_event(
         self,
@@ -91,6 +84,12 @@ class GraphUpdateAgent(BaseAgent):
         if not self.arangodb_manager:
             self.update_status("ArangoDB manager unavailable.", type_="error")
             raise ConnectionError("No ArangoDBManager.")
+
+        # Ensure collections before doing any operations (expects dicts)
+        self.arangodb_manager.ensure_collections(
+            [{"name": name} for name in self.entity_types],
+            [{"name": name} for name in self.relationship_types],
+        )
 
         data = self.state.final_output
         if not isinstance(data, dict) or data.get("error"):
@@ -158,7 +157,7 @@ class GraphUpdateAgent(BaseAgent):
 
         # Find or create the company document
         return self.arangodb_manager.find_or_create_document(
-            collection_name=ENTITY_COLLECTION_MAP["company"],
+            collection_name=self.entity_map.get("company"),
             filter_dict={"name": name},
             document_data=doc,
         )
@@ -194,8 +193,8 @@ class GraphUpdateAgent(BaseAgent):
         items = normalize_unique_items(items, key=name_field)
 
         # Collection and edge types to use for this entity and relationship
-        collection = ENTITY_COLLECTION_MAP.get(entity_type)
-        edge_collection = RELATIONSHIP_COLLECTION_MAP.get(relationship)
+        collection = self.entity_map.get(entity_type)
+        edge_collection = self.relationship_map.get(relationship)
         company_id = company_doc.get("_id")
         self.update_status(f"Processing {len(items)} {entity_key}...")
 
@@ -250,8 +249,8 @@ class GraphUpdateAgent(BaseAgent):
         regions = normalize_unique_items(regions)
 
         # Collection and edge types to use for this entity and relationship
-        collection = ENTITY_COLLECTION_MAP.get("region")
-        edge_collection = RELATIONSHIP_COLLECTION_MAP.get("operates_in")
+        collection = self.entity_map.get("region")
+        edge_collection = self.relationship_map.get("operates_in")
         company_id = company_doc.get("_id")
         self.update_status(f"Processing {len(regions)} regions...")
 
