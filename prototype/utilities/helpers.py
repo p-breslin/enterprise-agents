@@ -107,7 +107,7 @@ def agent_color_code(agent_name):
     """
     AGENT_COLORS = {
         "Orchestrator": "#55e5e3",
-        "GraphQueryAgent": "#a1b7d4",
+        "GraphQueryAgent": "#879557",
         "QueryGenerationAgent": "#c57f00",
         "WebSearchAgent": "#8e44ad",
         "ResearchAgent": "#d35400",
