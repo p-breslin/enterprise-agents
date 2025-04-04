@@ -118,9 +118,10 @@ class ArangoDBManager:
 
             # If no match is found; insert the document and return the result
             inserted = self.db.collection(collection_name).insert(
-                document_data, overwrite=False
+                document_data, overwrite=False, return_new=True
             )
-            return inserted
+            # insert() only returns metadata; full doc if return_new=True
+            return inserted.get("new")
 
         except (AQLQueryExecuteError, DocumentInsertError) as e:
             logger.error(
@@ -168,7 +169,12 @@ class ArangoDBManager:
 
             # Build the edge payload and inserts it if not found
             edge_payload = {"_from": from_doc_id, "_to": to_doc_id, **edge_data}
-            return self.db.collection(edge_collection_name).insert(edge_payload)
+            inserted = self.db.collection(edge_collection_name).insert(
+                edge_payload, return_new=True
+            )
+
+            # insert() only returns metadata; full doc if return_new=True
+            return inserted.get("new")
 
         except (AQLQueryExecuteError, DocumentInsertError) as e:
             logger.error(
