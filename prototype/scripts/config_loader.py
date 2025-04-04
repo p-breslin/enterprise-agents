@@ -120,7 +120,6 @@ class ConfigLoader:
         """
         Purpose:
             Retrieves + parses agent sequence string for a given workflow ID.
-
         Notes:
             - Returns an ordered list of agent IDs. Returns an empty list if the ID is invalid or improperly formatted.
         """
