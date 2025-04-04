@@ -13,8 +13,12 @@ logger = logging.getLogger(__name__)
 
 class ResearchAgent(BaseAgent):
     """
-    1.  Listens for either DB_CHECK_DONE (if DB had data) or SEARCH_RESULTS_READY (if we had to do a web search).
-    2.  Compiles research notes and publishes RESEARCH_COMPILED.
+    Compiles structured research notes from search results or database entries.
+
+    Behavior:
+        1. Listens for DB_CHECK_DONE or SEARCH_RESULTS_READY.
+        2. Formats search results and calls an LLM to generate a summary.
+        3. Stores output in shared state and publishes RESEARCH_COMPILED event.
     """
 
     def __init__(self, name: str, state: OverallState, config: Dict[str, Any]):
@@ -22,50 +26,55 @@ class ResearchAgent(BaseAgent):
         self.cfg = config
 
     async def handle_event(
-        self, event: Event, event_queue, ui_callback: Optional[Callable[[Dict], None]]
+        self,
+        event: Event,
+        event_queue,
+        progress_callback: Optional[Callable[[Dict], None]],
     ) -> None:
         """
-        Overrides handle_event from BaseAgent.
+        Purpose:
+            Entry point for the agent's behavior in response to events.
+        Notes:
+            Expects DB_CHECK_DONE as the trigger.
         """
+        # Initialize progress manager
+        self.setup_progress(progress_callback)
+
         if event.type in [EventType.DB_CHECK_DONE, EventType.SEARCH_RESULTS_READY]:
-            self.report_status(
-                ui_callback, f"Received {event.type.name}, compiling research notes..."
+            self.update_status(
+                "Received DB_CHECK_DONE event, compiling research notes..."
             )
+
             try:
-                await self.compile_research(event_queue, ui_callback)
+                await self.compile_research(event_queue)
             except Exception as e:
-                self.report_status(
-                    ui_callback,
-                    f"Research compilation failed critically: {e}",
-                    type="error",
-                )
+                self.update_status(f"Research compilation failed: {e}", type_="error")
                 await self.publish_event(
                     event_queue,
                     Event(
                         EventType.ERROR_OCCURRED,
                         payload={"error": f"ResearchAgent failed: {e}"},
                     ),
-                    ui_callback,
                 )
 
-    async def compile_research(
-        self, event_queue, ui_callback: Optional[Callable[[Dict], None]]
-    ) -> None:
-        self.report_status(ui_callback, "Compiling research notes.")
+    async def compile_research(self, event_queue) -> None:
+        """
+        Purpose:
+            Uses an LLM to compile research notes based on prior search results.
+        Notes:
+            Updates state.research and emits RESEARCH_COMPILED.
+        """
+        self.update_status("Compiling research notes...")
+
         if not self.state.search_results:
-            self.report_status(
-                ui_callback,
-                "No search results available to compile from. Skipping.",
-                type="warning",
+            self.update_status(
+                "No search results found. Skipping research.", type_="warning"
             )
-            # Publish empty result (?)
-            self.state.research = [""]
-            await self.publish_event(
-                event_queue, Event(EventType.RESEARCH_COMPILED), ui_callback
-            )
+            self.state.research = [""]  # reconsider this?
+            await self.publish_event(event_queue, Event(EventType.RESEARCH_COMPILED))
             return
 
-        # Fetch prompts
+        # Fetch system and user prompt templates
         try:
             system_prompt_text, research_template = get_prompt(
                 self.cfg, system_id="RESEARCH_COMPILER", template_id="RESEARCH_PROMPT"
@@ -75,47 +84,39 @@ class ResearchAgent(BaseAgent):
 
         except (KeyError, ValueError) as e:
             logger.error(f"Prompt configuration error: {e}", exc_info=True)
-            self.report_status(ui_callback, f"Prompt config error: {e}", type="error")
+            self.update_status(f"Prompt config error: {e}", type_="error")
             raise ValueError(f"Prompt configuration error: {e}") from e
 
+        # Format the messages for the LLM
+        self.update_status("Formatting search results for LLM...")
+
+        context_str = format_results(self.state.search_results)
+        instructions = research_template.format(
+            company=self.state.company,
+            schema=json.dumps(self.state.output_schema, indent=2),
+            context=context_str,
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt_text},
+            {"role": "user", "content": instructions},
+        ]
+
+        # Call the LLM
         try:
-            # Prepare LLM context
-            self.report_status(
-                ui_callback, "Formatting search results for LLM context..."
-            )
-
-            context_str = format_results(self.state.search_results)
-            instructions = research_template.format(
-                company=self.state.company,
-                schema=json.dumps(self.state.output_schema, indent=2),
-                context=context_str,
-            )
-
-            messages = [
-                {"role": "system", "content": system_prompt_text},
-                {"role": "user", "content": instructions},
-            ]
-
-            # Call LLM
-            self.report_status(ui_callback, "Calling LLM for research compilation...")
+            self.update_status("Calling LLM for research compilation...")
             output = call_llm(messages=messages)
+
             if "LLM Error:" in output or "ChatGPT Error:" in output:
-                raise Exception(f"LLM call failed: {output}")
+                raise RuntimeError(f"LLM call failed: {output}")
 
-            # Add research notes to state
             self.state.research = output
-            self.report_status(ui_callback, "Research notes compiled successfully.")
-
-            # Publish success event
-            await self.publish_event(
-                event_queue, Event(EventType.RESEARCH_COMPILED), ui_callback
-            )
+            self.update_status("Research notes compiled successfully.")
+            await self.publish_event(event_queue, Event(EventType.RESEARCH_COMPILED))
 
         except Exception as e:
             logger.error(
-                f"Error during research compilation LLM call: {e}", exc_info=True
+                f"LLM call failed during research compilation: {e}", exc_info=True
             )
-            self.report_status(
-                ui_callback, f"Research compilation failed: {e}", type="error"
-            )
+            self.update_status(f"Research compilation failed: {e}", type_="error")
             raise e

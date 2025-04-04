@@ -1,5 +1,6 @@
 import logging
 from scripts.secrets import Secrets
+from typing import List, Union, Optional, Dict, Any
 
 
 """
@@ -105,13 +106,13 @@ def agent_color_code(agent_name):
     Defines a HTML color for the agent / process in the UI display.
     """
     AGENT_COLORS = {
-        "Orchestrator": "#0066cc",
-        "GraphQueryAgent": "#1b8a5a",
+        "Orchestrator": "#55e5e3",
+        "GraphQueryAgent": "#a1b7d4",
         "QueryGenerationAgent": "#c57f00",
         "WebSearchAgent": "#8e44ad",
         "ResearchAgent": "#d35400",
-        "ExtractionAgent": "#2c3e50",
-        "GraphUpdateAgent": "#e74c3c",
+        "ExtractionAgent": "#0066cc",
+        "GraphUpdateAgent": "#e5559d",
     }
     color = AGENT_COLORS.get(agent_name, "#333")
     return f'<span style="color:{color}; font-weight:600;">{agent_name}</span>'
@@ -134,7 +135,7 @@ def format_agent_message(update, logs=False):
         # horizontal line above event
         return (
             "<hr style='border: none; border-top: 1px dashed #ccc; margin-top: 1.5em;' />"
-            f"<div><strong>Event:</strong> <code>{event_type}</code></div>"
+            f"<div><strong>{message}</strong> <code>{event_type}</code></div>"
         )
 
     # DISPATCH
@@ -170,3 +171,48 @@ def format_agent_message(update, logs=False):
     # Fallback
     if message or event_type:
         return f"<div>{message or event_type}</div>"
+
+
+def normalize_unique_items(
+    input_list: List[Any], key: Optional[str] = None, case_insensitive: bool = True
+) -> List[Union[str, Dict]]:
+    """
+    Purpose:
+        Deduplicates a list of strings or a list of dicts (by key) in a normalized way.
+
+    Params:
+        input_list: List of strings or dicts.
+        key: Deduplicatse based on dict[key], otherwise assumes List[str].
+        case_insensitive: Normalize by lowercasing if True.
+
+    Returns:
+        List[str] or List[Dict]: The deduplicated and cleaned list, preserving order.
+    """
+    seen = set()
+    result = []
+
+    for item in input_list:
+        # String mode
+        if key is None:
+            if not isinstance(item, str):
+                continue
+            cleaned = item.strip()
+            norm = cleaned.lower() if case_insensitive else cleaned
+            if cleaned and norm not in seen:
+                seen.add(norm)
+                result.append(cleaned)
+
+        # Dict mode
+        else:
+            if not isinstance(item, dict):
+                continue
+            value = item.get(key)
+            if not isinstance(value, str):
+                continue
+            cleaned = value.strip()
+            norm = cleaned.lower() if case_insensitive else cleaned
+            if cleaned and norm not in seen:
+                seen.add(norm)
+                result.append(item)
+
+    return result

@@ -16,57 +16,67 @@ logger = logging.getLogger(__name__)
 
 class Orchestrator:
     """
-    Orchestrates everything:
-    1.  Creates events, shared OverallState, agents, and starts them all.
-    2.  Publishes a START_RESEARCH event.
-    3.  Waits for EXTRACTION_COMPLETE.
+    Orchestrates the agent-based execution of the research pipeline.
+
+    Behavior:
+        - Initializes shared state, agent instances, config, and DB.
+        - Dispatches events to agents and monitors progress.
+        - Terminates when the pipeline completes (EXTRACTION_COMPLETE) or fails.
     """
 
     def __init__(
         self,
         company: str,
         workflow_id: str,
-        ui_callback: Optional[Callable[[Dict], None]] = None,
+        progress_callback: Optional[Callable[[Dict], None]] = None,
     ):
         self.company = company
         self.workflow_id = workflow_id
-        self.ui_callback = ui_callback
+        self.progress_callback = progress_callback
         self.arangodb_manager: Optional[ArangoDBManager] = None
 
+        # Dictionary to route events to agents
+        self.agent_map: Dict[EventType, BaseAgent] = {}
+
+        self._load_config()
+        self._init_arangodb()
+        self._prepare_state()
+        self._init_agents()
+        self._init_event_queue()
+        self._log("Initialization complete.")
+
+    def _log(
+        self,
+        message: str = None,
+        type_: str = "agent_log",
+        agent_name="Orchestrator",
+        event_type: Optional[str] = None,
+    ):
+        if self.progress_callback:
+            try:
+                update = {
+                    "type": type_,
+                    "agent_name": agent_name,
+                    "message": message,
+                    "event_type": event_type,
+                }
+                self.progress_callback(update)
+            except Exception as e:
+                logger.warning(f"Progress callback failed: {e}", exc_info=False)
+
+    def _load_config(self):
         try:
             self.secrets = Secrets()
             self.loader = ConfigLoader()
-            self.cfg: Dict[str, Any] = self.loader.get_all_configs()
-            self._send_ui_update(
-                {
-                    "type": "agent_log",
-                    "agent_name": "Orchestrator",
-                    "message": "Config loaded.",
-                }
-            )
-        except FileNotFoundError:
-            logger.critical(
-                "Config directory not found. Orchestrator cannot initialize.",
-                exc_info=True,
-            )
-            self._send_ui_update(
-                {"type": "error", "message": "Config directory not found."}
-            )
-            raise
-        except ValueError as e:
-            logger.critical(f"Secrets configuration error: {e}", exc_info=True)
-            self._send_ui_update({"type": "error", "message": f"Secrets Error: {e}"})
-            raise
+            self.cfg = self.loader.get_all_configs()
+            self._log("Config loaded.")
         except Exception as e:
-            logger.critical(
-                f"Failed to load configurations or secrets: {e}", exc_info=True
-            )
-            self._send_ui_update(
-                {"type": "error", "message": f"Config/Secrets Load Error: {e}"}
-            )
-            raise
+            raise RuntimeError(f"Failed to load configuration: {e}") from e
 
-        # –– Initialize ArangoDB manager and ensure collections ––
+    def _init_arangodb(self):
+        """
+        Initializes the ArangoDB manager and ensures collections.
+        """
         try:
             self.arangodb_manager = ArangoDBManager(
                 host=self.secrets.ARANGO_HOST,
@@ -74,366 +84,185 @@ class Orchestrator:
                 usr=self.secrets.ARANGO_USR,
                 pwd=self.secrets.ARANGO_PWD,
             )
-            # Fetch entity/relationship definitions from loaded config
-            entity_types = list(self.cfg.get("entity_types", {}).values())
-            relationship_types = list(self.cfg.get("relationship_types", {}).values())
 
-            # Ensure collections exist based on config
-            self.arangodb_manager.ensure_collections(entity_types, relationship_types)
-            self._send_ui_update(
-                {
-                    "type": "agent_log",
-                    "agent_name": "ArangoDBManager",
-                    "message": "Collections ensured.",
-                }
+            # Ensure collections exist using entities & relationships in config
+            self.arangodb_manager.ensure_collections(
+                list(self.cfg.get("entity_types", {}).values()),
+                list(self.cfg.get("relationship_types", {}).values()),
             )
-
-        except ConnectionError as e:
-            logger.critical(
-                f"Failed to initialize ArangoDBManager: {e}. Graph features disabled.",
-                exc_info=True,
-            )
-            self._send_ui_update(
-                {"type": "error", "message": f"ArangoDB Connection Error: {e}"}
-            )
-            raise RuntimeError(f"ArangoDB connection failed: {e}") from e
+            self._log("ArangoDB collections ensured.", type_="agent_log")
         except Exception as e:
-            logger.critical(
-                f"Unexpected error during ArangoDB setup: {e}", exc_info=True
-            )
-            self._send_ui_update(
-                {"type": "error", "message": f"ArangoDB Setup Error: {e}"}
-            )
-            raise RuntimeError(f"ArangoDB setup failed: {e}") from e
+            raise RuntimeError(f"Failed to initialize ArangoDB: {e}") from e
 
-        # –– Select and prepare output schema ––
+    def _prepare_state(self):
+        """
+        Selects and prepares the output schema.
+        """
         try:
-            runtime_settings = self.cfg.get("runtime_settings", {})
-            schema_id_to_use = runtime_settings.get("schema_id_to_use")
-            logger.info(f"Using output schema ID: {schema_id_to_use}")
-            self._send_ui_update(
-                {
-                    "type": "agent_log",
-                    "agent_name": "Orchestrator",
-                    "message": f"Using schema: {schema_id_to_use}",
-                }
+            # Fetch the schema by ID from the loaded config
+            schema_id = self.cfg.get("runtime_settings", {}).get("schema_id_to_use")
+            schema_entry = self.cfg.get("output_schemas", {}).get(schema_id)
+
+            if not schema_entry or not isinstance(schema_entry.get("schema"), dict):
+                raise ValueError(f"Invalid or missing schema for ID: {schema_id}")
+
+            # Initialize state with chosen schemanfor use across agents
+            self.state = OverallState(
+                company=self.company, output_schema=schema_entry["schema"]
             )
-
-            # Fetch the schema entry from the loaded config
-            schema_entry = self.cfg.get("output_schemas", {}).get(schema_id_to_use)
-            if not schema_entry:
-                raise ValueError(
-                    f"Output schema with ID '{schema_id_to_use}' not found in configuration."
-                )
-
-            # Extract the actual schema definition part
-            schema = schema_entry.get("schema")
-            if not schema or not isinstance(schema, dict):
-                raise ValueError(
-                    f"Schema definition missing or invalid for schema ID '{schema_id_to_use}'."
-                )
-
+            self._log(f"Using schema: {schema_id}")
         except Exception as e:
-            logger.critical(f"Failed to prepare output schema: {e}", exc_info=True)
-            self._send_ui_update(
-                {"type": "error", "message": f"Schema Prep Error: {e}"}
-            )
-            raise ValueError(f"Schema preparation failed: {e}") from e
+            raise RuntimeError(f"Schema preparation failed: {e}") from e
 
-        # –– Initialize state ––
-        self.state = OverallState(company=company, output_schema=schema)
-        self._send_ui_update(
-            {
-                "type": "agent_log",
-                "agent_name": "Orchestrator",
-                "message": "OverallState initialized.",
-            }
-        )
-
-        # –– Load the workflow sequence ––
-        self.agent_sequence_ids: list[str] = self.loader.load_workflow_sequence(
-            self.workflow_id, self.cfg
-        )
-
-        # Just logging for now but aim for this to drive agent creation/routing
-        logger.info(
-            f"Target agent sequence for workflow '{self.workflow_id}': {self.agent_sequence_ids}"
-        )
-        if not self.agent_sequence_ids:
-            # Decide how to handle missing/empty sequence - warning or error?
-            logger.warning(
-                f"Workflow '{self.workflow_id}' has an empty or invalid agent sequence."
-            )
-            # raise ValueError(f"Workflow '{self.workflow_id}' defines no agents.")
-
-        # –– Setup agents ––
+    def _init_agents(self):
+        """
+        Instantiates all agents defined in the workflow.
+        Note: workflow is not properly implemented yet!
+        """
         self.agents = create_agents(
-            state=self.state, config=self.cfg, arangodb_manager=self.arangodb_manager
-        )
-        agent_names = [agent.name for agent in self.agents]
-        self._send_ui_update(
-            {
-                "type": "agent_log",
-                "agent_name": "Orchestrator",
-                "message": f"Created agents: {', '.join(agent_names)}",
-            }
+            state=self.state,
+            config=self.cfg,
+            arangodb_manager=self.arangodb_manager,
         )
 
-        # –– Setup the event queue and routing ––
+        # Build the routing map between EventType and the corresponding agent
+        self.agent_map = self._map_events_to_agents(self.agents)
+        agent_names = [a.name for a in self.agents]
+        self._log(f"Created agents: {', '.join(agent_names)}")
+
+    def _init_event_queue(self):
+        """
+        Initializes a shared queue for agents to push/pull events.
+        """
         self.event_queue = asyncio.Queue()
+        self._log("Event queue initialized.")
 
-        # Dictionary to map each EventType to each agent
-        self.agent_map: Dict[EventType, BaseAgent] = {}
-
-        # route_event() will determine what event goes to what agent
-        self.route_event()  # Static routing needs update for new agents/events
-
-        self._send_ui_update(
-            {
-                "type": "agent_log",
-                "agent_name": "Orchestrator",
-                "message": "Event queue and routing map ready.",
-            }
-        )
-
-    def _send_ui_update(self, update: Dict[str, Any]):
+    def _map_events_to_agents(
+        self, agents: list[BaseAgent]
+    ) -> Dict[EventType, BaseAgent]:
         """
-        Helper to safely call the UI callback if it exists.
+        Routing between events and agents (hardcoded for now!).
+        The orchestrator will act as the central coordinator and dispatch events to the appropiate agent.
         """
-        if self.ui_callback:
-            try:
-                # Add timestamp or other common fields here?
-                self.ui_callback(update)
-            except Exception as e:
-                logger.warning(f"UI callback failed: {e}", exc_info=False)
-
-    def route_event(self):
-        """
-        Event routing: the orchestrator will act as the central coordinator and dispatch events to the appropiate agent.
-        TO-DO: Make this dynamic based on selected workflow.
-        """
-        logger.debug("Setting up static event routing map...")
-        self.agent_map = {}  # Clear any previous map
-        for agent in self.agents:
+        mapping = {}
+        for agent in agents:
             if agent.name == "GraphQueryAgent":
-                self.agent_map[EventType.START_RESEARCH] = agent
+                mapping[EventType.START_RESEARCH] = agent
 
             elif agent.name == "QueryGenerationAgent":
-                self.agent_map[EventType.NEED_EXTERNAL_DATA] = agent
+                mapping[EventType.NEED_EXTERNAL_DATA] = agent
 
             elif agent.name == "WebSearchAgent":
-                self.agent_map[EventType.QUERIES_GENERATED] = agent
+                mapping[EventType.QUERIES_GENERATED] = agent
 
             elif agent.name == "ResearchAgent":
-                self.agent_map[EventType.SEARCH_RESULTS_READY] = agent
+                mapping[EventType.SEARCH_RESULTS_READY] = agent
 
             elif agent.name == "ExtractionAgent":
-                self.agent_map[EventType.RESEARCH_COMPILED] = agent
+                mapping[EventType.RESEARCH_COMPILED] = agent
 
-            # Route EXTRACTION_COMPLETE to GraphUpdateAgent
             elif agent.name == "GraphUpdateAgent":
-                self.agent_map[EventType.EXTRACTION_COMPLETE] = agent
+                mapping[EventType.EXTRACTION_COMPLETE] = agent
 
-        # Log the final map
-        mapped_events = list(self.agent_map.keys())
-        logger.debug(
-            f"Agent map populated. Handling events: {[e.name for e in mapped_events]}"
-        )
+        return mapping
 
-    async def start_system(self):
+    async def start(self) -> Dict[str, Any]:
         """
-        Starts all agents and coordinates the system until EXTRACTION_COMPLETE event is receieved.
-        Reports status via the UI callbacks.
+        Begins the full agentic pipeline by pushing the START_RESEARCH event.
         """
-
-        # Initiate the pipeline
-        logger.info("Agentic System Initiating...")
         await self.event_queue.put(Event(EventType.START_RESEARCH))
 
-        final_event_types = {
-            # Normal completion after enrichment
+        # Define the events to terminate the pipeline
+        terminal_events = {
             EventType.GRAPH_UPDATE_COMPLETE,
-            # Completion if graph had sufficient data initially
             EventType.GRAPH_DATA_FOUND,
-            # Completion on error
             EventType.ERROR_OCCURRED,
         }
 
-        final_output: Dict[str, Any] = {"status": "unknown"}
-
-        # The orchestrator will ontinuously consume events from the queue
+        # Continue dispatching events to agents until terminal event is reached
         while True:
             event = await self.event_queue.get()
-            logger.info(f"[Orchestrator] Received event: {event.type.name}")
 
-            # Report every event received
-            self._send_ui_update(
-                {
-                    "type": "event",
-                    "event_type": event.type.name,
-                    "payload": event.payload,
-                }
+            # This is not a true log since type_="event"
+            self._log(
+                "Orchestrator received event:",
+                type_="event",
+                event_type=event.type.name,
             )
 
-            # –– Check for end conditions ––
-            if event.type in final_event_types:
-                status = "error"
-                message = "An error occurred."
+            if event.type in terminal_events:
+                return await self._handle_termination(event)
 
-                if event.type == EventType.GRAPH_UPDATE_COMPLETE:
-                    status = "success"
-                    message = "Graph update complete. Pipeline finished successfully."
-                    logger.info(message)
-                    final_output = (
-                        self.state.final_output
-                        if self.state
-                        else {"status": "completed"}
-                    )
+            await self._dispatch_event(event)
 
-                elif event.type == EventType.GRAPH_DATA_FOUND:
-                    status = "success"
-                    message = (
-                        "Graph data found. Pipeline finished (bypassed enrichment)."
-                    )
-                    logger.info(message)
+    async def _dispatch_event(self, event: Event):
+        """
+        Routes an event to its mapped agent who begins handling the event.
+        """
+        agent = self.agent_map.get(event.type)
+        if not agent:
+            self._log(f"No agent mapped for event: {event.type.name}", type_="warning")
+            return
 
-                    # Prepare a specific output format for this case
-                    final_output = {
-                        "status": "Data found in graph",
-                        "results": self.state.graph_query_results if self.state else [],
-                    }
-                    if self.state:
-                        self.state.complete = True
+        self._log(type_="dispatch", agent_name=agent.name, event_type=event.type.name)
+        try:
+            await agent.handle_event(event, self.event_queue, self.progress_callback)
+        except Exception as e:
+            error_msg = f"Agent {agent.name} failed on {event.type.name}: {e}"
+            self._log(error_msg, type_="error")
+            await self.event_queue.put(
+                Event(EventType.ERROR_OCCURRED, payload={"error": error_msg})
+            )
 
-                elif event.type == EventType.ERROR_OCCURRED:
-                    status = "error"
-                    error_payload = event.payload.get("error", "Unknown error")
-                    message = f"Pipeline halting due to error: {error_payload}"
-                    logger.error(message)
-                    final_output = {"error": message}
-                    if self.state:
-                        self.state.complete = False
+    async def _handle_termination(self, event: Event) -> Dict[str, Any]:
+        """
+        Final step: formats the final result, logs the end status, and sends a pipeline_end message via progress_callback.
+        """
+        result = {}
+        status = "error"
+        message = "Pipeline terminated unexpectedly."
 
-                # Send the final pipeline status update
-                self._send_ui_update(
+        if event.type == EventType.GRAPH_UPDATE_COMPLETE:
+            status = "success"
+            message = "Graph update completed."
+            result = self.state.final_output
+
+        elif event.type == EventType.GRAPH_DATA_FOUND:
+            status = "success"
+            message = "Graph data found — skipping enrichment."
+            result = {
+                "status": "Data found in graph",
+                "results": self.state.graph_query_results,
+            }
+            self.state.complete = True
+
+        elif event.type == EventType.ERROR_OCCURRED:
+            error_text = event.payload.get("error", "Unknown error")
+            message = f"Pipeline error: {error_text}"
+            result = {"error": message}
+            self.state.complete = False
+
+        if self.progress_callback:
+            try:
+                self.progress_callback(
                     {
                         "type": "pipeline_end",
                         "status": status,
                         "message": message,
-                        "result": final_output,  # Include final result for UI
+                        "result": result,
                     }
                 )
-                break
-
-            # Dispatch event to whichever agent handles it
-            await self.dispatch_event(event)
-
-        logger.info("Agentic System Shutdown.")
-        return self.state.final_output
-
-    async def dispatch_event(self, event: Event):
-        """
-        Dispatches the event to the relevant agent.
-        """
-        if event.type in self.agent_map:
-            agent = self.agent_map[event.type]
-            logger.debug(f"Dispatching {event.type.name} to {agent.name}")
-
-            # Report the dispatch action
-            self._send_ui_update(
-                {
-                    "type": "dispatch",
-                    "event_type": event.type.name,
-                    "agent_name": agent.name,
-                }
-            )
-            try:
-                # Pass event, queue, and callback to the agent
-                await agent.handle_event(event, self.event_queue, self.ui_callback)
-
-            # Handle errors from agent's handle_event if not caught inside
             except Exception as e:
-                logger.error(
-                    f"Error during handling of {event.type.name} by {agent.name}: {e}",
-                    exc_info=True,
-                )
-
-                # Publish an error event to stop the pipeline
-                error_payload = {
-                    "error": f"Agent {agent.name} failed on event {event.type.name}: {e}"
-                }
-                await self.event_queue.put(
-                    Event(EventType.ERROR_OCCURRED, payload=error_payload)
-                )
-
-                # Also send immediate UI update about this critical failure
-                self._send_ui_update(
-                    {"type": "error", "message": error_payload["error"]}
-                )
-        else:
-            logger.warning(f"No agent mapped to handle event type {event.type.name}.")
-
-            # Report the warning to UI
-            self._send_ui_update(
-                {
-                    "type": "warning",
-                    "message": f"No handler for event: {event.type.name}",
-                }
-            )
+                logger.error(f"Failed to send pipeline end status: {e}")
 
 
-# --- Global Runner Function ---
 async def run_research_pipeline(
-    company: str, workflow_id: str, ui_callback: Optional[Callable[[Dict], None]] = None
+    company: str,
+    workflow_id: str,
+    progress_callback: Optional[Callable[[Dict], None]] = None,
 ) -> Dict[str, Any]:
     """
-    A helper function that sets up the Orchestrator for a given company and workflow. Runs the system, and returns final state, all while passing the UI callback for status updates.
+    xternal entry point to start the system. Creates the Orchestrator, starts it, and returns its output.
     """
-    final_output: Dict[str, Any] = {}
-    orchestrator: Optional[Orchestrator] = None
-
-    try:
-        # Pass the callback during initialization
-        orchestrator = Orchestrator(
-            company=company, workflow_id=workflow_id, ui_callback=ui_callback
-        )
-        final_output = await orchestrator.start_system()
-
-    except Exception as e:
-        logger.error(f"Orchestrator failed to initialize or run: {e}", exc_info=True)
-        error_msg = f"Pipeline execution failed: {e}"
-        final_output = {"error": error_msg}
-
-        # If callback exists, send error
-        if ui_callback:
-            try:
-                # Ensure a pipeline_end message is sent even on failure
-                ui_callback(
-                    {
-                        "type": "pipeline_end",
-                        "status": "error",
-                        "message": error_msg,
-                        "result": final_output,
-                    }
-                )
-            except Exception as cb_e:
-                logger.error(
-                    f"Failed to send final error status via UI callback: {cb_e}"
-                )
-
-    return final_output
-
-
-if __name__ == "__main__":
-    # –– Local testing ––
-    company_to_research = "Nvidia"
-    default_workflow = "INITIAL_ANALYSIS"
-    print(
-        f"--- Running local test for '{company_to_research}' with workflow '{default_workflow}' ---"
-    )
-
-    result = asyncio.run(run_research_pipeline(company_to_research))
-    print("\n===Final results===")
-    for field in result:
-        print(f"{field}: {result[field]}")
-    print("--- Local test complete ---")
+    orchestrator = Orchestrator(company, workflow_id, progress_callback)
+    return await orchestrator.start()

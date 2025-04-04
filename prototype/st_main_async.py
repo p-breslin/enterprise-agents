@@ -88,7 +88,7 @@ def pipeline_thread_target(company: str, workflow_id: str, q: queue.Queue):
         asyncio.set_event_loop(loop)
 
         # Run the async pipeline until completion
-        result = loop.run_until_complete(
+        loop.run_until_complete(
             run_research_pipeline(company, workflow_id, ui_update_callback)
         )
         # No need to put result directly on queue, pipeline_end handles it

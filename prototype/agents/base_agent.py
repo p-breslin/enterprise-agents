@@ -1,89 +1,75 @@
 import abc
 import logging
 from typing import Dict, Optional, Callable
+
 from scripts.events import Event
 from scripts.state import OverallState
+from utilities.progress_manager import ProgressManager
 
-"""
-Base class for all agents, defining the event handling interface and providing helper methods for logging and status reporting.
-
- - Defines a template for agents that handle events asynchronously.
- - Processes events delegated by the orchestrator.
- - Ensures subclasses implement handle_event; gives specific behavior to agents.
-"""
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent:
     """
-    BaseAgent provides a common structure for all agents in the multi-agent system. Each agent subscribes to an asyncio Queue event bus and processes events as they arrive. Provides helpers for logging and reporting status to a UI via callback.
+    Provides a common agent structure that all agents inherit. Each agent subscribes to an event queue and processes events as they arrive.
+
+    - Defines a template for agents that handle events asynchronously.
+    - Processes events delegated by the orchestrator.
+    - Shared logic for logging, progress reporting, and event publishing.
     """
 
     def __init__(self, name: str, state: OverallState):
-        self.name = name  # agent's name
+        self.name = name
         self.state = state
+        self.progress: Optional[ProgressManager] = None
 
-    @abc.abstractmethod
-    async def handle_event(
-        self, event: Event, event_queue, ui_callback: Optional[Callable[[Dict], None]]
-    ) -> None:
+    def setup_progress(self, progress_callback: Optional[Callable[[Dict], None]]):
         """
-        Handles an event based on its type and payload. This is an Abstract Base Class (cannot be instantiated directly): agent classes must subclass BaseAgent and implement how to handle incoming events.
-
-        - Should use report_status to communicate progress via the ui_callback.
-        - Should use publish_event to send new events via the event_queue.
-
-        Args:
-            event (Event): The event to handle.
-            event_queue (asyncio.Queue): The queue to publish new events to.
-            ui_callback: Callback function to send status updates to the UI.
+        Purpose:
+            Initializes a ProgressManager instance for sending updates.
+        Notes:
+            Should be called at the start of every handle_event() in agent subclasses.
         """
-        pass
+        self.progress = ProgressManager(self.name, progress_callback)
 
-    def report_status(
-        self,
-        ui_callback: Optional[Callable[[Dict], None]],
-        message: str,
-        type: str = "agent_action",  # Default type for agent activity
-    ):
+    def update_status(self, message: str = None, type_: str = "agent_action"):
         """
-        Logs a message and sends a status update dictionary to the UI callback, if provided. type is the type of status update (e.g., 'agent_action', 'agent_log', 'error')
+        Purpose:
+            Reports status updates to the UI through the ProgressManager.
         """
-        # Log regardless of UI
-        log_level = logging.ERROR if type == "error" else logging.INFO
-        logging.log(log_level, f"[{self.name}] {message}")
+        if self.progress:
+            self.progress.send(message, type_)
 
-        if ui_callback:
-            try:
-                # Send structured update
-                status_update = {
-                    "type": type,
-                    "agent_name": self.name,
-                    "message": message,
-                }
-                ui_callback(status_update)
-            except Exception as e:
-                # Log callback error but don't crash the agent
-                logging.warning(
-                    f"[{self.name}] UI callback failed during report_status: {e}",
-                    exc_info=False,
-                )
+    async def publish_event(self, event_queue, event: Event, announce: bool = True):
+        """
+        Purpose:
+            Puts a new event onto the shared event queue. Optionally announces this to the UI via ProgressManager.
+        """
+        if self.progress and announce:
+            self.update_status(message=f"Publishing event: {event.type.name}")
+        await event_queue.put(event)
 
     def log(self, message: str):
         """
-        Simple internal logging without sending to UI.
-        Keeps log separate for purely internal logging.
-        Maybe not needed!
+        Purpose:
+            Logs a message directly without triggering a UI update.
+        Notes:
+            This is for testing purposes and will probably be removed.
         """
         logging.info(f"[{self.name}] {message}")
 
-    async def publish_event(
-        self, event_queue, event: Event, ui_callback: Optional[Callable[[Dict], None]]
-    ):
+    @abc.abstractmethod
+    async def handle_event(
+        self,
+        event: Event,
+        event_queue,
+        progress_callback: Optional[Callable[[Dict], None]],
+    ) -> None:
         """
-        Helper method to publish an event to the queue and report the action via the UI callback.
+        Purpose:
+            Receives an event, decides what to do, and optionally pushes new events.
+        Notes:
+            This is an Abstract Base Class (cannot be instantiated directly): agent classes must subclass BaseAgent and implement how to handle incoming events i.e. this must be implemented by each agent.
+
         """
-        # Report the intention BEFORE putting on queue (redundant repetition)
-        # self.report_status(
-        #     ui_callback, f"Publishing event: {event.type.name}", type="event"
-        # )
-        await event_queue.put(event)
+        pass
