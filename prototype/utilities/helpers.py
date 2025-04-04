@@ -3,11 +3,6 @@ from scripts.secrets import Secrets
 from typing import List, Union, Optional, Dict, Any
 
 
-"""
-Helper functions to reduce redundancy and keep code tidy.
-"""
-
-
 def filter_searches(results: dict | list[dict]) -> list[dict]:
     """
     Removes duplicate search results from Tavily API response(s).
