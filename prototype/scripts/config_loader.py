@@ -125,7 +125,7 @@ class ConfigLoader:
             - Returns an ordered list of agent IDs. Returns an empty list if the ID is invalid or improperly formatted.
         """
         # agent_workflows is processed into a dict with workflow_id key
-        workflows = self.cfg.get("agent_workflows", {})
+        workflows = self.cfgs.get("agent_workflows", {})
         if not isinstance(workflows, dict):
             logger.warning("Expected 'agent_workflows' to be a dictionary.")
             return []
