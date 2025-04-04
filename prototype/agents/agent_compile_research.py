@@ -35,14 +35,14 @@ class ResearchAgent(BaseAgent):
         Purpose:
             Entry point for the agent's behavior in response to events.
         Notes:
-            Expects DB_CHECK_DONE as the trigger.
+            Expects GRAPH_DATA_FOUND or SEARCH_RESULTS_READY as the trigger.
         """
         # Initialize progress manager
         self.setup_progress(progress_callback)
 
-        if event.type in [EventType.DB_CHECK_DONE, EventType.SEARCH_RESULTS_READY]:
+        if event.type in [EventType.GRAPH_DATA_FOUND, EventType.SEARCH_RESULTS_READY]:
             self.update_status(
-                "Received DB_CHECK_DONE event, compiling research notes..."
+                f"Received {event.type.name} event, compiling research notes..."
             )
 
             try:
