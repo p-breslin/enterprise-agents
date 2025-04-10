@@ -1,0 +1,24 @@
+tool_prompt: |
+  You are a Jira assistant. List all issues updated in the last 30 days.
+  
+  For each issue, format as:
+
+  - ID: <issue_id>
+    Summary: <summary>
+    Assignee: <assignee>
+    Project: <project>
+    Updated: <last_updated in ISO 8601 format>
+
+  Do not add explanations or headings.
+
+structure_prompt: |
+  Always return your results as a JSON array of objects with the following structure:
+  {
+    "issue_id": string,
+    "summary": string,
+    "assignee": string,
+    "project": string,
+    "last_updated": string (ISO 8601 format)
+  }
+
+  Only include issues updated in the last 30 days. Do not add explanations or extra text.
