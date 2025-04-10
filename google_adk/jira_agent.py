@@ -1,15 +1,16 @@
 import os
-import yaml
 import json
 import asyncio
 from typing import List
-from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from utils import load_prompt, log_event_details
 
 from google.genai import types
-from google.adk.agents.llm_agent import LlmAgent
 from google.adk.runners import Runner
+from google.adk.agents.llm_agent import LlmAgent
+from google.adk.agents.sequential_agent import SequentialAgent
+
 from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.tools.mcp_tool.mcp_toolset import (
@@ -28,12 +29,6 @@ class JiraIssues(BaseModel):
 
 class JiraIssuesList(BaseModel):
     issues: List[JiraIssues]
-
-
-def load_prompt(prompt_key: str) -> str:
-    path = Path(__file__).parent / "prompts.yaml"
-    with open(path, "r") as f:
-        return yaml.safe_load(f)[prompt_key]
 
 
 # Only want to expose read-only Jira tools
@@ -56,9 +51,10 @@ JIRA_TOKEN = os.getenv("JIRA_TOKEN")
 
 
 # Import tools from the MCP server
-async def get_tools_async():
+async def get_tool_agent():
     """
     Connects to the mcp-atlassian MCP server and returns only selected tools.
+    Creates an agent equipped with tools from the MCP Server.
 
     Note:
       MCP requires maintaining a connection to the local MCP Server. exit_stack manages the cleanup of this connection.
@@ -74,38 +70,28 @@ async def get_tools_async():
             ],
         )
     )
-    print("MCP toolset created successfully.")
 
     # Filter tools to include only the allowed Jira tools
     filtered_tools = [tool for tool in tools if tool.name in ALLOWED_TOOLS]
     print(f"Filtered tools: {[tool.name for tool in filtered_tools]}")
-    return filtered_tools, exit_stack
 
-
-# Agent definition
-async def get_tool_agent():
-    """
-    Creates an agent equipped with tools from the MCP Server.
-    """
-    tools, exit_stack = await get_tools_async()
-    print(f"Fetched {len(tools)} tools from the MCP server.")
-
-    tool_agent = LlmAgent(
-        model="gemini-2.0-flash",
+    agent = LlmAgent(
+        model="gemini-2.0-flash-exp",
         name="jira_tools_agent",
         description="Fetches Jira issue data using tools.",
         instruction=load_prompt("tool_prompt"),
-        tools=tools,
+        tools=filtered_tools,
+        output_key="raw_issues_text",
     )
-    return tool_agent, exit_stack
+    return agent, exit_stack
 
 
 async def get_structure_agent():
     """
     Creates an agent tasked with adding JSON structure to the the tool agent's response (invoking output schema removes tool use with Google ADK).
     """
-    structure_agent = LlmAgent(
-        model="gemini-2.0-flash",
+    return LlmAgent(
+        model="gemini-2.0-flash-exp",
         name="jira_structure_agent",
         description="Formats Jira issue summaries into structured JSON.",
         instruction=load_prompt("structure_prompt"),
@@ -114,68 +100,58 @@ async def get_structure_agent():
         disallow_transfer_to_peers=True,
         disallow_transfer_to_parent=True,
     )
-    return structure_agent
 
 
 # Main execution logic
 async def async_main():
     session_service = InMemorySessionService()
     artifacts_service = InMemoryArtifactService()
+    app_name = "mcp_jira_app"
+    session_id = "jira_seq_session"
+    user_id = "user_jira"
 
-    session = session_service.create_session(
-        state={}, app_name="mcp_jira_app", user_id="user_jira"
+    session_service.create_session(
+        app_name=app_name, user_id=user_id, session_id=session_id
+    )
+
+    tool_agent, exit_stack = await get_tool_agent()
+    structure_agent = await get_structure_agent()
+    sequential_agent = SequentialAgent(
+        name="jira_pipeline_agent", sub_agents=[tool_agent, structure_agent]
+    )
+
+    runner = Runner(
+        agent=sequential_agent,
+        app_name=app_name,
+        session_service=session_service,
+        artifact_service=artifacts_service,
     )
 
     query = "List issues updated in the last 30 days and who is working on them"
     print(f"User Query: '{query}'")
     content = types.Content(role="user", parts=[types.Part(text=query)])
 
-    tool_agent, exit_stack = await get_tool_agent()
-    structure_agent = await get_structure_agent()
-
-    # First agent uses MCP tool
-    tool_runner = Runner(
-        app_name="mcp_jira_app",
-        agent=tool_agent,
-        artifact_service=artifacts_service,
-        session_service=session_service,
-    )
-
-    print("Running tool agent...")
-    tool_output = None
-    async for event in tool_runner.run_async(
-        session_id=session.id, user_id=session.user_id, new_message=content
+    async for event in runner.run_async(
+        user_id=user_id, session_id=session_id, new_message=content
     ):
+        log_event_details(event)
         if event.is_final_response() and event.content and event.content.parts:
-            tool_output = event.content.parts[0].text
+            structured_json = event.content.parts[0].text
+            if event.author == "jira_structure_agent":
+                try:
+                    parsed = json.loads(structured_json)
+                    print("Structured output (pretty):")
+                    print(json.dumps(parsed.get("issues", []), indent=2))
+                except json.JSONDecodeError:
+                    print("Could not parse structured output as JSON.")
 
-    print("Tool agent output:\n", tool_output)
+    # # Inspect session state
+    # session = session_service.get_session(
+    #     app_name=app_name, user_id=user_id, session_id=session_id
+    # )
+    # print("Final session state:", json.dumps(session.state, indent=2))
 
-    # Second agent adds structure to the response
-    structure_runner = Runner(
-        app_name="mcp_jira_app",
-        agent=structure_agent,
-        artifact_service=artifacts_service,
-        session_service=session_service,
-    )
-
-    structure_content = types.Content(role="user", parts=[types.Part(text=tool_output)])
-    print("Running structure agent...")
-    async for event in structure_runner.run_async(
-        session_id=session.id, user_id=session.user_id, new_message=structure_content
-    ):
-        if event.is_final_response() and event.content and event.content.parts:
-            structure_output = event.content.parts[0].text
-            print("Structured output (raw JSON):\n", structure_output)
-
-            try:
-                parsed = json.loads(structure_output)
-                print("Structured output:")
-                print(json.dumps(parsed.get("issues", []), indent=2))
-            except json.JSONDecodeError:
-                print("Could not parse structured output as JSON.")
-
-    # Crucial Cleanup: Ensure the MCP server process connection is closed.
+    # Ensure the MCP server process connection is closed
     print("Closing MCP server connection...")
     await exit_stack.aclose()
     print("Cleanup complete.")
