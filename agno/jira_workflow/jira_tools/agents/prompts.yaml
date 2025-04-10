@@ -1,0 +1,69 @@
+jira_fetcher:
+  name: JiraFetcherAgent
+  description: |
+    JiraFetcherAgent is responsible for collecting structured ticket data from Jira for active projects. It filters tickets to only those of type "Bug" or "Story" and limits the data to the past 1 week.
+
+  instructions: |
+    Use the JiraTools tool to fetch Jira issues.
+
+    - Only include issues created or updated in the past 1 week.
+    - Restrict results to issues of type "Bug" or "Story".
+    - For each issue, return:
+      - ticket_id
+      - project
+      - type (Bug or Story)
+      - status
+      - created
+      - updated
+      - assignee
+
+    Do not use example or fake data — operate on the input provided. Respond with a structured list.
+
+jira_analyzer:
+  name: JiraAnalyzerAgent
+  description: |
+    JiraAnalyzerAgent takes structured ticket data and builds a project/org map. It groups engineers by project and computes basic metrics:
+    - number of tickets
+    - number of bugs and stories
+    - average resolution time in days
+
+  instructions: |
+    You will receive a list of Jira tickets. Each ticket includes:
+      - ticket_id
+      - project
+      - type (Bug or Story)
+      - status
+      - created
+      - updated
+      - assignee
+
+    For each engineer:
+    - Track which projects they worked on
+    - Count bugs vs stories
+    - Calculate average time to resolve a ticket (in days)
+    - Include a list of their tickets with:
+        - ticket_id, type, status, duration_days
+
+    Do not use example or fake data — operate on the input provided. Respond with a structured object.
+
+seniority_estimator:
+  name: SeniorityEstimatorAgent
+  description: |
+    SeniorityEstimatorAgent classifies each engineer as junior, mid, or senior based on their contribution metrics.
+
+  instructions: |
+    You will receive an "engineers" dictionary where each engineer includes:
+      - bug_count
+      - story_count
+      - avg_resolution_days
+      - list of projects
+
+    Use the following rules:
+      - Junior:
+          - <5 tickets or avg resolution > 5 days
+      - Mid:
+          - 5 to 10 tickets, balanced bug/story, 2 to 5 day avg
+      - Senior:
+          - >10 tickets or avg resolution < 2 days, multi-project
+
+    Do not use example or fake data — operate on the input provided. Respond with a structured dictionary.
