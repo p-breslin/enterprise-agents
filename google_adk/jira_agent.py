@@ -2,7 +2,7 @@ import os
 import json
 import asyncio
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from utils import load_prompt, log_event_details
 
@@ -20,11 +20,13 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
 
 
 class JiraIssues(BaseModel):
-    issue_id: str
-    summary: str
-    assignee: str
-    project: str
-    last_updated: str
+    issue_id: str = Field(description="Unique identifier or key of the issue")
+    summary: str = Field(description="Short description or title of the issue")
+    assignee: str = Field(description="Full name of user assigned to the issue")
+    project: str = Field(description="Project key that this issue belongs to")
+    last_updated: str = Field(
+        description="ISO 8601 format timestamp when the issue was last updated"
+    )
 
 
 class JiraIssuesList(BaseModel):
@@ -136,20 +138,13 @@ async def async_main():
     ):
         log_event_details(event)
         if event.is_final_response() and event.content and event.content.parts:
-            structured_json = event.content.parts[0].text
             if event.author == "jira_structure_agent":
                 try:
-                    parsed = json.loads(structured_json)
+                    parsed = json.loads(event.content.parts[0].text)
                     print("Structured output (pretty):")
                     print(json.dumps(parsed.get("issues", []), indent=2))
                 except json.JSONDecodeError:
                     print("Could not parse structured output as JSON.")
-
-    # # Inspect session state
-    # session = session_service.get_session(
-    #     app_name=app_name, user_id=user_id, session_id=session_id
-    # )
-    # print("Final session state:", json.dumps(session.state, indent=2))
 
     # Ensure the MCP server process connection is closed
     print("Closing MCP server connection...")
