@@ -10,7 +10,7 @@ from mcp import StdioServerParameters
 
 from agno.agent import Agent
 from agno.tools.mcp import MCPTools
-from agno.models.mistral import MistralChat
+from agno.models.openai import OpenAIChat
 
 import logging
 
@@ -78,7 +78,7 @@ async def run_agent(message: str) -> List[JiraIssue]:
         ],
     ) as mcp_tools:
         agent = Agent(
-            model=MistralChat(id="mistral-large-latest"),
+            model=OpenAIChat(id="gpt-4o-mini"),
             tools=[mcp_tools],
             instructions=load_prompt("jira_agent"),
             markdown=True,
