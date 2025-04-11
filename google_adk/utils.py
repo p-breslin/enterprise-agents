@@ -48,3 +48,14 @@ def log_event_details(event):
                 print(f"[{author}] Unknown content part: {part}")
     else:
         print(f"[{author}] Event had no content.")
+
+
+def save_json(data, filename="jira_issues.json"):
+    """
+    Saves structured data to a JSON file.
+    """
+    output = Path(__file__).parent / filename
+
+    with open(output, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    print(f"Structured data saved to: {output}")
