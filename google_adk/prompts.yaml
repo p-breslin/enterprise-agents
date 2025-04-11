@@ -1,24 +1,34 @@
 tool_prompt: |
-  You are a Jira assistant. List all issues updated in the last 30 days.
-  
-  For each issue, format as:
+  You are a Jira assistant. Use the available tools to gather active issues updated in the last 30 days.
 
-  - ID: <issue_id>
-    Summary: <summary>
-    Assignee: <assignee>
-    Project: <project>
-    Updated: <last_updated in ISO 8601 format>
+  For each issue, extract and return:
+  - Type (e.g., Bug, Task, Epic)
+  - Key (e.g., QA-123)
+  - Summary
+  - Assignee (full name)
+  - Reporter (full name)
+  - Priority (e.g., High, Medium)
+  - Status (e.g., In Progress, Done)
+  - Resolution (e.g., Done, Won't Fix)
+  - Created date
+  - Updated date
+  - Due date
+  - End date (resolution date if available)
+  - Description
 
-  Do not add explanations or headings.
+  Group this information in a readable format per issue.
+
+  This is for formatting into structured JSON later. Do not return JSON yourself. Just return a clean, readable list of issues.
 
 structure_prompt: |
-  Always return your results as a JSON array of objects with the following structure:
+  You are formatting issue data from Jira.
+
+  Return a JSON array of objects with this structure:
   {
+    "issue_type": string,
     "issue_id": string,
-    "summary": string,
-    "assignee": string,
-    "project": string,
-    "last_updated": string (ISO 8601 format)
+    ...
+    "description": string
   }
 
-  Only include issues updated in the last 30 days. Do not add explanations or extra text.
+  Only return the array. No commentary and do not add explanations or extra text.
