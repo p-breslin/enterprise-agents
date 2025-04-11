@@ -4,7 +4,7 @@ import asyncio
 from dotenv import load_dotenv
 
 from schemas import JiraIssuesList
-from utils import load_prompt, log_event_details
+from utils import load_prompt, log_event_details, save_json
 
 from google.genai import types
 from google.adk.runners import Runner
@@ -64,12 +64,12 @@ async def get_tool_agent():
     print(f"Filtered tools: {[tool.name for tool in filtered_tools]}")
 
     agent = LlmAgent(
-        model="gemini-2.0-flash-exp",
+        model="gemini-2.0-flash-lite",
         name="jira_tools_agent",
         description="Fetches Jira issue data using tools.",
         instruction=load_prompt("tool_prompt"),
         tools=filtered_tools,
-        output_key="raw_issues_text",
+        output_key="raw_issues",
     )
     return agent, exit_stack
 
@@ -84,7 +84,7 @@ async def get_structure_agent():
         description="Formats Jira issue summaries into structured JSON.",
         instruction=load_prompt("structure_prompt"),
         output_schema=JiraIssuesList,
-        output_key="issues",
+        output_key="structured_issues",
         disallow_transfer_to_peers=True,
         disallow_transfer_to_parent=True,
     )
@@ -115,7 +115,7 @@ async def async_main():
         artifact_service=artifacts_service,
     )
 
-    query = "Get all Jira issues updated in the last 30 days with full detail for reporting."
+    query = "Get all Jira issues updated in the last 7 days."
     print(f"User Query: '{query}'")
     content = types.Content(role="user", parts=[types.Part(text=query)])
 
@@ -127,8 +127,7 @@ async def async_main():
             if event.author == "jira_structure_agent":
                 try:
                     parsed = json.loads(event.content.parts[0].text)
-                    print("Structured output (pretty):")
-                    print(json.dumps(parsed.get("issues", []), indent=2))
+                    save_json(parsed)
                 except json.JSONDecodeError:
                     print("Could not parse structured output as JSON.")
 
