@@ -1,9 +1,9 @@
 import os
 import json
 import asyncio
-from typing import List
-from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+
+from schemas import JiraIssuesList
 from utils import load_prompt, log_event_details
 
 from google.genai import types
@@ -17,20 +17,6 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
     MCPToolset,
     StdioServerParameters,
 )
-
-
-class JiraIssues(BaseModel):
-    issue_id: str = Field(description="Unique identifier or key of the issue")
-    summary: str = Field(description="Short description or title of the issue")
-    assignee: str = Field(description="Full name of user assigned to the issue")
-    project: str = Field(description="Project key that this issue belongs to")
-    last_updated: str = Field(
-        description="ISO 8601 format timestamp when the issue was last updated"
-    )
-
-
-class JiraIssuesList(BaseModel):
-    issues: List[JiraIssues]
 
 
 # Only want to expose read-only Jira tools
@@ -129,7 +115,7 @@ async def async_main():
         artifact_service=artifacts_service,
     )
 
-    query = "List issues updated in the last 30 days and who is working on them"
+    query = "Get all Jira issues updated in the last 30 days with full detail for reporting."
     print(f"User Query: '{query}'")
     content = types.Content(role="user", parts=[types.Part(text=query)])
 
