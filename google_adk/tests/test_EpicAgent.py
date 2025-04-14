@@ -4,6 +4,7 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
 
+from debug_tools import debug_before_tool
 from google_adk.agents.EpicAgent import build_epic_agent
 
 APP_NAME = "jira_test_app"
@@ -17,6 +18,11 @@ async def test_epic_agent():
     session_service = InMemorySessionService()
     artifact_service = InMemoryArtifactService()
 
+    # Debug
+    session_service.delete_session(
+        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+    )
+
     session_service.create_session(
         app_name=APP_NAME,
         user_id=USER_ID,
@@ -24,7 +30,7 @@ async def test_epic_agent():
     )
 
     # Create the EpicAgent and retrieve tools + exit stack
-    epic_agent, exit_stack = await build_epic_agent()
+    epic_agent, exit_stack = await build_epic_agent(tool_debug=debug_before_tool)
 
     runner = Runner(
         agent=epic_agent,

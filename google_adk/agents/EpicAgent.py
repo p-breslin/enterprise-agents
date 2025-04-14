@@ -3,7 +3,7 @@ from google_adk.tools import jira_mcp_tools
 from google.adk.agents.llm_agent import LlmAgent
 
 
-async def build_epic_agent():
+async def build_epic_agent(tool_debug=None):
     """
     Constructs the EpicAgent with access to Jira MCP tools.
     Returns:
@@ -19,6 +19,7 @@ async def build_epic_agent():
         instruction=load_prompt("epic_prompt"),
         tools=tools,
         output_key="epics_raw",  # Will be saved to session.state["epics_raw"]
+        before_tool_callback=tool_debug,
     )
 
     return agent, exit_stack
