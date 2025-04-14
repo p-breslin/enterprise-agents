@@ -5,7 +5,14 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import Runner
 
 from debug_tools import debug_before_tool
+from google_adk.tools import jira_mcp_tools
 from google_adk.agents.EpicAgent import build_epic_agent
+
+
+async def get_mcp_tools():
+    tools, exit_stack = await jira_mcp_tools()
+    return tools, exit_stack
+
 
 APP_NAME = "jira_test_app"
 USER_ID = "test_user"
@@ -30,7 +37,8 @@ async def test_epic_agent():
     )
 
     # Create the EpicAgent and retrieve tools + exit stack
-    epic_agent, exit_stack = await build_epic_agent(tool_debug=debug_before_tool)
+    tools, exit_stack = await get_mcp_tools()
+    epic_agent = build_epic_agent(tools, tool_debug=debug_before_tool)
 
     runner = Runner(
         agent=epic_agent,
