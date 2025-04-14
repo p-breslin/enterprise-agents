@@ -4,7 +4,7 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
 
-from debug_tools import debug_before_tool
+from debug_callbacks import debug_before_tool, debug_before_model
 from google_adk.tools import jira_mcp_tools
 from google_adk.agents.EpicAgent import build_epic_agent
 
@@ -38,7 +38,9 @@ async def test_epic_agent():
 
     # Create the EpicAgent and retrieve tools + exit stack
     tools, exit_stack = await get_mcp_tools()
-    epic_agent = build_epic_agent(tools, tool_debug=debug_before_tool)
+    epic_agent = build_epic_agent(
+        tools, tool_debug=debug_before_tool, model_debug=debug_before_model
+    )
 
     runner = Runner(
         agent=epic_agent,
@@ -47,7 +49,6 @@ async def test_epic_agent():
         artifact_service=artifact_service,
     )
 
-    print(QUERY)
     content = types.Content(role="user", parts=[types.Part(text=QUERY)])
 
     async with exit_stack:

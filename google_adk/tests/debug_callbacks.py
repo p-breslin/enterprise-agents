@@ -22,6 +22,6 @@ def debug_before_model(
     print("\n[DEBUG] Full prompt sent to LLM:")
     for content in llm_request.contents:
         if content.role == "user":
-            print(f"\nUSER:\n{content.parts[0].text}")
+            print(f"USER:\n{content.parts[0].text}\n")
         elif content.role == "system":
-            print(f"\nSYSTEM:\n{content.parts[0].text}")
+            print(f"SYSTEM:\n{content.parts[0].text}\n")
