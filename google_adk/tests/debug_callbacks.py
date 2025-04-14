@@ -19,9 +19,9 @@ def debug_before_tool(
 def debug_before_model(
     callback_context: CallbackContext, llm_request: LlmRequest
 ) -> None:
-    print("\n[DEBUG] Full prompt sent to LLM:")
+    print("\n[DEBUG] Query sent to LLM:")
     for content in llm_request.contents:
         if content.role == "user":
-            print(f"USER:\n{content.parts[0].text}\n")
+            print(f"USER: {content.parts[0].text}\n")
         elif content.role == "system":
-            print(f"SYSTEM:\n{content.parts[0].text}\n")
+            print(f"SYSTEM: {content.parts[0].text}\n")

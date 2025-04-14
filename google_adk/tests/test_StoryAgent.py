@@ -13,7 +13,16 @@ APP_NAME = "jira_test_app"
 USER_ID = "test_user"
 SESSION_ID = "story_test_session"
 EPIC_FILE = "google_adk/tests/epic_test_data.json"
-QUERY = "Get all stories from the given epics."
+
+
+with open("google_adk/tests/epic_test_data.json", "r") as f:
+    epic_data = json.load(f)
+epics_text = json.dumps(epic_data["epics"], indent=2)
+
+QUERY = f"""
+You must call the jira_get_epic_issues tool for each of the following epics:
+{epics_text}
+"""
 
 
 async def test_story_agent():
@@ -33,21 +42,9 @@ async def test_story_agent():
         session_id=SESSION_ID,
     )
 
-    # Load epic test data
-    with open(EPIC_FILE, "r") as f:
-        epic_data = json.load(f)
-
-    # Set epic data in session state (as if returned from EpicAgent)
-    session = session_service.get_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
-    )
-    session.state["epics_raw"] = json.dumps(epic_data)
-
     # Load tools and agent
     tools, exit_stack = await jira_mcp_tools()
-    story_agent = get_story_agent(
-        tools, tool_debug=debug_before_tool, model_debug=debug_before_model
-    )
+    story_agent = get_story_agent(tools, tool_debug=debug_before_tool)
 
     runner = Runner(
         agent=story_agent,

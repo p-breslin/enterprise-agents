@@ -38,9 +38,7 @@ async def test_epic_agent():
 
     # Create the EpicAgent and retrieve tools + exit stack
     tools, exit_stack = await get_mcp_tools()
-    epic_agent = build_epic_agent(
-        tools, tool_debug=debug_before_tool, model_debug=debug_before_model
-    )
+    epic_agent = build_epic_agent(tools, tool_debug=debug_before_tool)
 
     runner = Runner(
         agent=epic_agent,
