@@ -15,8 +15,6 @@ load_dotenv()
 APP_NAME = "jira_test_app"
 USER_ID = "test_user"
 SESSION_ID = "story_test_session"
-EPIC_FILE = "google_adk/tests/epic_test_data.json"
-
 
 with open("google_adk/tests/test_data/epic_test_data.json", "r") as f:
     epic_data = json.load(f)
