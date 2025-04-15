@@ -1,5 +1,6 @@
 import asyncio
 import json
+from dotenv import load_dotenv
 from google.genai import types
 from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
@@ -9,6 +10,7 @@ from debug_callbacks import trace_event
 from google_adk.tools.custom_tools import jira_get_epic_issues
 from google_adk.agents.StoryAgent import get_story_agent
 
+load_dotenv()
 
 APP_NAME = "jira_test_app"
 USER_ID = "test_user"
