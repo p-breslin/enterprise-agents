@@ -15,7 +15,7 @@ epic_prompt: |
 
     {
       "epic_key": string,
-      "summary": string,
+      "epic_summary": string,
       "project": string  # Use project.key
     }
 
@@ -35,9 +35,6 @@ story_prompt: |
   From each tool response, extract the following fields from every issue:
     {
       "story_key": issue.key,
-      "summary": issue.fields.summary,
-      "status": issue.fields.status.name,
-      "assignee": issue.fields.assignee.displayName or null,
       "epic_key": the epic_key you used for the request
     }
 
@@ -47,3 +44,53 @@ story_prompt: |
   Output rules:
   - Use only values from tool results. Never fabricate.
   - Return valid JSON. No markdown, comments, or code blocks.
+
+issues_prompt: |
+  You are a Jira assistant. Your task is to enrich a list of discovered Jira stories by retrieving full issue metadata using the `jira_get_issue` tool.
+
+  You will receive a list of simplified story objects. Each object contains:
+    - story_key: the Jira issue key
+    - epic_key: the key of the epic the issue belongs to
+
+  For each story in the list:
+    - Call the tool `jira_get_issue` using:
+        {
+          "issue_key": "<story.story_key>"
+        }
+
+    - From the tool result, extract the following fields:
+        - story_key: issue.key
+        - summary: issue.fields.summary
+        - status: issue.fields.status.name
+        - assignee: issue.fields.assignee.displayName or null
+        - created: issue.fields.created
+        - resolved: issue.fields.resolutiondate or null
+        - priority: issue.fields.priority.name
+        - project: issue.fields.project.key
+
+    - Also copy the `epic_key` value directly from the input story. Do not try to extract the epic key from the issue metadata. Use only the given value.
+
+  Output format:
+    Return a single valid JSON object with this structure:
+
+    {
+      "issues": [
+        {
+          "story_key": string,
+          "summary": string,
+          "status": string,
+          "assignee": string or null,
+          "epic_key": string,
+          "created": string (ISO datetime),
+          "resolved": string or null,
+          "priority": string,
+          "project": string
+        },
+        ...
+      ]
+    }
+
+  Strict rules:
+  - Do not fabricate or infer any field.
+  - Use only values returned by the tool or copied from the input.
+  - Do not include markdown, comments, or any explanation — output valid JSON only.
