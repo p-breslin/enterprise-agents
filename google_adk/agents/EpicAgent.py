@@ -15,6 +15,5 @@ def build_epic_agent(tools, tool_debug=None, model_debug=None):
         tools=tools,
         output_key="epics_raw",  # Will be saved to session.state["epics_raw"]
         before_tool_callback=tool_debug,
-        before_model_callback=model_debug
-
+        before_model_callback=model_debug,
     )
