@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 
 from atlassian import Jira
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
@@ -26,9 +26,7 @@ def get_jira_client() -> Optional[Jira]:
         return None
 
 
-def jira_get_epic_issues(
-    epic_key: str, max_results: int = 50
-) -> List[Dict[str, Any]]:
+def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> List[Dict[str, Any]]:
     """
     Searches for Jira issues belonging to a specific Epic using a JQL query
 
