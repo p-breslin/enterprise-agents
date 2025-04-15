@@ -9,3 +9,4 @@ data
 metatool-app
 .env.swp
 /google_adk/tests/test_data
+/google_adk/mcp-server-arangodb
