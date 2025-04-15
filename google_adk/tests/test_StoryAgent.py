@@ -5,9 +5,10 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
 
-from debug_callbacks import debug_before_tool, debug_before_model
-from google_adk.tools import jira_mcp_tools
+from debug_callbacks import trace_event
+from google_adk.tools.custom_tools import jira_get_epic_issues
 from google_adk.agents.StoryAgent import get_story_agent
+
 
 APP_NAME = "jira_test_app"
 USER_ID = "test_user"
@@ -15,7 +16,7 @@ SESSION_ID = "story_test_session"
 EPIC_FILE = "google_adk/tests/epic_test_data.json"
 
 
-with open("google_adk/tests/epic_test_data.json", "r") as f:
+with open("google_adk/tests/test_data/epic_test_data.json", "r") as f:
     epic_data = json.load(f)
 epics_text = json.dumps(epic_data["epics"], indent=2)
 
@@ -43,8 +44,8 @@ async def test_story_agent():
     )
 
     # Load tools and agent
-    tools, exit_stack = await jira_mcp_tools()
-    story_agent = get_story_agent(tools, tool_debug=debug_before_tool)
+    # tools, exit_stack = await jira_mcp_tools()
+    story_agent = get_story_agent(tools=[jira_get_epic_issues])
 
     runner = Runner(
         agent=story_agent,
@@ -55,16 +56,13 @@ async def test_story_agent():
 
     content = types.Content(role="user", parts=[types.Part(text=QUERY)])
 
-    async with exit_stack:
-        async for event in runner.run_async(
-            user_id=USER_ID, session_id=SESSION_ID, new_message=content
-        ):
-            if event.is_final_response() and event.content and event.content.parts:
-                print("\n--- Final LLM Output ---")
-                print(event.content.parts[0].text)
-
-    print("MCP server cleanup...")
-    await exit_stack.aclose()
+    async for event in runner.run_async(
+        user_id=USER_ID, session_id=SESSION_ID, new_message=content
+    ):
+        trace_event(event)
+        if event.is_final_response() and event.content and event.content.parts:
+            print("\n--- Final LLM Output ---")
+            print(event.content.parts[0].text)
 
 
 if __name__ == "__main__":
