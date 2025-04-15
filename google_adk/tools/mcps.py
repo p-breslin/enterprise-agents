@@ -5,27 +5,9 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
     StdioServerParameters,
 )
 
-
-# Only want to expose read-only Jira tools
-ALLOWED_TOOLS = {
-    "jira_get_issue",
-    "jira_search",
-    "jira_get_project_issues",
-    "jira_get_epic_issues",
-    "jira_get_transitions",
-    "jira_get_agile_boards",
-    "jira_get_board_issues",
-    "jira_get_sprints_from_board",
-    "jira_get_sprint_issues",
-}
-
 load_dotenv()
-JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
-JIRA_USERNAME = os.getenv("JIRA_USERNAME")
-JIRA_TOKEN = os.getenv("JIRA_TOKEN")
 
 
-# Import tools from the MCP server
 async def jira_mcp_tools():
     """
     Connects to the mcp-atlassian MCP server and returns only selected tools.
@@ -34,7 +16,24 @@ async def jira_mcp_tools():
     Note:
       MCP requires maintaining a connection to the local MCP Server. exit_stack manages the cleanup of this connection.
     """
-    print("Connecting to MCP Atlassian server...")
+
+    # Only want to expose read-only Jira tools
+    ALLOWED_TOOLS = {
+        "jira_get_issue",
+        "jira_search",
+        "jira_get_project_issues",
+        "jira_get_epic_issues",
+        "jira_get_transitions",
+        "jira_get_agile_boards",
+        "jira_get_board_issues",
+        "jira_get_sprints_from_board",
+        "jira_get_sprint_issues",
+    }
+    JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
+    JIRA_USERNAME = os.getenv("JIRA_USERNAME")
+    JIRA_TOKEN = os.getenv("JIRA_TOKEN")
+
+    print("Connecting to Atlassian MCP server...")
     tools, exit_stack = await MCPToolset.from_server(
         connection_params=StdioServerParameters(
             command="mcp-atlassian",
@@ -46,5 +45,34 @@ async def jira_mcp_tools():
         )
     )
     filtered_tools = [tool for tool in tools if tool.name in ALLOWED_TOOLS]
-    print(f"Available Jira tools: {[tool.name for tool in filtered_tools]}")
+    # print(f"Available Jira tools: {[tool.name for tool in filtered_tools]}")
     return filtered_tools, exit_stack
+
+
+async def arango_mcp_tools():
+    """
+    Connects to the ArangoDB MCP server and returns only selected tools.
+    Used to construct agents that write to the knowledge graph.
+
+    Note:
+      MCP requires maintaining a connection to the local MCP Server. exit_stack manages the cleanup of this connection.
+    """
+    ARANGO_HOST = os.getenv("ARANGO_HOST")
+    ARANGO_DB = os.getenv("ARANGO_DB")
+    ARANGO_USR = os.getenv("ARANGO_USR")
+    ARANGO_PWD = os.getenv("ARANGO_PWD")
+
+    print("Connecting to ArangoDB MCP server...")
+    tools, exit_stack = await MCPToolset.from_server(
+        connection_params=StdioServerParameters(
+            command="mcp-arangodb",
+            args=[
+                f"--url={ARANGO_HOST}",
+                f"--database={ARANGO_DB}",
+                f"--username={ARANGO_USR}",
+                f"--password={ARANGO_PWD}",
+            ],
+        )
+    )
+    print(f"Available Arango tools: {[tool.name for tool in tools]}")
+    return tools, exit_stack
