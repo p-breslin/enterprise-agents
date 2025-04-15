@@ -5,7 +5,7 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import Runner
 
 from debug_callbacks import debug_before_tool, debug_before_model
-from google_adk.tools import jira_mcp_tools
+from google_adk.tools.mcps import jira_mcp_tools
 from google_adk.agents.EpicAgent import build_epic_agent
 
 
