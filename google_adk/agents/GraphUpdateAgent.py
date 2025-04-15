@@ -11,7 +11,7 @@ def build_graph_agent(tools):
         model="gemini-2.5-pro-exp-03-25",
         name="GraphUpdateAgent",
         description="Updates an ArangoDB knowledge graph using the available tools.",
-        instruction=load_prompt("graph_prompt"),
+        instruction=load_prompt("epic_graph_prompt"),
         tools=tools,
         output_key="graph_raw",
     )
