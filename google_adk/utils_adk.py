@@ -7,6 +7,11 @@ def load_prompt(prompt_key: str) -> str:
     path = Path(__file__).parent / "prompts.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)[prompt_key]
+    
+def load_config(folder):
+    path = Path(__file__).parent / f"configs/{folder}"
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
 
 
 def log_event_details(event):
