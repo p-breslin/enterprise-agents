@@ -4,7 +4,7 @@ from google.adk.agents.llm_agent import LlmAgent
 
 def get_story_agent(tools):
     """
-    Constructs the StoryAgent with access to Jira MCP tools.
+    Constructs the StoryAgent with access to a custom Jira tool.
     Returns an LlmAgent instance ready for execution.
     """
     return LlmAgent(
