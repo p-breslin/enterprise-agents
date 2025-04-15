@@ -5,6 +5,23 @@ from google.adk.tools.tool_context import ToolContext
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmRequest
 
+from google.adk.events import Event
+
+
+def trace_event(event: Event):
+    print(f"\n[Event Author]: {event.author}")
+
+    if event.get_function_calls():
+        for call in event.get_function_calls():
+            print(f"[Tool Call] {call.name} | Args: {call.args}")
+
+    elif event.get_function_responses():
+        for res in event.get_function_responses():
+            print(f"[Tool Response] {res.name}")
+
+    if event.is_final_response():
+        print("Final response detected")
+
 
 def debug_before_tool(
     tool: BaseTool, args: Dict[str, Any], tool_context: ToolContext
@@ -25,3 +42,4 @@ def debug_before_model(
             print(f"USER: {content.parts[0].text}\n")
         elif content.role == "system":
             print(f"SYSTEM: {content.parts[0].text}\n")
+    return None
