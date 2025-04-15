@@ -18,7 +18,9 @@ try:
 
     try:
         # Authenticate with root user (required to manage databases)
-        sys_db = client.db("_system", username="root", password=os.getenv("ARANGO_PWD"))
+        sys_db = client.db(
+            "_system", username="root", password=os.getenv("ARANGO_PASSWORD")
+        )
 
         db_name = os.getenv("ARANGO_DB_JIRA")
 
@@ -46,8 +48,8 @@ cfg = load_config(folder="graph.yaml")
 client = ArangoClient()
 db = client.db(
     os.getenv("ARANGO_DB_JIRA"),
-    username=os.getenv("ARANGO_USR"),
-    password=os.getenv("ARANGO_PWD"),
+    username=os.getenv("ARANGO_USERNAME"),
+    password=os.getenv("ARANGO_PASSWORD"),
 )
 
 # Vertex collections
