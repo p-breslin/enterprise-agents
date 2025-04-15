@@ -1,3 +1,4 @@
+import json
 import asyncio
 from google.genai import types
 from google.adk.sessions import InMemorySessionService
@@ -17,7 +18,15 @@ async def get_mcp_tools():
 APP_NAME = "jira_test_app"
 USER_ID = "test_user"
 SESSION_ID = "graph_test_session"
-QUERY = "Follow the instructions to execute the graph operation"
+
+with open("google_adk/tests/test_data/epic_test_data_simple.json", "r") as f:
+    epic_data = json.load(f)
+epics_text = json.dumps(epic_data["epics"], indent=2)
+
+QUERY = f"""
+Follow the instructions to execute the graph operation for the following data:
+{epics_text}
+"""
 
 
 async def test_graph_agent():
