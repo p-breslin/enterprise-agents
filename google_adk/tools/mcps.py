@@ -57,21 +57,21 @@ async def arango_mcp_tools():
     Note:
       MCP requires maintaining a connection to the local MCP Server. exit_stack manages the cleanup of this connection.
     """
-    ARANGO_HOST = os.getenv("ARANGO_HOST")
-    ARANGO_DB = os.getenv("ARANGO_DB")
-    ARANGO_USR = os.getenv("ARANGO_USR")
-    ARANGO_PWD = os.getenv("ARANGO_PWD")
+    env = {
+        "ARANGO_URL": os.getenv("ARANGO_HOST"),
+        "ARANGO_DB": os.getenv("ARANGO_DB_JIRA"),
+        "ARANGO_USERNAME": os.getenv("ARANGO_USERNAME"),
+        "ARANGO_PASSWORD": os.getenv("ARANGO_PASSWORD"),
+    }
 
     print("Connecting to ArangoDB MCP server...")
     tools, exit_stack = await MCPToolset.from_server(
         connection_params=StdioServerParameters(
-            command="mcp-arangodb",
+            command="node",
             args=[
-                f"--url={ARANGO_HOST}",
-                f"--database={ARANGO_DB}",
-                f"--username={ARANGO_USR}",
-                f"--password={ARANGO_PWD}",
+                "/Users/peter/ExperienceFlow/enterprise-agents/mcps/mcp-server-arangodb/build/index.js"
             ],
+            env=env,
         )
     )
     print(f"Available Arango tools: {[tool.name for tool in tools]}")
