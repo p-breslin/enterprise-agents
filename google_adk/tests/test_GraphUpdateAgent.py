@@ -6,13 +6,9 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import Runner
 
 from debug_callbacks import trace_event
-from google_adk.tools.mcps import arango_mcp_tools
+from google_adk.tools.ArangoUpsertTool import arango_upsert
+from google.adk.tools.function_tool import FunctionTool
 from google_adk.agents.GraphUpdateAgent import build_graph_agent
-
-
-async def get_mcp_tools():
-    tools, exit_stack = await arango_mcp_tools()
-    return tools, exit_stack
 
 
 APP_NAME = "jira_test_app"
@@ -45,9 +41,9 @@ async def test_graph_agent():
         session_id=SESSION_ID,
     )
 
-    # Create the GraphUpdateAgent and retrieve tools + exit stack
-    tools, exit_stack = await get_mcp_tools()
-    graph_agent = build_graph_agent(tools)
+    # Create the GraphUpdateAgent and retrieve tools
+    my_tools = FunctionTool(arango_upsert)
+    graph_agent = build_graph_agent(tools=[my_tools])
 
     runner = Runner(
         agent=graph_agent,
@@ -58,19 +54,14 @@ async def test_graph_agent():
 
     content = types.Content(role="user", parts=[types.Part(text=QUERY)])
 
-    async with exit_stack:
-        async for event in runner.run_async(
-            user_id=USER_ID, session_id=SESSION_ID, new_message=content
-        ):
-            trace_event(event)
-            if event.is_final_response() and event.content and event.content.parts:
-                final_output = event.content.parts[0].text
-                print("\n--- Final LLM Output ---")
-                print(final_output)
-
-    # Ensure the MCP server process connection is closed
-    print("Closing MCP server connection...")
-    await exit_stack.aclose()
+    async for event in runner.run_async(
+        user_id=USER_ID, session_id=SESSION_ID, new_message=content
+    ):
+        trace_event(event)
+        if event.is_final_response() and event.content and event.content.parts:
+            final_output = event.content.parts[0].text
+            print("\n--- Final LLM Output ---")
+            print(final_output)
 
 
 if __name__ == "__main__":
