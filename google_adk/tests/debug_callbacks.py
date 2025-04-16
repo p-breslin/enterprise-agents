@@ -22,6 +22,11 @@ def trace_event(event: Event):
     if event.is_final_response():
         print("Final response detected")
 
+    # print(f"[Event Author]: {event.author}")
+    # print(f"[Tool Response]: {event.get_function_responses()}")
+    # print(f"[Event Content]: {event.content}")
+    # print(f"[Is Final?]: {event.is_final_response()}")
+
 
 def debug_before_tool(
     tool: BaseTool, args: Dict[str, Any], tool_context: ToolContext
