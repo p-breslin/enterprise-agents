@@ -5,7 +5,7 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
 
-from debug_callbacks import trace_event
+from debug_callbacks import trace_event, save_trace_event
 from google_adk.tools.ArangoUpsertTool import arango_upsert
 from google.adk.tools.function_tool import FunctionTool
 from google_adk.agents.GraphUpdateAgent import build_graph_agent
@@ -13,7 +13,6 @@ from google_adk.agents.GraphUpdateAgent import build_graph_agent
 
 APP_NAME = "jira_test_app"
 USER_ID = "test_user"
-SESSION_ID = "graph_test_session"
 
 
 def create_test(TEST_DATA):
@@ -22,58 +21,57 @@ def create_test(TEST_DATA):
     ) as f:
         data = json.load(f)
     text = json.dumps(data, indent=2)
-    QUERY = f"""
-    Follow the instructions to execute the graph operation for the following data:
-    {text}
-    """
+    QUERY = f"Follow the instructions to execute the graph operation for the following data:\n{text}"
     PROMPT = f"{TEST_DATA}_graph_prompt"
     return QUERY, PROMPT
 
 
-A = "epic"
-B = "story"
-C = "issue"
-QUERY, PROMPT = create_test(C)
+async def test_graph_agent(test_name):
+    QUERY, PROMPT = create_test(test_name)
+    SESSION_ID = f"{test_name}_test_session"
 
-
-async def test_graph_agent():
-    # Create session and artifact services
+    # Setup session
     session_service = InMemorySessionService()
     artifact_service = InMemoryArtifactService()
-
-    # Debug
     session_service.delete_session(
         app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
     )
-
     session_service.create_session(
-        app_name=APP_NAME,
-        user_id=USER_ID,
-        session_id=SESSION_ID,
+        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
     )
 
-    # Create the GraphUpdateAgent and retrieve tools
-    my_tools = FunctionTool(arango_upsert)
-    graph_agent = build_graph_agent(tools=[my_tools], prompt=PROMPT)
+    # Create GraphUpdateAgent
+    tool = FunctionTool(arango_upsert)
+    agent = build_graph_agent(tools=[tool], prompt=PROMPT)
 
     runner = Runner(
-        agent=graph_agent,
+        agent=agent,
         app_name=APP_NAME,
         session_service=session_service,
         artifact_service=artifact_service,
     )
 
     content = types.Content(role="user", parts=[types.Part(text=QUERY)])
-
     async for event in runner.run_async(
         user_id=USER_ID, session_id=SESSION_ID, new_message=content
     ):
-        trace_event(event)
-        if event.is_final_response() and event.content and event.content.parts:
-            final_output = event.content.parts[0].text
-            print("\n--- Final LLM Output ---")
-            print(final_output)
+        trace_event(event, debug_state=False)
+        save_trace_event(event, test_name)
+        if event.is_final_response():
+            print(f"[{test_name}] Final event detected")
+
+
+async def main():
+    print("=== Running Epic Test ===")
+    await test_graph_agent("epic")
+
+    print("=== Running Story Test ===")
+    await test_graph_agent("story")
+
+    print("=== Running Issue Test ===")
+    await asyncio.sleep(20)
+    await test_graph_agent("issue")
 
 
 if __name__ == "__main__":
-    asyncio.run(test_graph_agent())
+    asyncio.run(main())
