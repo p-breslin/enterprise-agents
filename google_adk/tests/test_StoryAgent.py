@@ -7,6 +7,7 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import Runner
 
 from debug_callbacks import trace_event
+from google.adk.tools.function_tool import FunctionTool
 from google_adk.tools.custom_tools import jira_get_epic_issues
 from google_adk.agents.StoryAgent import get_story_agent
 
@@ -44,8 +45,8 @@ async def test_story_agent():
     )
 
     # Load tools and agent
-    # tools, exit_stack = await jira_mcp_tools()
-    story_agent = get_story_agent(tools=[jira_get_epic_issues])
+    my_tool = FunctionTool(jira_get_epic_issues)
+    story_agent = get_story_agent(tools=[my_tool])
 
     runner = Runner(
         agent=story_agent,
