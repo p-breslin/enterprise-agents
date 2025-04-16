@@ -1,13 +1,24 @@
+import os
 import json
 import yaml
+import logging
 from pathlib import Path
+from dotenv import load_dotenv
+from arango import ArangoClient
+
+load_dotenv()
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(levelname)s - %(message)s",
+)
 
 
 def load_prompt(prompt_key: str) -> str:
     path = Path(__file__).parent / "prompts.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)[prompt_key]
-    
+
+
 def load_config(folder):
     path = Path(__file__).parent / f"configs/{folder}"
     with open(path, "r") as f:
@@ -60,3 +71,24 @@ def save_json(data, filename="jira_issues.json"):
     with open(output, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     print(f"Structured data saved to: {output}")
+
+
+def arango_connect(db_name="ARANGO_DB_JIRA"):
+    try:
+        DB = os.getenv(db_name)
+        HST = os.getenv("ARANGO_HOST")
+        USR = os.getenv("ARANGO_USERNAME")
+        PWD = os.getenv("ARANGO_PASSWORD")
+
+        # Connect to ArangoDB server
+        client = ArangoClient(hosts=HST)
+        conn = client.db(DB, username=USR, password=PWD)
+
+        # Verify connection
+        conn.version()
+        logging.info(f"Successfully connected to ArangoDB: {HST}, DB: {DB}")
+        return conn
+
+    except Exception as e:
+        logging.error(f"Failed to connect to ArangoDB server: {e}")
+        raise
