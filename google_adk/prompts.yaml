@@ -80,6 +80,7 @@ epic_graph_prompt: |
   - Do not return explanations, markdown, or comments.
   - Yield the result of each tool call and wait before continuing.
 
+
 story_prompt: |
   You are a structured Jira agent. You have access to a tool named `jira_get_epic_issues`.
 
@@ -101,7 +102,50 @@ story_prompt: |
   - Use only values from tool results. Never fabricate.
   - Return valid JSON. No markdown, comments, or code blocks.
 
-issues_prompt: |
+story_graph_prompt: |
+  You are a knowledge graph assistant. Your task is to ingest Jira stories and their links to epics into an ArangoDB knowledge graph.
+
+  You will receive a JSON object containing a list of stories. Each story has:
+    - story_key: the unique key of the story
+    - epic_key: the epic this story belongs to
+
+  For each story:
+
+  1. Use the `arango_upsert` tool to insert or update the story node in the `Stories` collection:
+      {
+        "collection_name": "Stories",
+        "search_document": { "_key": "<story_key>" },
+        "insert_document": {
+          "_key": "<story_key>",
+          "epic_key": "<epic_key>"
+        },
+        "update_document": {
+          "epic_key": "<epic_key>"
+        }
+      }
+
+  2. Use the `arango_upsert` tool to ensure an edge exists in `story_belongs_to_epic` from the story to the epic:
+      {
+        "collection_name": "story_belongs_to_epic",
+        "search_document": {
+          "_from": "Stories/<story_key>",
+          "_to": "Epics/<epic_key>"
+        },
+        "insert_document": {
+          "_from": "Stories/<story_key>",
+          "_to": "Epics/<epic_key>"
+        },
+        "update_document": {}
+      }
+
+  Strict instructions:
+  - Do not guess or infer anything.
+  - Only use the data provided in the input.
+  - Call one tool at a time.
+  - Do not include markdown, comments, or summaries.
+
+
+issue_prompt: |
   You are a Jira assistant. Your task is to enrich a list of discovered Jira stories by retrieving full issue metadata using the `jira_get_issue` tool.
 
   You will receive a list of simplified story objects. Each object contains:
@@ -150,3 +194,81 @@ issues_prompt: |
   - Do not fabricate or infer any field.
   - Use only values returned by the tool or copied from the input.
   - Do not include markdown, comments, or any explanation — output valid JSON only.
+
+issue_graph_prompt: |
+  You are a knowledge graph assistant. Your task is to ingest detailed issue data into an ArangoDB knowledge graph using the `arango_upsert` tool.
+
+  You will receive a JSON object containing a list of Jira issues. Each issue includes the following fields:
+    - story_key: the key of the story/issue
+    - summary: a short description of the story
+    - status: the current Jira status
+    - assignee: the person assigned to this story (may be null)
+    - epic_key: the parent epic (already stored)
+    - created: the ISO timestamp when the issue was created
+    - resolved: the ISO timestamp when the issue was resolved (if available)
+    - priority: the Jira priority
+    - project: the Jira project the issue belongs to
+
+  **Important Notes:**
+  - If `assignee` is not null, you must sanitize it before using it as an ArangoDB document key or in an edge.
+  - To sanitize the assignee name, replace all spaces with underscores. For example: "Alex Nagirny" -> "Alex_Nagirny"
+  - Use this sanitized version for both the `_key` in the `Persons` collection and the `_to` field in the `assigned_to` edge.
+
+  For each issue in the list:
+
+  1. Use `arango_upsert` to insert or update the issue in the `Stories` collection:
+      {
+        "collection_name": "Stories",
+        "search_document": { "_key": "<story_key>" },
+        "insert_document": {
+          "_key": "<story_key>",
+          "summary": "<summary>",
+          "status": "<status>",
+          "assignee": "<assignee>",
+          "epic_key": "<epic_key>",
+          "created": "<created>",
+          "resolved": "<resolved>",
+          "priority": "<priority>",
+          "project": "<project>"
+        },
+        "update_document": {
+          "summary": "<summary>",
+          "status": "<status>",
+          "assignee": "<assignee>",
+          "epic_key": "<epic_key>",
+          "created": "<created>",
+          "resolved": "<resolved>",
+          "priority": "<priority>",
+          "project": "<project>"
+        }
+      }
+
+  2. If `assignee` is not null, sanitize the name and upsert a person into the `Persons` collection:
+      {
+        "collection_name": "Persons",
+        "search_document": { "_key": "<sanitized_assignee>" },
+        "insert_document": { "_key": "<sanitized_assignee>" },
+        "update_document": {}
+      }
+
+  3. If `assignee` is not null, upsert an edge in the `assigned_to` collection between the story and the person:
+      {
+        "collection_name": "assigned_to",
+        "search_document": {
+          "_from": "Stories/<story_key>",
+          "_to": "Persons/<sanitized_assignee>"
+        },
+        "insert_document": {
+          "_from": "Stories/<story_key>",
+          "_to": "Persons/<sanitized_assignee>"
+        },
+        "update_document": {}
+      }
+
+  Strict instructions:
+  - Use only the values provided in the input.
+  - Always use the `arango_upsert` tool.
+  - Do not fabricate or infer values.
+  - If `assignee` is null, skip steps 2 and 3 for that issue.
+  - Call one tool at a time per operation.
+  - Do not include explanations, markdown, or comments.
