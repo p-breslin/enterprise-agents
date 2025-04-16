@@ -30,7 +30,10 @@ def create_test(TEST_DATA):
     return QUERY, PROMPT
 
 
-QUERY, PROMPT = create_test("story")
+A = "epic"
+B = "story"
+C = "issue"
+QUERY, PROMPT = create_test(C)
 
 
 async def test_graph_agent():
