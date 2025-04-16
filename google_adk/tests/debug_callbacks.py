@@ -5,27 +5,51 @@ from google.adk.tools.tool_context import ToolContext
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmRequest
 
+import json
+from rich.panel import Panel
+from rich.console import Console
 from google.adk.events import Event
 
+console = Console()
 
-def trace_event(event: Event):
-    print(f"\n[Event Author]: {event.author}")
 
-    if event.get_function_calls():
-        for call in event.get_function_calls():
-            print(f"[Tool Call] {call.name} | Args: {call.args}")
+def trace_event(event: Event, debug_state: bool = False):
+    # --- Event Author ---
+    console.print(f"[bold blue][Event Author][/bold blue]: {event.author}")
 
-    elif event.get_function_responses():
-        for res in event.get_function_responses():
-            print(f"[Tool Response] {res.name}")
+    # --- Tool Calls ---
+    for call in event.get_function_calls():
+        console.print(
+            Panel(
+                f"[Tool Call] {call.name}\nArgs:\n{json.dumps(call.args, indent=2)}",
+                title="[bold green]Tool Call[/bold green]",
+                expand=True,
+            )
+        )
 
+    # --- Final Output Trigger ---
     if event.is_final_response():
-        print("Final response detected")
+        console.print("[bold cyan]Final response detected[/bold cyan]")
 
-    # print(f"[Event Author]: {event.author}")
-    # print(f"[Tool Response]: {event.get_function_responses()}")
-    # print(f"[Event Content]: {event.content}")
-    # print(f"[Is Final?]: {event.is_final_response()}")
+    # --- Errors ---
+    if event.error_code:
+        console.print(
+            Panel(
+                f"[Error Code] {event.error_code}\nMessage: {event.error_message}",
+                title="[bold red]Agent Error[/bold red]",
+                expand=True,
+            )
+        )
+
+    # --- State Changes ---
+    if debug_state and event.actions and event.actions.state_delta:
+        console.print(
+            Panel(
+                f"[State Change]\n{json.dumps(event.actions.state_delta, indent=2)}",
+                title="[bold magenta]State Delta[/bold magenta]",
+                expand=True,
+            )
+        )
 
 
 def debug_before_tool(
@@ -48,3 +72,26 @@ def debug_before_model(
         elif content.role == "system":
             print(f"SYSTEM: {content.parts[0].text}\n")
     return None
+
+
+def save_trace_event(event: Event, test_name):
+    output_lines = []
+
+    # Event Author
+    output_lines.append(f"\n[{test_name}] Event: {event.author}")
+
+    # Tool Calls
+    if event.get_function_calls():
+        for call in event.get_function_calls():
+            output_lines.append(f"[Tool Call] {call.name} | Args: {call.args}")
+
+    # Final Response
+    if event.is_final_response():
+        output_lines.append("Final response detected")
+
+    # Combine
+    output = "\n".join(output_lines)
+
+    # Save to file
+    with open("graph_update_trace.log", "a") as f:
+        f.write(output + "\n")
