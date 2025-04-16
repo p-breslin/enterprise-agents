@@ -44,7 +44,7 @@ except Exception as e:
 
 
 # Now creating the database
-cfg = load_config(folder="graph.yaml")
+cfg = load_config(folder="graph")
 client = ArangoClient(hosts=os.getenv("ARANGO_HOST"))
 db = client.db(
     os.getenv("ARANGO_DB_JIRA"),

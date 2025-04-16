@@ -20,7 +20,7 @@ def load_prompt(prompt_key: str) -> str:
 
 
 def load_config(folder):
-    path = Path(__file__).parent / f"configs/{folder}"
+    path = Path(__file__).parent / f"configs/{folder}.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
