@@ -108,30 +108,13 @@ def arango_upsert(
 
         return {"status": "success", "result": result_document}
 
+    # Error handling
     except AQLQueryExecuteError as e:
-        # This often catches issues like collection not found during query execution,
-        # constraint violations, or syntax errors in generated options etc.
-        http_exception = getattr(e, "http_exception", None)
-        details = (
-            http_exception.response.text
-            if http_exception and hasattr(http_exception, "response")
-            else str(e)
-        )
-        status_code = (
-            http_exception.response.status_code
-            if http_exception and hasattr(http_exception, "response")
-            else None
-        )
-        error_msg = "AQL Execution Error during UPSERT"
-        # Check for common error codes if needed (e.g., 1203 = collection not found)
-        if status_code == 404 and "collection or view not found" in details.lower():
-            error_msg = f"Collection '{collection_name}' not found"
-        logger.error(f"{error_msg}. Status: {status_code}. Details: {details}")
+        logger.error("AQL Execution Error during UPSERT", exc_info=True)
         return {
             "status": "error",
-            "error": error_msg,
-            "details": details,
-            "status_code": status_code,
+            "error": "AQL Execution Error",
+            "details": str(e),
         }
     except ArangoServerError as e:
         # Catch other potential server-side issues
