@@ -7,7 +7,7 @@ from google.adk.runners import Runner
 
 from debug_callbacks import trace_event
 from google_adk.tools.mcps import jira_mcp_tools
-from google_adk.agents.IssuesAgent import build_issue_agent
+from google_adk.agents.IssueAgent import build_issue_agent
 
 
 async def get_mcp_tools():
@@ -45,7 +45,7 @@ async def test_issue_agent():
         session_id=SESSION_ID,
     )
 
-    # Create the IssuesAgent and retrieve tools + exit stack
+    # Create the IssueAgent and retrieve tools + exit stack
     tools, exit_stack = await get_mcp_tools()
     issue_agent = build_issue_agent(tools)
 
