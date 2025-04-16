@@ -2,7 +2,7 @@ from google_adk.utils_adk import load_prompt
 from google.adk.agents.llm_agent import LlmAgent
 
 
-def get_story_agent(tools):
+def build_story_agent(tools):
     """
     Constructs the StoryAgent with access to a custom Jira tool.
     Returns an LlmAgent instance ready for execution.
