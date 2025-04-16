@@ -15,14 +15,22 @@ APP_NAME = "jira_test_app"
 USER_ID = "test_user"
 SESSION_ID = "graph_test_session"
 
-with open("google_adk/tests/test_data/epic_test_data_simple.json", "r") as f:
-    epic_data = json.load(f)
-epics_text = json.dumps(epic_data["epics"], indent=2)
 
-QUERY = f"""
-Follow the instructions to execute the graph operation for the following data:
-{epics_text}
-"""
+def create_test(TEST_DATA):
+    with open(
+        f"google_adk/tests/test_data/simple/{TEST_DATA}_test_data.json", "r"
+    ) as f:
+        data = json.load(f)
+    text = json.dumps(data, indent=2)
+    QUERY = f"""
+    Follow the instructions to execute the graph operation for the following data:
+    {text}
+    """
+    PROMPT = f"{TEST_DATA}_graph_prompt"
+    return QUERY, PROMPT
+
+
+QUERY, PROMPT = create_test("story")
 
 
 async def test_graph_agent():
@@ -43,7 +51,7 @@ async def test_graph_agent():
 
     # Create the GraphUpdateAgent and retrieve tools
     my_tools = FunctionTool(arango_upsert)
-    graph_agent = build_graph_agent(tools=[my_tools])
+    graph_agent = build_graph_agent(tools=[my_tools], prompt=PROMPT)
 
     runner = Runner(
         agent=graph_agent,
