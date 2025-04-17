@@ -9,6 +9,7 @@ from debug_callbacks import trace_event, save_trace_event
 from google_adk.tools.ArangoUpsertTool import arango_upsert
 from google.adk.tools.function_tool import FunctionTool
 from google_adk.agents.GraphUpdateAgent import build_graph_agent
+from google_adk.utils_adk import load_config
 
 
 APP_NAME = "jira_test_app"
@@ -42,7 +43,8 @@ async def test_graph_agent(test_name):
 
     # Create GraphUpdateAgent
     tool = FunctionTool(arango_upsert)
-    agent = build_graph_agent(tools=[tool], prompt=PROMPT)
+    models = load_config("runtime")["models"]["google"]
+    agent = build_graph_agent(model=models["graph"], tools=[tool], prompt=PROMPT)
 
     runner = Runner(
         agent=agent,
