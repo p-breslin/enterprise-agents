@@ -95,5 +95,5 @@ def save_trace_event(event: Event, test_name):
             if part.text:
                 output_lines.append(f"[LLM Output] {part.text.strip()}")
 
-    with open("trace.log", "a") as f:
+    with open(f"trace_{test_name}.log", "a") as f:
         f.write("\n".join(output_lines) + "\n")
