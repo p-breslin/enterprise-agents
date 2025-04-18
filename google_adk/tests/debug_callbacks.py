@@ -89,9 +89,11 @@ def save_trace_event(event: Event, test_name):
     if event.is_final_response():
         output_lines.append("Final response detected")
 
-    # Combine
-    output = "\n".join(output_lines)
+    # LLM response
+    if event.content and event.content.parts:
+        for part in event.content.parts:
+            if part.text:
+                output_lines.append(f"[LLM Output] {part.text.strip()}")
 
-    # Save to file
-    with open("graph_update_trace.log", "a") as f:
-        f.write(output + "\n")
+    with open("trace.log", "a") as f:
+        f.write("\n".join(output_lines) + "\n")
