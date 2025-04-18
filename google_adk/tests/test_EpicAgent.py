@@ -5,9 +5,9 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import Runner
 
 from debug_callbacks import trace_event
-from google_adk.utils_adk import extract_json
 from google_adk.tools.mcps import jira_mcp_tools
 from google_adk.agents.EpicAgent import build_epic_agent
+from google_adk.utils_adk import load_config, extract_json, resolve_model
 
 
 async def get_mcp_tools():
@@ -19,6 +19,13 @@ APP_NAME = "jira_test_app"
 USER_ID = "test_user"
 SESSION_ID = "epic_test_session"
 QUERY = "Get all epics updated in the last 30 days."
+
+
+model_provider = "openai"
+RUNTIME_PARAMS = load_config("runtime")
+
+MODELS = RUNTIME_PARAMS["MODELS"][model_provider]
+MODEL_EPIC = resolve_model(MODELS["epic"], provider=model_provider)
 
 
 async def test_epic_agent():
@@ -39,7 +46,7 @@ async def test_epic_agent():
 
     # Create the EpicAgent and retrieve tools + exit stack
     tools, exit_stack = await get_mcp_tools()
-    epic_agent = build_epic_agent(model="gemini-2.0-flash", tools=tools)
+    epic_agent = build_epic_agent(model=MODEL_EPIC, tools=tools)
 
     runner = Runner(
         agent=epic_agent,
