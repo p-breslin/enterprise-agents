@@ -1,78 +1,108 @@
+import json
+import logging
 import asyncio
+import pathlib
 from google.genai import types
-from google.adk.sessions import InMemorySessionService
-from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
 
 from debug_callbacks import trace_event
-from google_adk.tools.mcps import jira_mcp_tools
 from google_adk.agents.EpicAgent import build_epic_agent
-from google_adk.utils_adk import load_config, extract_json, resolve_model
+from google_adk.utils_adk import load_config, load_tools, extract_json, resolve_model
 
 
-async def get_mcp_tools():
-    tools, exit_stack = await jira_mcp_tools()
-    return tools, exit_stack
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
-APP_NAME = "jira_test_app"
-USER_ID = "test_user"
-SESSION_ID = "epic_test_session"
-QUERY = "Get all epics updated in the last 30 days."
+# === Runtime params ===
 
-
-model_provider = "openai"
 RUNTIME_PARAMS = load_config("runtime")
+APP_NAME = RUNTIME_PARAMS["SESSION"]["app_name"]
+USER_ID = RUNTIME_PARAMS["SESSION"]["user_id"]
+TEST_SESSION_ID = "test_session_epic_agent"
 
-MODELS = RUNTIME_PARAMS["MODELS"][model_provider]
-MODEL_EPIC = resolve_model(MODELS["epic"], provider=model_provider)
+OUTPUTS = RUNTIME_PARAMS["OUTPUTS"]
+EPIC_AGENT_OUTPUT_KEY = OUTPUTS["epic"]
+
+model_provider = "google"
+MODEL_EPIC = resolve_model(
+    RUNTIME_PARAMS["MODELS"][model_provider]["epic"], provider=model_provider
+)
+
+OUTPUT_DIR = pathlib.Path(__file__).parent / "test_output"
+OUTPUT_DIR.mkdir(exist_ok=True)  # Create directory if it doesn't exist
+OUTPUT_FILE = OUTPUT_DIR / f"epics_output_{MODEL_EPIC}.json"
+
+# ======================
 
 
-async def test_epic_agent():
-    # Create session and artifact services
+async def run_epic_agent_test():
+    logger.info("--- Starting Isolated EpicAgent Test ---")
+    tools, exit_stack, _, _ = await load_tools()
+    logger.info("Tools loaded.")
+
+    print("test")
     session_service = InMemorySessionService()
-    artifact_service = InMemoryArtifactService()
-
-    # Debug
-    session_service.delete_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
-    )
-
+    try:
+        session_service.delete_session(
+            app_name=APP_NAME, user_id=USER_ID, session_id=TEST_SESSION_ID
+        )
+        logger.info(f"Deleted existing session: {TEST_SESSION_ID}")
+    except KeyError:
+        logger.info(f"Session {TEST_SESSION_ID} not found, creating new.")
     session_service.create_session(
-        app_name=APP_NAME,
-        user_id=USER_ID,
-        session_id=SESSION_ID,
+        app_name=APP_NAME, user_id=USER_ID, session_id=TEST_SESSION_ID
     )
+    logger.info(f"Created session: {TEST_SESSION_ID}")
 
-    # Create the EpicAgent and retrieve tools + exit stack
-    tools, exit_stack = await get_mcp_tools()
-    epic_agent = build_epic_agent(model=MODEL_EPIC, tools=tools)
-
-    runner = Runner(
-        agent=epic_agent,
-        app_name=APP_NAME,
-        session_service=session_service,
-        artifact_service=artifact_service,
+    # --- Agent Setup ---
+    agent = build_epic_agent(
+        model=MODEL_EPIC,
+        tools=tools,
+        output_key=EPIC_AGENT_OUTPUT_KEY,  # Agent saves its result here
     )
+    logger.info(f"Built EpicAgent using model {MODEL_EPIC}")
 
-    content = types.Content(role="user", parts=[types.Part(text=QUERY)])
+    runner = Runner(agent=agent, app_name=APP_NAME, session_service=session_service)
 
+    # --- Run Agent ---
+    trigger_message = types.Content(role="user", parts=[types.Part(text="Get epics")])
+    output = None
+
+    logger.info("Running EpicAgent...")
     async with exit_stack:
         async for event in runner.run_async(
-            user_id=USER_ID, session_id=SESSION_ID, new_message=content
+            user_id=USER_ID, session_id=TEST_SESSION_ID, new_message=trigger_message
         ):
             trace_event(event)
             if event.is_final_response() and event.content and event.content.parts:
-                final_output = event.content.parts[0].text
+                output = event.content.parts[0].text
+                logger.info("EpicAgent finished.")
                 print("\n--- Final LLM Output ---")
-                print(final_output)
+                print(output)
 
-    print(extract_json(raw_text=final_output, key="epics"))
+    # --- Save Output ---
+    if output:
+        logger.info(f"Saving EpicAgent output to: {OUTPUT_FILE}")
+        try:
+            structured_output = extract_json(raw_text=output, key="epics")
+            with open(OUTPUT_FILE, "w") as f:
+                json.dump(structured_output, f, indent=4)
 
-    # Ensure the MCP server process connection is closed
-    print("Closing MCP server connection...")
-    await exit_stack.aclose()
+        except IOError as e:
+            logger.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
+
+    else:
+        logger.error("EpicAgent did not produce a final response text.")
+
+    logger.info("--- Finished Isolated EpicAgent Test ---")
 
 
 if __name__ == "__main__":
-    asyncio.run(test_epic_agent())
+    try:
+        asyncio.run(run_epic_agent_test())
+    except Exception:
+        logger.exception("EpicAgent test failed with unhandled exception.")
