@@ -2,14 +2,14 @@ MODELS:
   google:
     epic: "gemini-2.0-flash"
     story: "gemini-2.5-pro-exp-03-25"
-    issues: "gemini-2.0-flash"
+    issue: "gemini-2.0-flash"
     graph: "gemini-2.0-flash-lite"
 
   openai:
-    epic: "gpt-4.1-mini"
-    story: "gpt-4.1-mini"
-    issues: "gpt-4.1-mini"
-    graph: "gpt-4.1-mini"
+    epic: "openai/gpt-4.1-mini"
+    story: "openai/gpt-4.1-mini"
+    issue: "openai/gpt-4.1-mini"
+    graph: "openai/gpt-4.1-mini"
 
 SESSION:
   app_name: "jira_graph"
