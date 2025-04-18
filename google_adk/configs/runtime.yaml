@@ -20,3 +20,9 @@ AGENT_NAMES:
   stage2: process_epics
   stage3: process_stories
   stage4: process_issues
+
+OUTPUTS:
+  epic: "outputs_EpicAgent"
+  story: "outputs_StoryAgent"
+  issue: "outputs_IssuesAgent"
+  graph: "outputs_GraphUpdateAgent"
