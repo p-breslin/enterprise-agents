@@ -2,7 +2,7 @@
 Jira-ArangoDB Multi-Agent Pipeline (Google ADK)
 -------------------------------------------------
 
-This pipeline ingests Jira data and incrementally populates an ArangoDB knowledge graph.
+This pipeline ingests Jira data and incrementally populates an ArangoDB knowledge graph (KG).
 
 Flow Overview:
 ---------------
@@ -53,10 +53,9 @@ from google_adk.agents.GraphUpdateAgent import build_graph_agent
 model_provider = "openai"
 
 
-# ========================================
+# ==================================
 # Runtime parameters (do not change)
-# ========================================
-
+# ==================================
 RUNTIME_PARAMS = load_config("runtime")
 
 # Session settings
@@ -84,9 +83,10 @@ STORY_OUTPUTS = OUTPUTS["story"]
 ISSUE_OUTPUTS = OUTPUTS["issue"]
 GRAPH_OUTPUTS = OUTPUTS["graph"]
 
-# ========================================
 
-
+# =============
+# Main pipeline
+# =============
 async def main():
     # Load tools
     jira_mcp, exit_stack, jira_custom, arango_custom = await load_tools()
@@ -109,7 +109,9 @@ async def main():
         app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
     )
 
-    # === Stage 1: Run Epic Agent ===
+    # =====================================
+    # Stage 1: Collect Epics with EpicAgent
+    # =====================================
     epic_agent = build_epic_agent(
         model=MODEL_EPIC, tools=jira_mcp, output_key=EPIC_OUTPUTS
     )
@@ -131,7 +133,9 @@ async def main():
     if not epic_data:
         raise ValueError("No epics returned.")
 
-    # === Stage 2: Process Epics ===
+    # =================================================================
+    # Stage 2: Update KG with Epics and collect Stories with StoryAgent
+    # =================================================================
     agents = []
     story_output_keys = []
 
@@ -180,7 +184,9 @@ async def main():
     print("Running Stage 2: Epic graphing and story discovery...")
     await run_parallel(STAGE2, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
-    # === Stage 3: Process Stories ===
+    # ===================================================================
+    # Stage 3: Update KG with Stories and collect Issues with IssueAgent
+    # ===================================================================
     agents = []
     issue_output_keys = []
 
@@ -231,7 +237,9 @@ async def main():
     print("Running Stage 3: Story graphing and issue discovery...")
     await run_parallel(STAGE3, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
-    # === Stage 4: Process Issues ===
+    # ==============================
+    # Stage 4: Update KG with Issues
+    # ==============================
     agents = []
 
     # Refresh session state view
@@ -271,6 +279,9 @@ async def main():
 
 
 async def run_parallel(name, agents, app_name, user_id, session_id, session_service):
+    """
+    Creates and runs a ParallelAgent instance for running concurrent processes.
+    """
     if not agents:
         print(f"No agents to run for stage: {name}")
         return
@@ -291,18 +302,20 @@ async def run_parallel(name, agents, app_name, user_id, session_id, session_serv
 
 def get_data_from_memory(output_keys, state, label):
     """
-    Helper function for getting data from memory in a safe way in case any intermediate LLM calls fail.
+    Helper function for getting data from memory in a safe way in case any intermediate LLM calls fail. Assumes data in state is a JSON string and extracts the list associated with the 'label' key from within that JSON.
     """
     data = []
     for key in output_keys:
-        raw = state.get(key, "[]")
+        raw = state.get(key)
+        if not raw:
+            continue
         try:
             data.extend(extract_json(raw, key=label))
         except Exception as e:
             print(f"Failed to parse {label} output at {key}: {e}")
 
     if not data:
-        raise ValueError(f"No {label} data found.")
+        raise ValueError(f"Fatal error: no {label} data found.")
     return data
 
 
