@@ -1,4 +1,4 @@
-models:
+MODELS:
   google:
     epic: "gemini-2.0-flash"
     story: "gemini-2.5-pro-exp-03-25"
@@ -6,7 +6,17 @@ models:
     graph: "gemini-2.0-flash-lite"
 
   openai:
-    epic: "gpt-4o-mini"
-    story: "gpt-4o-mini"
-    issues: "gpt-4o-mini"
-    graph: "gpt-4o-mini"
+    epic: "gpt-4.1-mini"
+    story: "gpt-4.1-mini"
+    issues: "gpt-4.1-mini"
+    graph: "gpt-4.1-mini"
+
+SESSION:
+  app_name: "jira_graph"
+  user_id: "admin"
+  session_id: "pipeline_run"
+
+AGENT_NAMES:
+  stage2: process_epics
+  stage3: process_stories
+  stage4: process_issues
