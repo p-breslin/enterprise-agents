@@ -113,7 +113,11 @@ async def main():
 
     # Run on an Epic item-by-item basis
     for i, epic in enumerate(epic_data):
-        output_key = f"story_output_{i}"  # output_key will determine where LLM output is saved in session state
+        # output_key will determine where LLM output is saved in session state
+        # unique keys to avoid overwriting the session state
+
+        graph_output_key = f"epic_graph_update_output_key_{i}"
+        story_output_key = f"story_output_key_{i}"
 
         # Create an instance of GraphUpdateAgent to add the Epic item to graph
         agents.append(
@@ -122,7 +126,7 @@ async def main():
                 prompt="epic_graph_prompt",
                 tools=[arango_custom],
                 data=epic,
-                output_key=output_key,
+                output_key=graph_output_key,
             )
         )
 
@@ -132,12 +136,12 @@ async def main():
                 model=MODEL_STORY,
                 tools=[jira_custom],
                 data=epic,
-                output_key=output_key,
+                output_key=story_output_key,
             )
         )
 
         # Keep track of the expected output keys
-        story_output_keys.append(output_key)
+        story_output_keys.append(story_output_key)
 
     # Create a concurrent process
     print("Running Stage 2: Epic graphing and story discovery...")
@@ -152,7 +156,8 @@ async def main():
 
     # Run on an Story item-by-item basis
     for i, story in enumerate(story_data):
-        output_key = f"issue_output_{i}"
+        graph_output_key = f"story_graph_update_output_key_{i}"
+        issue_output_key = f"issue_output_key_{i}"
 
         # Create an instance of GraphUpdateAgent to add the Story item to graph
         agents.append(
@@ -161,7 +166,7 @@ async def main():
                 prompt="story_graph_prompt",
                 tools=[arango_custom],
                 data=story,
-                output_key=output_key,
+                output_key=graph_output_key,
             )
         )
 
@@ -171,12 +176,12 @@ async def main():
                 model=MODEL_ISSUE,
                 tools=jira_mcp,
                 data=story,
-                output_key=output_key,
+                output_key=issue_output_key,
             )
         )
 
         # Keep track of the expected output keys
-        issue_output_keys.append(output_key)
+        issue_output_keys.append(issue_output_key)
 
     # Create a concurrent process
     print("Running Stage 3: Story graphing and issue discovery...")
@@ -190,7 +195,7 @@ async def main():
 
     # Run on an Issue item-by-item basis
     for i, issue in enumerate(issue_data):
-        output_key = f"issue_graph_{i}"
+        graph_output_key = f"issue_graph_update_output_key_{i}"
 
         # Create an instance of GraphUpdateAgent to add the Issue item to graph
         agents.append(
@@ -199,7 +204,7 @@ async def main():
                 prompt="issue_graph_prompt",
                 tools=[arango_custom],
                 data=issue,
-                output_key=output_key,
+                output_key=graph_output_key,
             )
         )
 
