@@ -7,6 +7,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 from arango import ArangoClient
 from google.adk.models.lite_llm import LiteLlm
+from google.adk.tools.function_tool import FunctionTool
+
+from google_adk.tools.mcps import jira_mcp_tools
+from google_adk.tools.ArangoUpsertTool import arango_upsert
+from google_adk.tools.custom_tools import jira_get_epic_issues
 
 
 load_dotenv()
@@ -53,6 +58,13 @@ def resolve_model(model_id: str, provider: str):
         return model_id  # string is fine for Gemini
     else:
         return LiteLlm(model=model_id)  # wrap for LiteLLM-compatible models
+
+
+async def load_tools():
+    jira_mcp, exit_stack = await jira_mcp_tools()
+    jira_custom = FunctionTool(jira_get_epic_issues)
+    arango_custom = FunctionTool(arango_upsert)
+    return jira_mcp, exit_stack, jira_custom, arango_custom
 
 
 def log_event_details(event):
