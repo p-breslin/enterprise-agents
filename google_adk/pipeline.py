@@ -34,6 +34,7 @@ Tooling Notes:
 
 import json
 import asyncio
+import logging
 from google.genai import types
 
 from google.adk.runners import Runner
@@ -48,8 +49,18 @@ from google_adk.agents.StoryAgent import build_story_agent
 from google_adk.agents.IssueAgent import build_issue_agent
 from google_adk.agents.GraphUpdateAgent import build_graph_agent
 
+# Logging Configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
-# ONLY ITEM TO CHANGE
+
+# ==============================
+# Settings to configure manually
+# ==============================
 model_provider = "openai"
 
 
@@ -90,6 +101,7 @@ GRAPH_OUTPUTS = OUTPUTS["graph"]
 async def main():
     # Load tools
     jira_mcp, exit_stack, jira_custom, arango_custom = await load_tools()
+    logger.info("Tools loaded.")
 
     # Initialize session service
     session_service = InMemorySessionService()
@@ -99,19 +111,21 @@ async def main():
         session_service.delete_session(
             app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
         )
-        print(f"Deleted existing session: {SESSION_ID}")
+        logger.info(f"Deleted existing session: {SESSION_ID}")
     except KeyError:
-        print(f"Session {SESSION_ID} did not exist, creating new.")
+        logger.info(f"Session {SESSION_ID} did not exist, creating new.")
         pass
 
     # Create a new session
     session_service.create_session(
         app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
     )
+    logger.info(f"Created new session: {SESSION_ID}")
 
     # =====================================
     # Stage 1: Collect Epics with EpicAgent
     # =====================================
+    logger.info("--- Stage 1: Collecting Jira Epics ---")
     epic_agent = build_epic_agent(
         model=MODEL_EPIC, tools=jira_mcp, output_key=EPIC_OUTPUTS
     )
@@ -122,22 +136,39 @@ async def main():
 
     epic_data = None
     async with exit_stack:
-        print("Running Stage 1: Epic discovery...")
         async for event in epic_runner.run_async(
             user_id=USER_ID, session_id=SESSION_ID, new_message=content
         ):
             save_trace_event(event, "Stage 1")
             if event.is_final_response() and event.content and event.content.parts:
-                epic_data = extract_json(event.content.parts[0].text, key="epics")
+                result = event.content.parts[0].text
+                logger.info("[Stage 1] Final response received from EpicAgent.")
+
+                try:
+                    epic_data = extract_json(result, key="epics")
+                    logger.debug(f"[Stage 1] Extracted {len(epic_data)} epics.")
+                except Exception as e:
+                    logger.error(
+                        f"[Stage 1] Failed to extract epics from final response: {e}",
+                        exc_info=False,
+                    )
+                    logger.debug(f"[Stage 1] Raw Response: {result}")
 
     if not epic_data:
+        logger.critical("No epics returned from Stage 1. Terminating pipeline.")
         raise ValueError("No epics returned.")
 
     # =================================================================
     # Stage 2: Update KG with Epics and collect Stories with StoryAgent
     # =================================================================
+    logger.info("--- Stage 2: Update KG with Epics and Collect Stories ---")
     agents = []
     story_output_keys = []
+
+    # Re-fetch the full Session object for modifying session state
+    session = session_service.get_session(
+        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+    )
 
     # Run on an Epic item-by-item basis
     for i, epic_item in enumerate(epic_data):
@@ -148,12 +179,12 @@ async def main():
         graph_output_key = f"{GRAPH_OUTPUTS}_{i}"
         story_output_key = f"{STORY_OUTPUTS}_{i}"
 
-        # Re-fetch the full Session object when modifying session state
-        session = session_service.get_session(
-            app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
-        )
+        # Write to session.state
         session.state[epic_input_key] = (
             json.dumps(epic_item) if not isinstance(epic_item, str) else epic_item
+        )
+        logger.debug(
+            f"[Stage 2] Placed epic {i} into state key '{epic_input_key}'. Epic data item:\n{epic_item}"
         )
 
         # Create an instance of GraphUpdateAgent to add the Epic item to graph
@@ -181,12 +212,12 @@ async def main():
         story_output_keys.append(story_output_key)
 
     # Create a concurrent process
-    print("Running Stage 2: Epic graphing and story discovery...")
     await run_parallel(STAGE2, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
     # ===================================================================
     # Stage 3: Update KG with Stories and collect Issues with IssueAgent
     # ===================================================================
+    logger.info("--- Stage 3: Update KG with Stories and Collect Issues ---")
     agents = []
     issue_output_keys = []
 
@@ -207,6 +238,9 @@ async def main():
         # Write to session.state
         session.state[story_input_key] = (
             json.dumps(story_item) if not isinstance(story_item, str) else story_item
+        )
+        logger.debug(
+            f"[Stage 3] Placed story {i} into state key '{story_input_key}'. Story data item:\n{story_item}"
         )
 
         # Create an instance of GraphUpdateAgent to add the Story item to graph
@@ -234,7 +268,6 @@ async def main():
         issue_output_keys.append(issue_output_key)
 
     # Create a concurrent process
-    print("Running Stage 3: Story graphing and issue discovery...")
     await run_parallel(STAGE3, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
     # ==============================
@@ -259,6 +292,9 @@ async def main():
         session.state[issue_input_key] = (
             json.dumps(issue_item) if not isinstance(issue_item, str) else issue_item
         )
+        logger.debug(
+            f"[Stage 4] Placed issue {i} into state key '{issue_input_key}'. Issue data item:\n{issue_item}"
+        )
 
         # Create an instance of GraphUpdateAgent to add the Issue item to graph
         agents.append(
@@ -272,7 +308,6 @@ async def main():
         )
 
     # Create a concurrent process
-    print("Running Stage 4: Issue graphing...")
     await run_parallel(STAGE4, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
     print("Pipeline complete.")
@@ -282,22 +317,23 @@ async def run_parallel(name, agents, app_name, user_id, session_id, session_serv
     """
     Creates and runs a ParallelAgent instance for running concurrent processes.
     """
-    if not agents:
-        print(f"No agents to run for stage: {name}")
-        return
+    logger.info(f"[{name}] Creating ParallelAgent with {len(agents)} sub-agents")
     runner = Runner(
         agent=ParallelAgent(name=name, sub_agents=agents),
         app_name=app_name,
         session_service=session_service,
     )
 
-    dummy_message = types.Content(role="user", parts=[types.Part(text="run")])
+    # Trigger the parallel execution
+    dummy_message = types.Content(
+        role="user", parts=[types.Part(text="Follow instructions.")]
+    )
     async for event in runner.run_async(
         user_id=user_id, session_id=session_id, new_message=dummy_message
     ):
         save_trace_event(event, name)
-        if event.is_final_response() and event.content and event.content.parts:
-            print(f"[{name}] Final response.")
+        if event.is_final_response():
+            logger.info(f"[{name}] Final event received from ParallelAgent.")
 
 
 def get_data_from_memory(output_keys, state, label):
@@ -308,11 +344,13 @@ def get_data_from_memory(output_keys, state, label):
     for key in output_keys:
         raw = state.get(key)
         if not raw:
+            logger.warning(f"No data found in state for key '{key}'. Skipping.")
             continue
         try:
             data.extend(extract_json(raw, key=label))
         except Exception as e:
-            print(f"Failed to parse {label} output at {key}: {e}")
+            logger.warning(f"Failed to parse {label} output at {key}: {e}")
+            logger.debug(f"Raw data snippet: {raw[:200]}...")
 
     if not data:
         raise ValueError(f"Fatal error: no {label} data found.")
