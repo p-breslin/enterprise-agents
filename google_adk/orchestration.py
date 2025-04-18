@@ -1,39 +1,50 @@
 """
-Jira + ArangoDB Multi-Agent Integration Pipeline
-------------------------------------------------
+Jira-ArangoDB Multi-Agent Pipeline (Google ADK)
+-------------------------------------------------
 
-This script defines a hybrid sequential + parallel agent workflow using Google ADK.
+This pipeline ingests Jira data and incrementally populates an ArangoDB knowledge graph.
 
-Goal:
-To extract Jira work item data (Epics → Stories → Issues) and incrementally populate an ArangoDB knowledge graph using a modular, multi-agent system.
+Flow Overview:
+---------------
+Stage 1:
+- Run EpicAgent to retrieve epics.
 
-Workflow:
-----------
+Stage 2:
+- Split Epic data into parts. Distribute among multiple instances of:
+    A. GraphUpdateAgent (to update graph with Epic data)
+    B. StoryAgent (to retrieve stories)
+- Note that A. and B. are executed concurrently inside a ParallelAgent block.
 
-Stage 1: Discover Epics
-  - EpicAgent queries Jira (via MCP tools) to retrieve epics.
-  - Each epic is sent to a GraphUpdateAgent instance to upsert it into ArangoDB.
+Stage 3:
+- Split Story data into parts. Distribute among multiple instances of:
+    A. GraphUpdateAgent (to update graph with Story data)
+    B. IssueAgent (to retrieve story metadata)
+- Note that A. and B. are executed concurrently inside a ParallelAgent block.
 
-Stage 2: Discover Stories
-  - For each epic, a parallel StoryAgent instance queries Jira (via FunctionTool) to get stories.
-  - Each story is passed to a GraphUpdateAgent to upsert into ArangoDB.
+Stage 4:
+- Split Story data into parts. Distribute among multiple instances of:
+    A. GraphUpdateAgent (to update graph with Issue data)
+- Note that A. is executed concurrently inside a ParallelAgent block.
 
-Stage 3: Discover Issues
-  - For each story, a parallel IssuesAgent (with MCP tools) fetches detailed metadata.
-  - Each issue is passed to a GraphUpdateAgent for ingestion into ArangoDB.
-
-Tooling:
----------
-- Jira tools come from an MCP server and must be passed to agents that require them.
-- StoryAgent and GraphUpdateAgent use custom tools wrapped in FunctionTool:
-    - `jira_get_epic_issues` (custom function)
-    - `arango_upsert` (custom ArangoDB utility)
+Tooling Notes:
+---------------
+- EpicAgent and IssueAgent use MCP tools.
+- StoryAgent and GraphUpdateAgent use custom function tools.
 """
 
+import json
 from google.genai import types
+
+from google.adk.runners import Runner
+from google.adk.tools.agent_tool import AgentTool
 from google.adk.tools.function_tool import FunctionTool
+from google.adk.sessions import InMemorySessionService
 from google.adk.agents import SequentialAgent, ParallelAgent
 
+from google_adk.tools.mcps import jira_mcp_tools
+from google_adk.utils_adk import load_config, extract_json
+from google_adk.tools.ArangoUpsertTool import arango_upsert
+from google_adk.tools.custom_tools import jira_get_epic_issues
 from google_adk.agents import (
     build_epic_agent,
     build_story_agent,
@@ -41,119 +52,187 @@ from google_adk.agents import (
     build_graph_agent,
 )
 
-from google_adk.utils_adk import load_config
-from google_adk.tools.ArangoUpsertTool import arango_upsert
-from google_adk.tools.custom_tools import jira_get_epic_issues
+
+# Load model config
+MODELS = load_config("runtime")["models"]["google"]
 
 
-# === Chunking Inputs ===
+# Load tools
+async def load_tools():
+    jira_mcp, exit_stack = await jira_mcp_tools()
+    jira_custom = FunctionTool(jira_get_epic_issues)
+    arango_custom = FunctionTool(arango_upsert)
+    return jira_mcp, exit_stack, jira_custom, arango_custom
 
 
-def epic_to_story_inputs(state):
-    epics = state.get("epics_raw", {}).get("epics", [])
-    for epic in epics:
-        yield types.Content(
-            role="user", parts=[types.Part(text=f"Get all stories for epic:\n{epic}")]
+async def create_pipeline():
+    jira_mcp, exit_stack, jira_custom, arango_custom = await load_tools()
+
+    session_service = InMemorySessionService()
+    app_name = "jira_graph"
+    user_id = "admin"
+    session_id = "pipeline_run"
+
+    # === Stage 1: Obtain Jira Epics ===
+    epic_agent = build_epic_agent(
+        model=MODELS["epic"], tools=jira_mcp, output_key="epic_list"
+    )
+    epic_runner = Runner(
+        agent=epic_agent, app_name=app_name, session_service=session_service
+    )
+    session_service.create_session(
+        app_name=app_name, user_id=user_id, session_id=session_id
+    )
+    content = types.Content(role="user", parts=[types.Part(text="Get epics")])
+
+    epic_data = []
+    async with exit_stack:
+        async for event in epic_runner.run_async(
+            user_id=user_id, session_id=session_id, new_message=content
+        ):
+            if event.is_final_response():
+                epic_data = extract_json(
+                    raw_text=event.content.parts[0].text, key="epics"
+                )
+
+    # === Stage 2: Process Epics ===
+    graph_agents = []
+    story_agents = []
+
+    # Run on an Epic item-by-item basis
+    for i, epic in enumerate(epic_data):
+        input_key = f"epic_input_{i}"
+
+        # Add individual Epic item to session memory
+        session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        ).state[input_key] = json.dumps(epic)
+
+        # Create an instance of GraphUpdateAgent to add the Epic item to graph
+        graph_ag = build_graph_agent(
+            model=MODELS["graph"],
+            prompt="epic_graph_prompt",
+            tools=[arango_custom],
+            input_key=input_key,
+            output_key=f"epic_graph_{i}",
         )
 
-
-def story_to_issue_inputs(state):
-    stories = state.get("stories_raw", {}).get("stories", [])
-    for story in stories:
-        yield types.Content(
-            role="user",
-            parts=[types.Part(text=f"Get detailed issue for story:\n{story}")],
+        # Create an instance of StoryAgent to find stories for the Epic item
+        story_ag = build_story_agent(
+            model=MODELS["story"],
+            tools=jira_custom,
+            input_key=input_key,
+            output_key=f"story_output_{i}",
         )
 
+        # Make into AgentTools to label and attach them to the pipeline
+        graph_agents.append(AgentTool(agent=graph_ag, name=f"GraphAgent_{i}"))
+        story_agents.append(AgentTool(agent=story_ag, name=f"StoryAgent_{i}"))
 
-def per_epic_graph_update_inputs(state):
-    epics = state.get("epics_raw", {}).get("epics", [])
-    for epic in epics:
-        yield types.Content(
-            role="user", parts=[types.Part(text=f"Update graph with epic:\n{epic}")]
+    # Create a concurrent process
+    parallel_epic_processing = ParallelAgent(
+        name="process_epics", sub_agents=graph_agents + story_agents
+    )
+
+    # === Stage 3: Process Stories ===
+    story_data = []
+    graph_agents = []
+    issue_agents = []
+
+    # Outputs from StoryAgent instances will be of varying length
+    for i in range(len(story_agents)):
+        story_output = session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        ).state.get(f"story_output_{i}", "[]")
+
+        # Add JSON structure to the text response and add to flattened list
+        story_output = extract_json(raw_text=story_output, key="stories")
+        story_data.extend(story_output)
+
+    # Run on an Story item-by-item basis
+    for i, story in enumerate(story_data):
+        input_key = f"story_input_{i}"
+
+        # Add individual Story item to session memory
+        session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        ).state[input_key] = json.dumps(story)
+
+        # Create an instance of GraphUpdateAgent to add the Story item to graph
+        graph_ag = build_graph_agent(
+            model=MODELS["graph"],
+            prompt="story_graph_prompt",
+            tools=[arango_custom],
+            input_key=input_key,
+            output_key=f"story_graph_{i}",
         )
 
-
-def per_story_graph_update_inputs(state):
-    stories = state.get("stories_raw", {}).get("stories", [])
-    for story in stories:
-        yield types.Content(
-            role="user", parts=[types.Part(text=f"Update graph with story:\n{story}")]
+        # Create an instance of IssueAgent to find metadata for the Story item
+        issue_ag = build_issue_agent(
+            model=MODELS["issue"],
+            tools=jira_mcp,
+            input_key=input_key,
+            output_key=f"issue_output_{i}",
         )
 
+        # Make into AgentTools to label and attach them to the pipeline
+        graph_agents.append(AgentTool(agent=graph_ag, name=f"GraphAgent_{i}"))
+        issue_agents.append(AgentTool(agent=issue_ag, name=f"IssueAgent_{i}"))
 
-def per_issue_graph_update_inputs(state):
-    issues = state.get("issues_raw", {}).get("issues", [])
-    for issue in issues:
-        yield types.Content(
-            role="user", parts=[types.Part(text=f"Update graph with issue:\n{issue}")]
+    # Create a concurrent process
+    parallel_story_processing = ParallelAgent(
+        name="process_stories", sub_agents=graph_agents + issue_agents
+    )
+
+    # === Stage 4: Process Issues ===
+    issue_data = []
+    graph_agents = []
+
+    # Outputs from IssueAgent instances will be of varying length
+    for i in range(len(issue_agents)):
+        issue_output = session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        ).state.get(f"issue_output_{i}", "[]")
+
+        # Add JSON structure to the text response and add to flattened list
+        issue_output = extract_json(raw_text=issue_output, key="issues")
+        issue_data.extend(issue_output)
+
+    # Run on an Issue item-by-item basis
+    for i, issue in enumerate(issue_data):
+        input_key = f"issue_input_{i}"
+
+        # Add individual Issue item to session memory
+        session_service.get_session(
+            app_name=app_name, user_id=user_id, session_id=session_id
+        ).state[input_key] = json.dumps(issue)
+
+        # Create an instance of GraphUpdateAgent to add the Issue item to graph
+        graph_ag = build_graph_agent(
+            model=MODELS["graph"],
+            prompt="issue_graph_prompt",
+            tools=[arango_custom],
+            input_key=input_key,
+            output_key=f"issue_graph_{i}",
         )
 
+        # Make into AgentTools to label and attach them to the pipeline
+        graph_agents.append(AgentTool(agent=graph_ag, name=f"GraphAgent_{i}"))
 
-# === Pipeline Factory ===
+    # Create a concurrent process
+    parallel_issue_processing = ParallelAgent(
+        name="process_issues", sub_agents=graph_agents
+    )
 
-
-def build_pipeline(jira_tools):
-    """
-    Constructs the Jira-to-Graph multi-agent pipeline using sequential and parallel execution.
-
-    Args:
-        jira_tools (List[BaseTool]): Tools loaded from the Jira MCP server.
-
-    Returns:
-        SequentialAgent: The fully constructed top-level pipeline.
-    """
-    models = load_config("runtime")["models"]["google"]
-    return SequentialAgent(
+    # === Full Sequential-Parallel Hybird Pipeline ===
+    pipeline = SequentialAgent(
         name="JiraGraphPipeline",
         sub_agents=[
-            # 1a. Fetch epics
-            build_epic_agent(model=models["epic"], tools=jira_tools),
-            # 1b. Parallel graph updates per epic
-            ParallelAgent.from_iterable(
-                name="ParallelEpicGraphUpdate",
-                agent_factory=lambda: build_graph_agent(
-                    model=models["graph"],
-                    prompt="epic_graph_prompt",
-                    tools=[FunctionTool(arango_upsert)],
-                ),
-                inputs_provider=per_epic_graph_update_inputs,
-            ),
-            # 2a. Parallel story agents (uses custom FunctionTool)
-            ParallelAgent.from_iterable(
-                name="ParallelStoryAgents",
-                agent_factory=lambda: build_story_agent(
-                    model=models["story"], tools=[FunctionTool(jira_get_epic_issues)]
-                ),
-                inputs_provider=epic_to_story_inputs,
-            ),
-            # 2b. Parallel graph updates per story
-            ParallelAgent.from_iterable(
-                name="ParallelStoryGraphUpdate",
-                agent_factory=lambda: build_graph_agent(
-                    model=models["graph"],
-                    prompt="story_graph_prompt",
-                    tools=[FunctionTool(arango_upsert)],
-                ),
-                inputs_provider=per_story_graph_update_inputs,
-            ),
-            # 3a. Parallel issue agents (uses Jira MCP tools)
-            ParallelAgent.from_iterable(
-                name="ParallelIssuesAgents",
-                agent_factory=lambda: build_issue_agent(
-                    model=models["graph"], tools=jira_tools
-                ),
-                inputs_provider=story_to_issue_inputs,
-            ),
-            # 3b. Parallel graph updates per issue
-            ParallelAgent.from_iterable(
-                name="ParallelIssueGraphUpdate",
-                agent_factory=lambda: build_graph_agent(
-                    model=models["graph"],
-                    prompt="issue_graph_prompt",
-                    tools=[FunctionTool(arango_upsert)],
-                ),
-                inputs_provider=per_issue_graph_update_inputs,
-            ),
+            epic_agent,
+            parallel_epic_processing,
+            parallel_story_processing,
+            parallel_issue_processing,
         ],
     )
+
+    return pipeline, exit_stack
