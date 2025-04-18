@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from arango import ArangoClient
+from google.adk.models.lite_llm import LiteLlm
+
 
 load_dotenv()
 logging.basicConfig(
@@ -27,12 +29,16 @@ def load_config(folder):
 
 
 def extract_json(raw_text: str, key: str = None) -> dict:
-    match = re.search(r"```json\s*(\{.*?\})\s*```", raw_text, re.DOTALL)
-    if not match:
-        raise ValueError("Could not find JSON block in output.")
-
-    json_str = match.group(1)
-    parsed = json.loads(json_str)
+    try:
+        # First try to parse raw JSON directly
+        parsed = json.loads(raw_text)
+    except json.JSONDecodeError:
+        # Fallback: extract JSON block from inside ```json ticks
+        match = re.search(r"```json\s*({.*?})\s*```", raw_text, re.DOTALL)
+        if not match:
+            raise ValueError("Cannot find JSON block or parse input as JSON.")
+        json_str = match.group(1)
+        parsed = json.loads(json_str)
 
     if key:
         if key not in parsed:
@@ -40,6 +46,13 @@ def extract_json(raw_text: str, key: str = None) -> dict:
         return parsed[key]
 
     return parsed
+
+
+def resolve_model(model_id: str, provider: str):
+    if provider == "google":
+        return model_id  # string is fine for Gemini
+    else:
+        return LiteLlm(model=model_id)  # wrap for LiteLLM-compatible models
 
 
 def log_event_details(event):
