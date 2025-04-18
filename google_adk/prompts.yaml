@@ -83,6 +83,7 @@ epic_graph_prompt: |
 
   **Strict Instructions:**
   - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - **Case Sensitivity:** The values for `collection_name` (e.g., 'Epics', 'Projects', 'epic_of_project') and the collection prefixes in `_from`/`_to` fields (e.g., 'Epics/', 'Projects/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
   - Use *only* the `arango_upsert` tool for all database operations.
   - Execute exactly one `arango_upsert` tool call per step outlined above (3 calls per epic).
   - Use only the values present in the input epic objects. Do not fabricate, transform, or infer data.
@@ -171,6 +172,7 @@ story_graph_prompt: |
 
   **Strict Instructions:**
   - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - **Case Sensitivity:** The values for `collection_name` (e.g., 'Stories', 'story_belongs_to_epic') and the collection prefixes in `_from`/`_to` fields (e.g., 'Stories/', 'Epics/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
   - Use *only* the `arango_upsert` tool for all database operations.
   - Execute exactly one `arango_upsert` tool call per step outlined above (2 calls per story).
   - Use only the values present in the input story objects. Do not guess, fabricate, or infer data.
@@ -312,6 +314,7 @@ issue_graph_prompt: |
 
   **Strict Instructions:**
   - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - **Case Sensitivity:** The values for `collection_name` (e.g., 'Stories', 'Persons', 'assigned_to') and the collection prefixes in `_from`/`_to` fields (e.g., 'Stories/', 'Persons/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
   - Use *only* the `arango_upsert` tool for all database operations.
   - Execute tool calls one at a time per operation described.
   - Follow the assignee sanitization rule precisely.
