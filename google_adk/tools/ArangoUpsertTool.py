@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, Optional
-from google_adk.utils_adk import arango_connect
+from google_adk.utils_arango import arango_connect
 from arango.exceptions import AQLQueryExecuteError, ArangoServerError
 
 

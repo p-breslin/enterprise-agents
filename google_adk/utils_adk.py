@@ -1,11 +1,9 @@
-import os
 import re
 import json
 import yaml
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from arango import ArangoClient
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.function_tool import FunctionTool
 
@@ -113,24 +111,3 @@ def save_json(data, filename="jira_issues.json"):
     with open(output, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     print(f"Structured data saved to: {output}")
-
-
-def arango_connect(db_name="ARANGO_DB_JIRA"):
-    try:
-        DB = os.getenv(db_name)
-        HST = os.getenv("ARANGO_HOST")
-        USR = os.getenv("ARANGO_USERNAME")
-        PWD = os.getenv("ARANGO_PASSWORD")
-
-        # Connect to ArangoDB server
-        client = ArangoClient(hosts=HST)
-        conn = client.db(DB, username=USR, password=PWD)
-
-        # Verify connection
-        conn.version()
-        logging.info(f"Successfully connected to ArangoDB: {HST}, DB: {DB}")
-        return conn
-
-    except Exception as e:
-        logging.error(f"Failed to connect to ArangoDB server: {e}")
-        raise
