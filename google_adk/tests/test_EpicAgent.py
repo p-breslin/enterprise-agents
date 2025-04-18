@@ -27,14 +27,15 @@ TEST_SESSION_ID = "test_session_epic_agent"
 OUTPUTS = RUNTIME_PARAMS["OUTPUTS"]
 EPIC_AGENT_OUTPUT_KEY = OUTPUTS["epic"]
 
-model_provider = "google"
-MODEL_EPIC = resolve_model(
-    RUNTIME_PARAMS["MODELS"][model_provider]["epic"], provider=model_provider
-)
+model_provider = "openai"
+SELECTED_MODEL = RUNTIME_PARAMS["MODELS"][model_provider]["epic"]
+MODEL = resolve_model(SELECTED_MODEL, provider=model_provider)
 
 OUTPUT_DIR = pathlib.Path(__file__).parent / "test_output"
 OUTPUT_DIR.mkdir(exist_ok=True)  # Create directory if it doesn't exist
-OUTPUT_FILE = OUTPUT_DIR / f"epics_output_{MODEL_EPIC}.json"
+
+model_save_name = SELECTED_MODEL.split("/")[-1]
+OUTPUT_FILE = OUTPUT_DIR / f"epics_output_{model_save_name}.json"
 
 # ======================
 
@@ -44,7 +45,6 @@ async def run_epic_agent_test():
     tools, exit_stack, _, _ = await load_tools()
     logger.info("Tools loaded.")
 
-    print("test")
     session_service = InMemorySessionService()
     try:
         session_service.delete_session(
@@ -60,11 +60,11 @@ async def run_epic_agent_test():
 
     # --- Agent Setup ---
     agent = build_epic_agent(
-        model=MODEL_EPIC,
+        model=MODEL,
         tools=tools,
         output_key=EPIC_AGENT_OUTPUT_KEY,  # Agent saves its result here
     )
-    logger.info(f"Built EpicAgent using model {MODEL_EPIC}")
+    logger.info(f"Built EpicAgent using model {MODEL}")
 
     runner = Runner(agent=agent, app_name=APP_NAME, session_service=session_service)
 
