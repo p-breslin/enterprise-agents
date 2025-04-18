@@ -3,7 +3,7 @@ from google_adk.utils_adk import load_prompt
 from google.adk.agents.llm_agent import LlmAgent
 
 
-def build_issue_agent(model, tools, data):
+def build_issue_agent(model, tools, data, output_key=None):
     """
     Constructs the IssueAgent with access to Jira MCP tools.
     Returns an LlmAgent instance ready for execution.
@@ -15,4 +15,5 @@ def build_issue_agent(model, tools, data):
         description="Fetches metadata from Jira issues using the jira_get_issue tool.",
         instruction=prompt.replace("{data}", json.dumps(data, indent=2)),
         tools=tools,
+        output_key=output_key
     )

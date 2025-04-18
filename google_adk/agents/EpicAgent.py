@@ -2,7 +2,7 @@ from google_adk.utils_adk import load_prompt
 from google.adk.agents.llm_agent import LlmAgent
 
 
-def build_epic_agent(model, tools):
+def build_epic_agent(model, tools, output_key=None):
     """
     Constructs the EpicAgent with access to Jira MCP tools.
     Returns an LlmAgent instance ready for execution.
@@ -13,4 +13,5 @@ def build_epic_agent(model, tools):
         description="Fetches all Jira epics using the jira_search tool.",
         instruction=load_prompt("epic_prompt"),
         tools=tools,
+        output_key=output_key
     )
