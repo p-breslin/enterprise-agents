@@ -10,3 +10,4 @@ metatool-app
 .env.swp
 /google_adk/tests/test_data
 /mcps
+/logs
