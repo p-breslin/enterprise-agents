@@ -13,5 +13,4 @@ def build_epic_agent(model, tools):
         description="Fetches all Jira epics using the jira_search tool.",
         instruction=load_prompt("epic_prompt"),
         tools=tools,
-        output_key="epics_raw",  # Will be saved to session.state["epics_raw"]
     )

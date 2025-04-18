@@ -37,32 +37,32 @@ import asyncio
 from google.genai import types
 
 from google.adk.runners import Runner
+from google.adk.agents import ParallelAgent
 from google.adk.tools.function_tool import FunctionTool
 from google.adk.sessions import InMemorySessionService
-from google.adk.agents import ParallelAgent
 
 from google_adk.tools.mcps import jira_mcp_tools
-from google_adk.utils_adk import load_config, extract_json
+from google_adk.tests.debug_callbacks import save_trace_event
 from google_adk.tools.ArangoUpsertTool import arango_upsert
 from google_adk.tools.custom_tools import jira_get_epic_issues
-from google_adk.agents import (
-    build_epic_agent,
-    build_story_agent,
-    build_issue_agent,
-    build_graph_agent,
-)
+from google_adk.utils_adk import load_config, extract_json, resolve_model
+
+from google_adk.agents.EpicAgent import build_epic_agent
+from google_adk.agents.StoryAgent import build_story_agent
+from google_adk.agents.IssueAgent import build_issue_agent
+from google_adk.agents.GraphUpdateAgent import build_graph_agent
 
 # Change this
-model_provider = "google"
+model_provider = "openai"
 
 # Runtime parameters from configuration file
 RUNTIME_PARAMS = load_config("runtime")
 
 MODELS = RUNTIME_PARAMS["MODELS"][model_provider]
-MODEL_EPIC = MODELS["epic"]
-MODEL_STORY = MODELS["story"]
-MODEL_ISSUE = MODELS["issue"]
-MODEL_GRAPH = MODELS["graph"]
+MODEL_EPIC = resolve_model(MODELS["epic"], provider=model_provider)
+MODEL_STORY = resolve_model(MODELS["story"], provider=model_provider)
+MODEL_ISSUE = resolve_model(MODELS["issue"], provider=model_provider)
+MODEL_GRAPH = resolve_model(MODELS["graph"], provider=model_provider)
 
 NAMES = RUNTIME_PARAMS["AGENT_NAMES"]
 STAGE2 = NAMES["stage2"]
@@ -96,10 +96,12 @@ async def main():
 
     epic_data = None
     async with exit_stack:
+        print("Running Stage 1: Epic discovery...")
         async for event in epic_runner.run_async(
             user_id=user_id, session_id=session_id, new_message=content
         ):
-            if event.is_final_response():
+            save_trace_event(event, "Stage 1")
+            if event.is_final_response() and event.content and event.content.parts:
                 epic_data = extract_json(event.content.parts[0].text, key="epics")
 
     if not epic_data:
@@ -112,7 +114,6 @@ async def main():
     # Run on an Epic item-by-item basis
     for i, epic in enumerate(epic_data):
         input_key = f"epic_input_{i}"
-        output_key_graph = f"epic_graph_{i}"
         output_key_story = f"story_output_{i}"
 
         # Add individual Epic item to session memory
@@ -124,19 +125,13 @@ async def main():
                 model=MODEL_GRAPH,
                 prompt="epic_graph_prompt",
                 tools=[arango_custom],
-                input_key=input_key,
-                output_key=output_key_graph,
+                data=epic,
             )
         )
 
         # Create an instance of StoryAgent to find stories for the Epic item
         agents.append(
-            build_story_agent(
-                model=MODEL_STORY,
-                tools=jira_custom,
-                input_key=input_key,
-                output_key=output_key_story,
-            )
+            build_story_agent(model=MODEL_STORY, tools=[jira_custom], data=epic)
         )
 
         # Keep track of the expected output keys
@@ -156,7 +151,6 @@ async def main():
     # Run on an Story item-by-item basis
     for i, story in enumerate(story_data):
         input_key = f"story_input_{i}"
-        output_key_graph = f"story_graph_{i}"
         output_key_issue = f"issue_output_{i}"
 
         # Add individual Story item to session memory
@@ -168,20 +162,12 @@ async def main():
                 model=MODEL_GRAPH,
                 prompt="story_graph_prompt",
                 tools=[arango_custom],
-                input_key=input_key,
-                output_key=output_key_graph,
+                data=story,
             )
         )
 
         # Create an instance of IssueAgent to find metadata for the Story item
-        agents.append(
-            build_issue_agent(
-                model=MODEL_ISSUE,
-                tools=jira_mcp,
-                input_key=input_key,
-                output_key=output_key_issue,
-            )
-        )
+        agents.append(build_issue_agent(model=MODEL_ISSUE, tools=jira_mcp, data=story))
 
         # Keep track of the expected output keys
         issue_output_keys.append(output_key_issue)
@@ -199,7 +185,6 @@ async def main():
     # Run on an Issue item-by-item basis
     for i, issue in enumerate(issue_data):
         input_key = f"issue_input_{i}"
-        output_key_graph = f"issue_graph_{i}"
 
         # Add individual Issue item to session memory
         state[input_key] = json.dumps(issue)
@@ -210,8 +195,7 @@ async def main():
                 model=MODEL_GRAPH,
                 prompt="issue_graph_prompt",
                 tools=[arango_custom],
-                input_key=input_key,
-                output_key=output_key_graph,
+                data=issue,
             )
         )
 
@@ -231,8 +215,13 @@ async def run_parallel(name, agents, app_name, user_id, session_id, session_serv
         app_name=app_name,
         session_service=session_service,
     )
-    async for event in runner.run_async(user_id=user_id, session_id=session_id):
-        if event.is_final_response():
+
+    dummy_message = types.Content(role="user", parts=[types.Part(text="run")])
+    async for event in runner.run_async(
+        user_id=user_id, session_id=session_id, new_message=dummy_message
+    ):
+        save_trace_event(event, name)
+        if event.is_final_response() and event.content and event.content.parts:
             print(f"[{name}] Final response.")
 
 
