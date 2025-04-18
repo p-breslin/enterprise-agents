@@ -5,7 +5,7 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.runners import Runner
 
 from debug_callbacks import trace_event
-from debug_callbacks import debug_before_tool
+from google_adk.utils_adk import extract_json
 from google_adk.tools.mcps import jira_mcp_tools
 from google_adk.agents.EpicAgent import build_epic_agent
 
@@ -39,7 +39,7 @@ async def test_epic_agent():
 
     # Create the EpicAgent and retrieve tools + exit stack
     tools, exit_stack = await get_mcp_tools()
-    epic_agent = build_epic_agent(tools, tool_debug=debug_before_tool)
+    epic_agent = build_epic_agent(model="gemini-2.0-flash", tools=tools)
 
     runner = Runner(
         agent=epic_agent,
@@ -59,6 +59,8 @@ async def test_epic_agent():
                 final_output = event.content.parts[0].text
                 print("\n--- Final LLM Output ---")
                 print(final_output)
+
+    print(extract_json(raw_text=final_output, key="epics"))
 
     # Ensure the MCP server process connection is closed
     print("Closing MCP server connection...")
