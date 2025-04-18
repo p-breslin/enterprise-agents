@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import yaml
 import logging
@@ -23,6 +24,22 @@ def load_config(folder):
     path = Path(__file__).parent / f"configs/{folder}.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)
+
+
+def extract_json(raw_text: str, key: str = None) -> dict:
+    match = re.search(r"```json\s*(\{.*?\})\s*```", raw_text, re.DOTALL)
+    if not match:
+        raise ValueError("Could not find JSON block in output.")
+
+    json_str = match.group(1)
+    parsed = json.loads(json_str)
+
+    if key:
+        if key not in parsed:
+            raise KeyError(f"Key '{key}' not found in parsed JSON output.")
+        return parsed[key]
+
+    return parsed
 
 
 def log_event_details(event):
