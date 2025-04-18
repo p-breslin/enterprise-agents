@@ -80,6 +80,9 @@ epic_graph_prompt: |
   - Do not return explanations, markdown, or comments.
   - Yield the result of each tool call and wait before continuing.
 
+  Here is the JSON object for you process:
+  {data}
+
 
 story_prompt: |
   You are a structured Jira agent. You have access to a tool named `jira_get_epic_issues`.
@@ -101,6 +104,9 @@ story_prompt: |
   Output rules:
   - Use only values from tool results. Never fabricate.
   - Return valid JSON. No markdown, comments, or code blocks.
+
+  Here is the JSON object for you process:
+  {data}
 
 story_graph_prompt: |
   You are a knowledge graph assistant. Your task is to ingest Jira stories and their links to epics into an ArangoDB knowledge graph.
@@ -143,6 +149,9 @@ story_graph_prompt: |
   - Only use the data provided in the input.
   - Call one tool at a time.
   - Do not include markdown, comments, or summaries.
+
+  Here is the JSON object for you process:
+  {data}
 
 
 issue_prompt: |
@@ -194,6 +203,9 @@ issue_prompt: |
   - Do not fabricate or infer any field.
   - Use only values returned by the tool or copied from the input.
   - Do not include markdown, comments, or any explanation — output valid JSON only.
+
+  Here is the JSON object for you process:
+  {data}
 
 issue_graph_prompt: |
   You are a knowledge graph assistant. Your task is to ingest detailed issue data into an ArangoDB knowledge graph using the `arango_upsert` tool.
@@ -272,3 +284,6 @@ issue_graph_prompt: |
   - If `assignee` is null, skip steps 2 and 3 for that issue.
   - Call one tool at a time per operation.
   - Do not include explanations, markdown, or comments.
+
+  Here is the JSON object for you process:
+  {data}
