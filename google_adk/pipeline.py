@@ -38,59 +38,83 @@ from google.genai import types
 
 from google.adk.runners import Runner
 from google.adk.agents import ParallelAgent
-from google.adk.tools.function_tool import FunctionTool
 from google.adk.sessions import InMemorySessionService
 
-from google_adk.tools.mcps import jira_mcp_tools
 from google_adk.tests.debug_callbacks import save_trace_event
-from google_adk.tools.ArangoUpsertTool import arango_upsert
-from google_adk.tools.custom_tools import jira_get_epic_issues
-from google_adk.utils_adk import load_config, extract_json, resolve_model
+from google_adk.utils_adk import load_config, extract_json, resolve_model, load_tools
 
 from google_adk.agents.EpicAgent import build_epic_agent
 from google_adk.agents.StoryAgent import build_story_agent
 from google_adk.agents.IssueAgent import build_issue_agent
 from google_adk.agents.GraphUpdateAgent import build_graph_agent
 
-# Change this
+
+# ONLY ITEM TO CHANGE
 model_provider = "openai"
 
-# Runtime parameters from configuration file
+
+# ========================================
+# Runtime parameters (do not change)
+# ========================================
+
 RUNTIME_PARAMS = load_config("runtime")
 
+# Session settings
+APP_NAME = RUNTIME_PARAMS["SESSION"]["app_name"]
+USER_ID = RUNTIME_PARAMS["SESSION"]["user_id"]
+SESSION_ID = RUNTIME_PARAMS["SESSION"]["session_id"]
+
+# LLM models
 MODELS = RUNTIME_PARAMS["MODELS"][model_provider]
 MODEL_EPIC = resolve_model(MODELS["epic"], provider=model_provider)
 MODEL_STORY = resolve_model(MODELS["story"], provider=model_provider)
 MODEL_ISSUE = resolve_model(MODELS["issue"], provider=model_provider)
 MODEL_GRAPH = resolve_model(MODELS["graph"], provider=model_provider)
 
+# Naming conventions
 NAMES = RUNTIME_PARAMS["AGENT_NAMES"]
 STAGE2 = NAMES["stage2"]
 STAGE3 = NAMES["stage3"]
 STAGE4 = NAMES["stage4"]
 
+# Session state outputs (memory)
+OUTPUTS = RUNTIME_PARAMS["OUTPUTS"]
+EPIC_OUTPUTS = OUTPUTS["epic"]
+STORY_OUTPUTS = OUTPUTS["story"]
+ISSUE_OUTPUTS = OUTPUTS["issue"]
+GRAPH_OUTPUTS = OUTPUTS["graph"]
+
+# ========================================
+
 
 async def main():
+    # Load tools
     jira_mcp, exit_stack, jira_custom, arango_custom = await load_tools()
+
+    # Initialize session service
     session_service = InMemorySessionService()
-    app_name = RUNTIME_PARAMS["SESSION"]["app_name"]
-    user_id = RUNTIME_PARAMS["SESSION"]["user_id"]
-    session_id = RUNTIME_PARAMS["SESSION"]["session_id"]
+
+    # Good practice to start fresh or retrieve existing session carefully
+    try:
+        session_service.delete_session(
+            app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+        )
+        print(f"Deleted existing session: {SESSION_ID}")
+    except KeyError:
+        print(f"Session {SESSION_ID} did not exist, creating new.")
+        pass
 
     # Create a new session
     session_service.create_session(
-        app_name=app_name, user_id=user_id, session_id=session_id
+        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
     )
 
-    # Obtain session state
-    state = session_service.get_session(
-        app_name=app_name, user_id=user_id, session_id=session_id
-    ).state
-
     # === Stage 1: Run Epic Agent ===
-    epic_agent = build_epic_agent(model=MODEL_EPIC, tools=jira_mcp)
+    epic_agent = build_epic_agent(
+        model=MODEL_EPIC, tools=jira_mcp, output_key=EPIC_OUTPUTS
+    )
     epic_runner = Runner(
-        agent=epic_agent, app_name=app_name, session_service=session_service
+        agent=epic_agent, app_name=APP_NAME, session_service=session_service
     )
     content = types.Content(role="user", parts=[types.Part(text="Get epics")])
 
@@ -98,7 +122,7 @@ async def main():
     async with exit_stack:
         print("Running Stage 1: Epic discovery...")
         async for event in epic_runner.run_async(
-            user_id=user_id, session_id=session_id, new_message=content
+            user_id=USER_ID, session_id=SESSION_ID, new_message=content
         ):
             save_trace_event(event, "Stage 1")
             if event.is_final_response() and event.content and event.content.parts:
@@ -112,12 +136,21 @@ async def main():
     story_output_keys = []
 
     # Run on an Epic item-by-item basis
-    for i, epic in enumerate(epic_data):
+    for i, epic_item in enumerate(epic_data):
         # output_key will determine where LLM output is saved in session state
         # unique keys to avoid overwriting the session state
 
-        graph_output_key = f"epic_graph_update_output_key_{i}"
-        story_output_key = f"story_output_key_{i}"
+        epic_input_key = f"{EPIC_OUTPUTS}_{i}"
+        graph_output_key = f"{GRAPH_OUTPUTS}_{i}"
+        story_output_key = f"{STORY_OUTPUTS}_{i}"
+
+        # Re-fetch the full Session object when modifying session state
+        session = session_service.get_session(
+            app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+        )
+        session.state[epic_input_key] = (
+            json.dumps(epic_item) if not isinstance(epic_item, str) else epic_item
+        )
 
         # Create an instance of GraphUpdateAgent to add the Epic item to graph
         agents.append(
@@ -125,7 +158,7 @@ async def main():
                 model=MODEL_GRAPH,
                 prompt="epic_graph_prompt",
                 tools=[arango_custom],
-                data=epic,
+                input_key=epic_input_key,
                 output_key=graph_output_key,
             )
         )
@@ -135,7 +168,7 @@ async def main():
             build_story_agent(
                 model=MODEL_STORY,
                 tools=[jira_custom],
-                data=epic,
+                input_key=epic_input_key,
                 output_key=story_output_key,
             )
         )
@@ -145,19 +178,30 @@ async def main():
 
     # Create a concurrent process
     print("Running Stage 2: Epic graphing and story discovery...")
-    await run_parallel(STAGE2, agents, app_name, user_id, session_id, session_service)
+    await run_parallel(STAGE2, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
     # === Stage 3: Process Stories ===
     agents = []
     issue_output_keys = []
+
+    # Refresh session state view
+    session = session_service.get_session(
+        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+    )
     story_data = get_data_from_memory(
-        output_keys=story_output_keys, state=state, label="story"
+        output_keys=story_output_keys, state=session.state, label="stories"
     )
 
     # Run on an Story item-by-item basis
-    for i, story in enumerate(story_data):
-        graph_output_key = f"story_graph_update_output_key_{i}"
-        issue_output_key = f"issue_output_key_{i}"
+    for i, story_item in enumerate(story_data):
+        story_input_key = f"{STORY_OUTPUTS}_{i}"
+        graph_output_key = f"{GRAPH_OUTPUTS}_{i}"
+        issue_output_key = f"{ISSUE_OUTPUTS}_{i}"
+
+        # Write to session.state
+        session.state[story_input_key] = (
+            json.dumps(story_item) if not isinstance(story_item, str) else story_item
+        )
 
         # Create an instance of GraphUpdateAgent to add the Story item to graph
         agents.append(
@@ -165,7 +209,7 @@ async def main():
                 model=MODEL_GRAPH,
                 prompt="story_graph_prompt",
                 tools=[arango_custom],
-                data=story,
+                input_key=story_input_key,
                 output_key=graph_output_key,
             )
         )
@@ -175,7 +219,7 @@ async def main():
             build_issue_agent(
                 model=MODEL_ISSUE,
                 tools=jira_mcp,
-                data=story,
+                input_key=story_input_key,
                 output_key=issue_output_key,
             )
         )
@@ -185,17 +229,28 @@ async def main():
 
     # Create a concurrent process
     print("Running Stage 3: Story graphing and issue discovery...")
-    await run_parallel(STAGE3, agents, app_name, user_id, session_id, session_service)
+    await run_parallel(STAGE3, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
     # === Stage 4: Process Issues ===
     agents = []
+
+    # Refresh session state view
+    session = session_service.get_session(
+        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+    )
     issue_data = get_data_from_memory(
-        output_keys=issue_output_keys, state=state, label="issue"
+        output_keys=issue_output_keys, state=session.state, label="issues"
     )
 
     # Run on an Issue item-by-item basis
-    for i, issue in enumerate(issue_data):
-        graph_output_key = f"issue_graph_update_output_key_{i}"
+    for i, issue_item in enumerate(issue_data):
+        issue_input_key = f"{ISSUE_OUTPUTS}_{i}"
+        graph_output_key = f"{GRAPH_OUTPUTS}_{i}"
+
+        # Write to session.state
+        session.state[issue_input_key] = (
+            json.dumps(issue_item) if not isinstance(issue_item, str) else issue_item
+        )
 
         # Create an instance of GraphUpdateAgent to add the Issue item to graph
         agents.append(
@@ -203,14 +258,14 @@ async def main():
                 model=MODEL_GRAPH,
                 prompt="issue_graph_prompt",
                 tools=[arango_custom],
-                data=issue,
+                input_key=issue_input_key,
                 output_key=graph_output_key,
             )
         )
 
     # Create a concurrent process
     print("Running Stage 4: Issue graphing...")
-    await run_parallel(STAGE4, agents, app_name, user_id, session_id, session_service)
+    await run_parallel(STAGE4, agents, APP_NAME, USER_ID, SESSION_ID, session_service)
 
     print("Pipeline complete.")
 
@@ -232,13 +287,6 @@ async def run_parallel(name, agents, app_name, user_id, session_id, session_serv
         save_trace_event(event, name)
         if event.is_final_response() and event.content and event.content.parts:
             print(f"[{name}] Final response.")
-
-
-async def load_tools():
-    jira_mcp, exit_stack = await jira_mcp_tools()
-    jira_custom = FunctionTool(jira_get_epic_issues)
-    arango_custom = FunctionTool(arango_upsert)
-    return jira_mcp, exit_stack, jira_custom, arango_custom
 
 
 def get_data_from_memory(output_keys, state, label):
