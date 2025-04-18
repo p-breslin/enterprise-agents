@@ -11,3 +11,4 @@ metatool-app
 /google_adk/tests/test_data
 /mcps
 /logs
+/google_adk/tests/test_output
