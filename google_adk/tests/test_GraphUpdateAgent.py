@@ -1,79 +1,146 @@
+import sys
 import json
 import asyncio
+import logging
+import pathlib
 from google.genai import types
-from google.adk.sessions import InMemorySessionService
-from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
 from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
 
-from debug_callbacks import trace_event, save_trace_event
-from google_adk.tools.ArangoUpsertTool import arango_upsert
-from google.adk.tools.function_tool import FunctionTool
+from debug_callbacks import trace_event
 from google_adk.agents.GraphUpdateAgent import build_graph_agent
-from google_adk.utils_adk import load_config
+from google_adk.utils_adk import load_tools, load_config, resolve_model
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
-APP_NAME = "jira_test_app"
-USER_ID = "test_user"
+# === Runtime params ===
+
+RUNTIME_PARAMS = load_config("runtime")
+APP_NAME = RUNTIME_PARAMS["SESSION"]["app_name"]
+USER_ID = RUNTIME_PARAMS["SESSION"]["user_id"]
+
+OUTPUTS = RUNTIME_PARAMS["OUTPUTS"]
+AGENT_OUTPUT_KEY = OUTPUTS["graph"]
+
+model_provider = "google"
+SELECTED_MODEL = RUNTIME_PARAMS["MODELS"][model_provider]["graph"]
+MODEL = resolve_model(SELECTED_MODEL, provider=model_provider)
+
+# Define Input (story data from IssueAgent)
+INPUT_DIR = pathlib.Path(__file__).parent / "test_data"
+
+# ======================
 
 
-def create_test(TEST_DATA):
-    with open(
-        f"google_adk/tests/test_data/simple/{TEST_DATA}_test_data.json", "r"
-    ) as f:
-        data = json.load(f)
-    text = json.dumps(data, indent=2)
-    QUERY = f"Follow the instructions to execute the graph operation for the following data:\n{text}"
-    PROMPT = f"{TEST_DATA}_graph_prompt"
-    return QUERY, PROMPT
+async def run_graph_agent_test(test_type: str):
+    if test_type not in ["epic", "story", "issue"]:
+        logger.critical(
+            f"Invalid test_type '{test_type}'. Must be 'epic', 'story', or 'issue'."
+        )
+        return
+    logger.info("--- Starting Isolated GraphUpdateAgent Test ---")
 
+    # Determine configuration based on test_type
+    if test_type == "epic":
+        input_file_name = "test_epic_data.json"
+        prompt_name = "epic_graph_prompt"
+        input_state_key = "epic_graph_input"
+        test_session_id = f"test_session_graph_agent_{test_type}"
+        graph_output_key = f"{AGENT_OUTPUT_KEY}_epics_test"
+    elif test_type == "story":
+        input_file_name = "test_story_data.json"
+        prompt_name = "story_graph_prompt"
+        input_state_key = "story_graph_input"
+        test_session_id = f"test_session_graph_agent_{test_type}"
+        graph_output_key = f"{AGENT_OUTPUT_KEY}_stories_test"
+    else:
+        input_file_name = "test_issue_data.json"
+        prompt_name = "issue_graph_prompt"
+        input_state_key = "issue_graph_input"
+        test_session_id = f"test_session_graph_agent_{test_type}"
+        graph_output_key = f"{AGENT_OUTPUT_KEY}_issues_test"
 
-async def test_graph_agent(test_name):
-    QUERY, PROMPT = create_test(test_name)
-    SESSION_ID = f"{test_name}_test_session"
+    input_file = INPUT_DIR / input_file_name
 
-    # Setup session
+    _, _, _, arango_custom = await load_tools()
+    logger.info("Tools loaded.")
+
     session_service = InMemorySessionService()
-    artifact_service = InMemoryArtifactService()
-    session_service.delete_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+    try:
+        session_service.delete_session(
+            app_name=APP_NAME, user_id=USER_ID, session_id=test_session_id
+        )
+        logger.info(f"Deleted existing session: {test_session_id}")
+    except KeyError:
+        logger.info(f"Session {test_session_id} not found, creating new.")
+    session = session_service.create_session(
+        app_name=APP_NAME, user_id=USER_ID, session_id=test_session_id
     )
-    session_service.create_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
+    logger.info(f"Created session: {test_session_id}")
+
+    # Load input data and put it into state
+    try:
+        with open(input_file, "r") as f:
+            data = json.load(f)
+        session.state[input_state_key] = json.dumps(data)
+    except Exception as e:
+        logger.critical(f"Failed to load or process input file {input_file}: {e}")
+        raise
+
+    # --- Agent Setup ---
+    agent = build_graph_agent(
+        model=MODEL,
+        prompt=prompt_name,
+        tools=[arango_custom],
+        input_key=input_state_key,  # Tell agent where to read data
+        output_key=graph_output_key,  # Agent saves its result here
     )
+    logger.info(f"Built GraphUpdateAgent ({test_type}) and prompt {prompt_name}")
 
-    # Create GraphUpdateAgent
-    tool = FunctionTool(arango_upsert)
-    models = load_config("runtime")["models"]["google"]
-    agent = build_graph_agent(model=models["graph"], tools=[tool], prompt=PROMPT)
+    runner = Runner(agent=agent, app_name=APP_NAME, session_service=session_service)
 
-    runner = Runner(
-        agent=agent,
-        app_name=APP_NAME,
-        session_service=session_service,
-        artifact_service=artifact_service,
+    # --- Run Agent ---
+    trigger_message = types.Content(
+        role="user",
+        parts=[types.Part(text=f"Update graph for {test_type} data in state")],
     )
+    output = None
 
-    content = types.Content(role="user", parts=[types.Part(text=QUERY)])
+    logger.info(f"Running GraphUpdateAgent ({test_type})...")
     async for event in runner.run_async(
-        user_id=USER_ID, session_id=SESSION_ID, new_message=content
+        user_id=USER_ID, session_id=test_session_id, new_message=trigger_message
     ):
-        trace_event(event, debug_state=False)
-        save_trace_event(event, test_name)
-        if event.is_final_response():
-            print(f"[{test_name}] Final event detected")
+        trace_event(event)
+        if event.is_final_response() and event.content and event.content.parts:
+            output = event.content.parts[0].text
+            logger.info(f"GraphUpdateAgent ({test_type}) finished.")
+            print("\n--- Final LLM Output ---")
+            print(output)
 
+    if output is None:
+        logger.warning(
+            f"GraphUpdateAgent ({test_type}) did not produce final text, but may have run successfully."
+        )
 
-async def main():
-    print("=== Running Epic Test ===")
-    await test_graph_agent("epic")
-
-    print("=== Running Story Test ===")
-    await test_graph_agent("story")
-
-    print("=== Running Issue Test ===")
-    await asyncio.sleep(20)
-    await test_graph_agent("issue")
+    logger.info(
+        f"--- Finished Isolated GraphUpdateAgent Test ({test_type.upper()}) ---"
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Get test type from command line argument
+    if len(sys.argv) != 2 or sys.argv[1] not in ["epic", "story", "issue"]:
+        print("Usage: python test_GraphUpdateAgent.py <epic|story|issue>")
+        sys.exit(1)
+
+    test_type_arg = sys.argv[1]
+
+    try:
+        asyncio.run(run_graph_agent_test(test_type_arg))
+        logger.info(f"GraphUpdateAgent test ({test_type_arg}) completed.")
+    except Exception:
+        logger.exception(f"GraphUpdateAgent test ({test_type_arg}) failed.")

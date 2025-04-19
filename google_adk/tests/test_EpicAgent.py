@@ -25,7 +25,7 @@ USER_ID = RUNTIME_PARAMS["SESSION"]["user_id"]
 TEST_SESSION_ID = "test_session_epic_agent"
 
 OUTPUTS = RUNTIME_PARAMS["OUTPUTS"]
-EPIC_AGENT_OUTPUT_KEY = OUTPUTS["epic"]
+AGENT_OUTPUT_KEY = OUTPUTS["epic"]
 
 model_provider = "openai"
 SELECTED_MODEL = RUNTIME_PARAMS["MODELS"][model_provider]["epic"]
@@ -42,7 +42,7 @@ OUTPUT_FILE = OUTPUT_DIR / f"epics_output_{model_save_name}.json"
 
 async def run_epic_agent_test():
     logger.info("--- Starting Isolated EpicAgent Test ---")
-    tools, exit_stack, _, _ = await load_tools()
+    jira_mcp, exit_stack, _, _ = await load_tools()
     logger.info("Tools loaded.")
 
     session_service = InMemorySessionService()
@@ -61,10 +61,10 @@ async def run_epic_agent_test():
     # --- Agent Setup ---
     agent = build_epic_agent(
         model=MODEL,
-        tools=tools,
-        output_key=EPIC_AGENT_OUTPUT_KEY,  # Agent saves its result here
+        tools=jira_mcp,
+        output_key=AGENT_OUTPUT_KEY,  # Agent saves its result here
     )
-    logger.info(f"Built EpicAgent using model {MODEL}")
+    logger.info(f"Built EpicAgent using model {model_save_name}")
 
     runner = Runner(agent=agent, app_name=APP_NAME, session_service=session_service)
 
