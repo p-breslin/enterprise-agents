@@ -57,19 +57,25 @@ async def run_story_agent_test():
         logger.info(f"Deleted existing session: {TEST_SESSION_ID}")
     except KeyError:
         logger.info(f"Session {TEST_SESSION_ID} not found, creating new.")
-    session = session_service.create_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=TEST_SESSION_ID
-    )
-    logger.info(f"Created session: {TEST_SESSION_ID}")
 
-    # Load input data and put it into state
+    # Load input data (beifre creating the session!) and put it into state
+    initial_state = {}
     try:
         with open(INPUT_FILE, "r") as f:
             data = json.load(f)
-        session.state[INPUT_STATE_KEY] = json.dumps(data)
+        initial_state[INPUT_STATE_KEY] = json.dumps(data)
     except Exception as e:
-        logger.critical(f"Failed to load or process input file {INPUT_FILE}: {e}")
+        logger.critical(f"Failed to process input file {INPUT_FILE}: {e}")
         raise
+
+    # Create session with intended state
+    session_service.create_session(
+        app_name=APP_NAME,
+        user_id=USER_ID,
+        session_id=TEST_SESSION_ID,
+        state=initial_state,
+    )
+    logger.info(f"Created session: {TEST_SESSION_ID}")
 
     # --- Agent Setup ---
     agent = build_story_agent(
@@ -122,3 +128,4 @@ if __name__ == "__main__":
         asyncio.run(run_story_agent_test())
     except Exception:
         logger.exception("StoryAgent test failed with unhandled exception.")
+
