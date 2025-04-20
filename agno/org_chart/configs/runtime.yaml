@@ -1,0 +1,12 @@
+MODELS:
+  google:
+    epic: "gemini-2.0-flash"
+    story: "gemini-2.5-pro-exp-03-25"
+    issue: "gemini-2.0-flash"
+    graph: "gemini-2.0-flash-lite"
+
+  openai:
+    epic: "gpt-4.1-mini"
+    story: "gpt-4.1-mini"
+    issue: "gpt-4.1-mini"
+    graph: "gpt-4.1-mini"

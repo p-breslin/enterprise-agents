@@ -1,0 +1,31 @@
+vertex_collections:
+  - Epics
+  - Projects
+  - Stories
+  - Persons
+  - Teams
+
+edge_collections:
+  - name: epic_of_project
+    from: [Epics]
+    to: [Projects]
+
+  - name: story_belongs_to_epic
+    from: [Stories]
+    to: [Epics]
+
+  - name: assigned_to
+    from: [Stories]
+    to: [Persons]
+
+  - name: member_of
+    from: [Persons]
+    to: [Teams]
+
+  - name: team_owns_epic
+    from: [Teams]
+    to: [Epics]
+
+  - name: team_works_on_project
+    from: [Teams]
+    to: [Projects]
