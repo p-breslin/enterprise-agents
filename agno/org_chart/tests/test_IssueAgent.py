@@ -44,7 +44,7 @@ async def run_issue_agent_test():
     try:
         with open(INPUT_FILE, "r") as f:
             raw_input_data = json.load(f)
-            input_state_data[INPUT_STATE_KEY] = raw_input_data
+            input_state_data[INPUT_STATE_KEY] = json.dumps(raw_input_data, indent=2)
             logger.info(
                 f"Loaded input data from {INPUT_FILE} into state key '{INPUT_STATE_KEY}'."
             )
@@ -56,7 +56,7 @@ async def run_issue_agent_test():
     agent = build_issue_agent(
         model=MODEL,
         tools=[jira_get_issue],
-        input_state_key=INPUT_STATE_KEY,  # Pass the key name to the builder
+        initial_state=input_state_data,
     )
     # Enable debugging during test development
     agent.debug_mode = True
@@ -71,9 +71,7 @@ async def run_issue_agent_test():
     try:
         # Use agent.arun for async execution, or agent.run for sync
         # Provide input state here
-        response = await agent.arun(
-            trigger_message, session_id=TEST_SESSION_ID, session_state=input_state_data
-        )
+        response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response
         print_callbacks(final_response, "IssueAgentTest")
 
@@ -88,10 +86,10 @@ async def run_issue_agent_test():
 
         # --- Verification ---
         assert isinstance(output_content, IssueList), (
-            f"Expected output type StoryList, but got {type(output_content)}"
+            f"Expected output type IssueList, but got {type(output_content)}"
         )
         logger.info(
-            f"Output validation successful (type: StoryList). Found {len(output_content.stories)} stories."
+            f"Output validation successful (type: IssueList). Found {len(output_content.issues)} issues."
         )
 
         try:

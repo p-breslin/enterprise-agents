@@ -185,9 +185,9 @@ issue_prompt: |
   **Task:** 
   Retrieve detailed metadata for a list of Jira stories.
 
-  **Input Source:**
-  - The list of stories to process is located in the session state.
-  - Retrieve the data associated with the state key named: **`{state_key_name}`**. This data represents a list of simplified story objects, each containing `story_key` and `epic_key`.
+  **Input Stories Data:**
+  Here is the list of story objects you need to process:
+  {stories_data_input}
 
   **Processing Steps:**
   1. Initialize an empty list to store the detailed issue results.
@@ -234,7 +234,7 @@ issue_prompt: |
     }
 
   **Strict Rules:**
-  - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - Use ONLY the values from the Input Stories Data provided above.
   - Use only values returned by the `jira_get_issue` tool or copied directly from the corresponding input story object (specifically the `epic_key`).
   - Do not fabricate or infer any fields.
   - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.
