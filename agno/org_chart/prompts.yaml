@@ -32,9 +32,9 @@ epic_graph_prompt: |
   **Task:** 
   Process a list of Jira epics and update the graph using the `arango_upsert` tool.
 
-  **Input Source:**
-  - The list of epics to process is located in the session state.
-  - You must retrieve the data associated with the state key named: **`{state_key_name}`**. This data represents a list of epic objects.
+  **Input Epics Data:**
+  Here is the list of epic objects you need to process:
+  {epics_data_input}
 
   Each epic includes:
     - epic_key: the unique identifier of the epic (e.g. "DNS-15554")
@@ -64,7 +64,7 @@ epic_graph_prompt: |
       "collection_name": "Projects",
       "search_document": { "_key": "<project>" },
       "insert_document": { "_key": "<project>" },
-      "update_document": {}  # No fields to update
+      "update_document": {<empyt>}  # No fields to update
     }
       
   3.  **Upsert Epic-Project Edge:** Use `arango_upsert` to ensure an edge exists in the `epic_of_project` collection, linking the epic to its project. Use the `epic_key` and `project` values:
@@ -78,16 +78,17 @@ epic_graph_prompt: |
         "_from": "Epics/<epic_key>",
         "_to": "Projects/<project>"
       },
-      "update_document": {}  # No edge properties to update
+      "update_document": {<empyt>}  # No edge properties to update
     }
 
   **Strict Instructions:**
-  - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - Use ONLY the values from the Input Epics Data provided above.
   - **Case Sensitivity:** The values for `collection_name` (e.g., 'Epics', 'Projects', 'epic_of_project') and the collection prefixes in `_from`/`_to` fields (e.g., 'Epics/', 'Projects/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
   - Use *only* the `arango_upsert` tool for all database operations.
   - Execute exactly one `arango_upsert` tool call per step outlined above (3 calls per epic).
   - Use only the values present in the input epic objects. Do not fabricate, transform, or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each epic.
+  - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
 
 
 
@@ -141,9 +142,9 @@ story_graph_prompt: |
   **Task:** 
   Process a list of Jira stories and their links to epics, updating the graph using the `arango_upsert` tool.
 
-  **Input Source:**
-  - The list of stories to process is located in the session state.
-  - Retrieve the data associated with the state key named: **`{state_key_name}`**. This data represents a list of story objects, each containing `story_key` and `epic_key`.
+  **Input Story Data:**
+  Here is the list of epic objects you need to process:
+  {stories_data_input}
 
   **Processing Steps for EACH Story:**
   For *every* story object found in the retrieved list:
@@ -167,16 +168,17 @@ story_graph_prompt: |
         "_from": "Stories/<story_key>",
         "_to": "Epics/<epic_key>"
       },
-      "update_document": {}
+      "update_document": {<empyt>}  # No edge properties to update
     }
 
   **Strict Instructions:**
-  - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - Use ONLY the values from the Input Stories Data provided above.
   - **Case Sensitivity:** The values for `collection_name` (e.g., 'Stories', 'story_belongs_to_epic') and the collection prefixes in `_from`/`_to` fields (e.g., 'Stories/', 'Epics/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
   - Use *only* the `arango_upsert` tool for all database operations.
   - Execute exactly one `arango_upsert` tool call per step outlined above (2 calls per story).
   - Use only the values present in the input story objects. Do not guess, fabricate, or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each story.
+  - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
 
 
 issue_prompt: |
@@ -246,9 +248,9 @@ issue_graph_prompt: |
   **Task:** 
   Process a list of detailed Jira issues and update the graph using the `arango_upsert` tool.
 
-  **Input Source:**
-  - The list of detailed issues to process is located in the session state.
-  - Retrieve the data associated with the state key named: **`{state_key_name}`**. This data represents a list of issue objects with fields like `story_key`, `summary`, `status`, `assignee`, `epic_key`, `created`, `resolved`, `priority`, and `project`.
+  **Input Issues Data:**
+  Here is the list of issues objects you need to process:
+  {issues_data_input}
 
   **Important Prerequisite: Assignee Sanitization**
   - Before using an `assignee` value in ArangoDB keys or edges, you MUST sanitize it if it's not null.
@@ -294,7 +296,7 @@ issue_graph_prompt: |
         "collection_name": "Persons",
         "search_document": { "_key": "<sanitized_assignee>" },
         "insert_document": { "_key": "<sanitized_assignee>" },
-        "update_document": {}
+        "update_document": {<empyt>}  # No fields to update
       }
     c. **Upsert Assignment Edge:** Use `arango_upsert` to ensure an edge exists in the `assigned_to` collection linking the story to the person. Use `story_key` and `<sanitized_assignee>`:
       {
@@ -307,13 +309,13 @@ issue_graph_prompt: |
           "_from": "Stories/<story_key>",
           "_to": "Persons/<sanitized_assignee>"
         },
-        "update_document": {}
+        "update_document": {<empyt>}  # No edge properties to update
       }
 
   4.  **If Assignee is Null:** Skip steps 3a, 3b, and 3c for this issue.
 
   **Strict Instructions:**
-  - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - Use ONLY the values from the Input Issues Data provided above.
   - **Case Sensitivity:** The values for `collection_name` (e.g., 'Stories', 'Persons', 'assigned_to') and the collection prefixes in `_from`/`_to` fields (e.g., 'Stories/', 'Persons/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
   - Use *only* the `arango_upsert` tool for all database operations.
   - Execute tool calls one at a time per operation described.
@@ -321,3 +323,4 @@ issue_graph_prompt: |
   - Only perform the Person and Edge upserts if the assignee is not null.
   - Use only the values present in the input issue objects. Do not fabricate or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each issue.
+  - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
