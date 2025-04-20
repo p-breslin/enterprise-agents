@@ -43,17 +43,17 @@ async def run_graph_agent_test(test_type: str):
     if test_type == "epic":
         input_file_name = "test_epic_data.json"
         prompt_key = "epic_graph_prompt"
-        INPUT_STATE_KEY = "epic_graph_input_state"
+        INPUT_STATE_KEY = "epics_data_input"
 
     elif test_type == "story":
         input_file_name = "test_story_data.json"
         prompt_key = "story_graph_prompt"
-        INPUT_STATE_KEY = "story_graph_input_state"
+        INPUT_STATE_KEY = "stories_data_input"
 
     elif test_type == "issue":
         input_file_name = "test_issue_data.json"
         prompt_key = "issue_graph_prompt"
-        INPUT_STATE_KEY = "issue_graph_input_state"
+        INPUT_STATE_KEY = "issues_data_input"
 
     TEST_SESSION_ID = f"test_session_graph_agent_{test_type}"
     INPUT_FILE = input_dir / input_file_name
@@ -75,7 +75,7 @@ async def run_graph_agent_test(test_type: str):
     agent = build_graph_agent(
         model=MODEL,
         tools=[arango_upsert],
-        input_state_key=INPUT_STATE_KEY,
+        initial_state=input_state_data,
         prompt_key=prompt_key,
     )
     agent.debug_mode = True
@@ -90,9 +90,7 @@ async def run_graph_agent_test(test_type: str):
     try:
         # Use agent.arun for async execution, or agent.run for sync
         # Provide input state here
-        response = await agent.arun(
-            trigger_message, session_id=TEST_SESSION_ID, session_state=input_state_data
-        )
+        response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response
         print_callbacks(final_response, f"GraphUpdateAgent_{test_type}_Test")
 
