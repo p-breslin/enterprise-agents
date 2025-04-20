@@ -4,7 +4,7 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
-from schemas import IssueDetail
+from schemas import IssueList
 from callbacks import print_callbacks
 from agents.IssueAgent import build_issue_agent
 from tools.tool_jira_issue import jira_get_issue
@@ -87,7 +87,7 @@ async def run_issue_agent_test():
         output_content = final_response.content
 
         # --- Verification ---
-        assert isinstance(output_content, IssueDetail), (
+        assert isinstance(output_content, IssueList), (
             f"Expected output type StoryList, but got {type(output_content)}"
         )
         logger.info(
@@ -107,7 +107,7 @@ async def run_issue_agent_test():
             logger.error("Output content does not have model_dump method.")
 
             # Fallback: try saving raw content if content exists
-            if not isinstance(output_content, IssueDetail):
+            if not isinstance(output_content, IssueList):
                 try:
                     with open(OUTPUT_FILE.with_suffix(".raw.json"), "w") as f:
                         json.dump(output_content, f, indent=4)
