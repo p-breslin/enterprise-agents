@@ -9,4 +9,4 @@ MODELS:
     epic: "gpt-4.1-nano"
     story: "gpt-4.1-nano"
     issue: "gpt-4.1-nano"
-    graph: "gpt-4.1-nano"
+    graph: "gpt-4.1-mini"
