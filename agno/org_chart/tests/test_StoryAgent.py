@@ -7,7 +7,7 @@ from agno.agent import RunResponse
 from schemas import StoryList
 from callbacks import print_callbacks
 from agents.StoryAgent import build_story_agent
-from tools.tool_jira_search import jira_get_epic_issues
+from tools.tool_jira_epic_issues import jira_get_epic_issues
 from utils_agno import load_config, resolve_model
 
 logging.basicConfig(
