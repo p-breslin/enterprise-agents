@@ -1,6 +1,6 @@
 from agno.agent import Agent
 from schemas import EpicList
-from utils import load_prompt
+from utils_agno import load_prompt
 
 
 def build_epic_agent(model, tools):
@@ -17,6 +17,5 @@ def build_epic_agent(model, tools):
         instructions=[prompt_text],
         tools=tools,
         response_model=EpicList,  # Expecting structured output
-        use_json_mode=True,  # Model must support native JSON mode reliably
         markdown=False,  # Output must be pure JSON
     )
