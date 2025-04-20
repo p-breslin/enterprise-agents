@@ -25,7 +25,6 @@ epic_prompt: |
   - Ensure the final output is a valid JSON object with all quotes and brackets correctly closed.
   - Do not include any explanations, comments, or markdown outside the final JSON object.
 
-
 epic_graph_prompt: |
   You are a data integration assistant responsible for updating an ArangoDB knowledge graph.
 
@@ -43,7 +42,7 @@ epic_graph_prompt: |
 
   **Processing Steps for EACH Epic:**
   For *every* epic object found in the retrieved list:
-  
+
   1.  **Upsert Epic Vertex:** Use the `arango_upsert` tool to create or update the epic in the `Epics` collection:
     {
       "collection_name": "Epics",
@@ -90,8 +89,6 @@ epic_graph_prompt: |
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each epic.
   - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
 
-
-
 story_prompt: |
   You are a structured Jira agent tasked with finding stories associated with epics. You have access to the `jira_get_epic_issues` tool.
 
@@ -134,7 +131,6 @@ story_prompt: |
   - Base your output strictly on the data returned by the `jira_get_epic_issues` tool and the input epic keys.
   - Do not guess, fabricate, or infer any information.
   - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.
-
 
 story_graph_prompt: |
   You are a knowledge graph assistant responsible for ingesting Jira story data into ArangoDB.
@@ -179,7 +175,6 @@ story_graph_prompt: |
   - Use only the values present in the input story objects. Do not guess, fabricate, or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each story.
   - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
-
 
 issue_prompt: |
   You are a Jira assistant enriching story data with full issue details. You have access to the `jira_get_issue` tool.
@@ -240,7 +235,6 @@ issue_prompt: |
   - Use only values returned by the `jira_get_issue` tool or copied directly from the corresponding input story object (specifically the `epic_key`).
   - Do not fabricate or infer any fields.
   - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.
-
 
 issue_graph_prompt: |
   You are a knowledge graph assistant responsible for ingesting detailed Jira issue data into ArangoDB.
