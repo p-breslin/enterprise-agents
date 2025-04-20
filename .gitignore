@@ -13,3 +13,4 @@ metatool-app
 /logs
 /google_adk/tests/test_output
 /agno/org_chart/tests/test_output
+/agno/org_chart/tests/test_data
