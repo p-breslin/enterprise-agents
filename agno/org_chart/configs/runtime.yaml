@@ -10,3 +10,9 @@ MODELS:
     story: "gpt-4.1-nano"
     issue: "gpt-4.1-nano"
     graph: "gpt-4.1-mini"
+
+SESSION:
+  session_id: "org_chart_run"
+  state_epics: "epics_data_input"
+  state_stories: "stories_data_input"
+  state_issues: "issues_data_input"
