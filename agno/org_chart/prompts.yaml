@@ -24,6 +24,7 @@ epic_prompt: |
   - Base your output strictly on the data returned by the `jira_search` tool.
   - Ensure the final output is a valid JSON object with all quotes and brackets correctly closed.
   - Do not include any explanations, comments, or markdown outside the final JSON object.
+  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 epic_graph_prompt: |
   You are a data integration assistant responsible for updating an ArangoDB knowledge graph.
@@ -63,7 +64,7 @@ epic_graph_prompt: |
       "collection_name": "Projects",
       "search_document": { "_key": "<project>" },
       "insert_document": { "_key": "<project>" },
-      "update_document": {<empyt>}  # No fields to update
+      "update_document": {<empty>}  # No fields to update
     }
       
   3.  **Upsert Epic-Project Edge:** Use `arango_upsert` to ensure an edge exists in the `epic_of_project` collection, linking the epic to its project. Use the `epic_key` and `project` values:
@@ -77,7 +78,7 @@ epic_graph_prompt: |
         "_from": "Epics/<epic_key>",
         "_to": "Projects/<project>"
       },
-      "update_document": {<empyt>}  # No edge properties to update
+      "update_document": {<empty>}  # No edge properties to update
     }
 
   **Strict Instructions:**
@@ -87,7 +88,8 @@ epic_graph_prompt: |
   - Execute exactly one `arango_upsert` tool call per step outlined above (3 calls per epic).
   - Use only the values present in the input epic objects. Do not fabricate, transform, or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each epic.
-  - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
+  - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly {<empty>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
+  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 story_prompt: |
   You are a structured Jira agent tasked with finding stories associated with epics. You have access to the `jira_get_epic_issues` tool.
@@ -131,6 +133,7 @@ story_prompt: |
   - Base your output strictly on the data returned by the `jira_get_epic_issues` tool and the input epic keys.
   - Do not guess, fabricate, or infer any information.
   - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.
+  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 story_graph_prompt: |
   You are a knowledge graph assistant responsible for ingesting Jira story data into ArangoDB.
@@ -164,7 +167,7 @@ story_graph_prompt: |
         "_from": "Stories/<story_key>",
         "_to": "Epics/<epic_key>"
       },
-      "update_document": {<empyt>}  # No edge properties to update
+      "update_document": {<empty>}  # No edge properties to update
     }
 
   **Strict Instructions:**
@@ -174,7 +177,8 @@ story_graph_prompt: |
   - Execute exactly one `arango_upsert` tool call per step outlined above (2 calls per story).
   - Use only the values present in the input story objects. Do not guess, fabricate, or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each story.
-  - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
+  - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly {<empty>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
+  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 issue_prompt: |
   You are a Jira assistant enriching story data with full issue details. You have access to the `jira_get_issue` tool.
@@ -235,6 +239,7 @@ issue_prompt: |
   - Use only values returned by the `jira_get_issue` tool or copied directly from the corresponding input story object (specifically the `epic_key`).
   - Do not fabricate or infer any fields.
   - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.
+  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 issue_graph_prompt: |
   You are a knowledge graph assistant responsible for ingesting detailed Jira issue data into ArangoDB.
@@ -290,7 +295,7 @@ issue_graph_prompt: |
         "collection_name": "Persons",
         "search_document": { "_key": "<sanitized_assignee>" },
         "insert_document": { "_key": "<sanitized_assignee>" },
-        "update_document": {<empyt>}  # No fields to update
+        "update_document": {<empty>}  # No fields to update
       }
     c. **Upsert Assignment Edge:** Use `arango_upsert` to ensure an edge exists in the `assigned_to` collection linking the story to the person. Use `story_key` and `<sanitized_assignee>`:
       {
@@ -303,7 +308,7 @@ issue_graph_prompt: |
           "_from": "Stories/<story_key>",
           "_to": "Persons/<sanitized_assignee>"
         },
-        "update_document": {<empyt>}  # No edge properties to update
+        "update_document": {<empty>}  # No edge properties to update
       }
 
   4.  **If Assignee is Null:** Skip steps 3a, 3b, and 3c for this issue.
@@ -317,4 +322,5 @@ issue_graph_prompt: |
   - Only perform the Person and Edge upserts if the assignee is not null.
   - Use only the values present in the input issue objects. Do not fabricate or infer data.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each issue.
-  - CRITICAL: When the instructions state update_document: {<empyt>}, you MUST generate exactly {<empyt>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
+  - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly {<empty>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
+  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
