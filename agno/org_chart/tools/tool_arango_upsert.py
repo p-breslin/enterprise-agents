@@ -1,5 +1,6 @@
+import json
 import logging
-from agno.agent import tool
+from agno.tools import tool
 from typing import Dict, Any, Optional
 from utils_arango import arango_connect
 from arango.exceptions import AQLQueryExecuteError, ArangoServerError
@@ -18,10 +19,9 @@ def arango_upsert(
     insert_document: Dict[str, Any],
     update_document: Dict[str, Any],
     options: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> str:
     """
-    Performs an ArangoDB UPSERT operation: updates a document if found based on search criteria,
-    otherwise inserts a new document.
+    Performs an ArangoDB UPSERT operation: updates a document if found based on search criteria, otherwise inserts a new document.
 
     This tool constructs and executes a safe UPSERT AQL query using bind variables.
 
@@ -37,7 +37,7 @@ def arango_upsert(
         options (Optional[Dict[str, Any]]): Additional ArangoDB options for the UPSERT operation (e.g., {'waitForSync': True, 'keepNull': False}). Consult ArangoDB documentation for available options. OPTIONAL.
 
     Returns:
-        Dict[str, Any]: A dictionary containing the execution status and result.
+        str: A A JSON string representation of a dictionary containing the execution status and result.
             - On Success:
                 {
                     "status": "success",
@@ -50,7 +50,6 @@ def arango_upsert(
                     "details": "Specific error message from the database or system.",
                     "status_code": Optional HTTP status code if available.
                 }
-            (Best Practice: Return dictionary preferred, include 'status' key, descriptive values).
     """
     logger.info(f"Tool 'arango_upsert' called for collection '{collection_name}'")
     logger.debug(
@@ -108,16 +107,18 @@ def arango_upsert(
             # Should not happen with RETURN NEW on success, but handle defensively
             logger.warning("Upsert executed but RETURN NEW yielded no document.")
 
-        return {"status": "success", "result": result_document}
+        return json.dumps({"status": "success", "result": result_document})
 
     # Error handling
     except AQLQueryExecuteError as e:
         logger.error("AQL Execution Error during UPSERT", exc_info=True)
-        return {
-            "status": "error",
-            "error": "AQL Execution Error",
-            "details": str(e),
-        }
+        return json.dumps(
+            {
+                "status": "error",
+                "error": "AQL Execution Error",
+                "details": str(e),
+            }
+        )
     except ArangoServerError as e:
         # Catch other potential server-side issues
         http_exception = getattr(e, "http_exception", None)
@@ -133,18 +134,24 @@ def arango_upsert(
         )
         error_msg = "ArangoDB Server Error during UPSERT"
         logger.error(f"{error_msg}: {details}")
-        return {
-            "status": "error",
-            "error": "ArangoDB Server Error",
-            "details": details,
-            "status_code": status_code,
-        }
+        return json.dumps(
+            {
+                "status": "error",
+                "error": "ArangoDB Server Error",
+                "details": details,
+                "status_code": status_code,
+            }
+        )
     except ConnectionError as e:  # Catch connection errors from db connection
         error_msg = f"Database connection failed: {e}"
         logger.error(error_msg)
-        return {"status": "error", "error": "Connection Error", "details": str(e)}
+        return json.dumps(
+            {"status": "error", "error": "Connection Error", "details": str(e)}
+        )
     except Exception as e:
         # Catch-all for unexpected errors
         error_msg = f"An unexpected error occurred in arango_upsert: {e}"
         logger.exception(error_msg)  # Include traceback
-        return {"status": "error", "error": "Unexpected Tool Error", "details": str(e)}
+        return json.dumps(
+            {"status": "error", "error": "Unexpected Tool Error", "details": str(e)}
+        )

@@ -1,6 +1,6 @@
+import json
 import logging
-from agno.agent import tool
-from typing import List, Dict, Any
+from agno.tools import tool
 from utils_agno import get_jira_client
 
 logging.basicConfig(level=logging.WARNING)
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # --- Jira Tool Function: Search Issues from Epics ---
 @tool()
-def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> List[Dict[str, Any]]:
+def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> str:
     """
     Searches for Jira issues belonging to a specific Epic using a JQL query
 
@@ -23,7 +23,7 @@ def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> List[Dict[str,
         max_results (int): Maximum number of issues to return. Defaults to 50.
 
     Returns:
-        List[Dict[str, Any]]: A list of raw issue data dictionaries directly from the Jira API response. Each dictionary typically contains:
+        str: A A JSON string representation of a list of raw issue data dictionaries directly from the Jira API response. Each A JSON string representation of the dictionary typically contains:
             - 'key' (str): The issue key (e.g., 'PROJ-456')
             - 'id' (str): The internal issue ID.
             - 'self' (str): URL to the issue API endpoint.
@@ -32,19 +32,20 @@ def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> List[Dict[str,
                 - 'status' (Dict | None): {'name': 'Status Name', ...}
                 - 'assignee' (Dict | None): {'displayName': 'Assignee
 
-        Returns an empty list if no issues are found.
-        Returns a list containing a single error dictionary (e.g., [{"error": "message"}]) if an error occurs.
+        Returns an empty A JSON string representation of a list if no issues are found. Returns a A JSON string representation os a list containing a single error dictionary (e.g., [{"error": "message"}]) if an error occurs.
     """
     logger.info(
         f"Tool 'search_jira_issues_by_epic' called for Epic: {epic_key} (limit: {max_results})"
     )
     jira = get_jira_client()
     if not jira:
-        return [
-            {
-                "error": "Failed to initialize Jira client. Check credentials and environment variables."
-            }
-        ]
+        return json.dumps(
+            [
+                {
+                    "error": "Failed to initialize Jira client. Check credentials and environment variables."
+                }
+            ]
+        )
 
     # JQL query targeting 'parent' field
     jql_query = f'parent = "{epic_key}" ORDER BY created DESC'
@@ -62,14 +63,14 @@ def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> List[Dict[str,
             raw_issues = issues_data["issues"]
             logger.info(f"Found {len(raw_issues)} raw issues for Epic {epic_key}.")
             # Return the raw list directly to the agent
-            return raw_issues
+            return json.dumps(raw_issues)
         else:
             logger.info(f"No issues found for Epic {epic_key} with JQL: {jql_query}")
-            return []  # Return empty list
+            return json.dumps([])  # Return empty list
 
     except Exception as e:
         logger.error(f"Error during Jira JQL search for Epic {epic_key}: {e}")
         error_message = f"An error occurred while searching Jira: {str(e)}"
         if "does not exist" in str(e):
             error_message = f"Epic '{epic_key}' not found or JQL query failed."
-        return [{"error": error_message}]  # Return error in a list for type consistency
+        return json.dumps([{"error": error_message}])
