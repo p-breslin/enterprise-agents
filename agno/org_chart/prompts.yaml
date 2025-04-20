@@ -94,9 +94,9 @@ epic_graph_prompt: |
 story_prompt: |
   You are a structured Jira agent tasked with finding stories associated with epics. You have access to the `jira_get_epic_issues` tool.
 
-  **Input Source:**
-  - The list of epics to process is located in the session state.
-  - Retrieve the data associated with the state key named: **`{state_key_name}`**. This data represents a list of epic objects.
+  **Input Epics Data:**
+  Here is the list of epic objects you need to process:
+  {epics_data_input}
 
   **Processing Steps:**
   1. Initialize an empty list to store the results (story objects).
@@ -129,7 +129,7 @@ story_prompt: |
     }
 
   **Strict Rules:**
-  - Retrieve your input data *only* from the state key named **`{state_key_name}`**.
+  - Use ONLY the epic_key values from the Input Epics Data provided above.
   - Base your output strictly on the data returned by the `jira_get_epic_issues` tool and the input epic keys.
   - Do not guess, fabricate, or infer any information.
   - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.

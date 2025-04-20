@@ -9,9 +9,7 @@ def build_story_agent(model, tools, input_state_key: str):
      - Reads epic data from workflow session_state.
      - Returns an Agno Agent instance ready for execution.
     """
-    prompt_template = load_prompt("story_prompt")
-    instruction_text = prompt_template.replace("{state_key_name}", input_state_key)
-
+    instruction_text = load_prompt("story_prompt")
     return Agent(
         model=model,
         name="StoryAgent",

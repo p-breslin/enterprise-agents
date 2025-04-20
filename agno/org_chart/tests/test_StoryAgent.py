@@ -11,8 +11,9 @@ from tools.tool_jira_epic_issues import jira_get_epic_issues
 from utils_agno import load_config, resolve_model
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
+    force=False,
 )
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ async def run_story_agent_test():
             logger.info(
                 f"Loaded input data from {INPUT_FILE} into state key '{INPUT_STATE_KEY}'."
             )
+            logger.debug(json.dumps(input_state_data, indent=2))
     except Exception as e:
         logger.critical(f"Failed to load input file {INPUT_FILE}: {e}")
         raise
@@ -80,6 +82,11 @@ async def run_story_agent_test():
     except Exception as e:
         logger.exception("StoryAgent execution failed.")
         raise
+    finally:  # Print state even if an exception occurred mid-run
+        if agent and hasattr(agent, "session_state"):
+            logger.debug("--- Agent's final internal session_state ---")
+            logger.debug(json.dumps(agent.session_state, indent=2))
+            logger.debug("--- End agent final state ---")
 
     # --- Save & Verify Output ---
     if final_response and final_response.content:
