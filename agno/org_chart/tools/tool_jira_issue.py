@@ -27,7 +27,7 @@ _REQUIRED_FIELDS_STR = ",".join(_REQUIRED_ISSUE_FIELDS)
 @tool()
 def jira_get_issue(issue_key: str) -> str:
     """
-    Purpose of Tool:
+    Tool Purpose:
         Retrieves the SPECIFIC details of a single Jira issue by its key as a JSON string. The agent using this tool will need to parse the returned dictionary to extract the specific fields it requires (e.g., summary, status.name, fields assignee.displayName).
 
     Args:
@@ -72,25 +72,22 @@ def jira_get_issue(issue_key: str) -> str:
         return json.dumps({"error": error_message})
 
 
-# --- Jira Tool Function: Get Multiple Issues (Batch) ---
-@tool()
+# --- Jira Tool Function: Get Batch Issues using enhanced_search_issues ---
 def jira_get_issues_batch(
     issue_keys: List[str], max_results_per_batch: int = 100
 ) -> str:
     """
-    Retrieves SPECIFIC details for multiple Jira issues using a batch JQL query.
-
-    Fetches only necessary fields for a list of issue keys in a single request to improve efficiency and reduce network latency/API calls.
+    Tool Purpose:
+        Retrieves SPECIFIC details for multiple Jira issues using enhanced_search_issues from the Jira API. Fetches only necessary fields for a list of issue keys in potentially fewer requests.
 
     Args:
         issue_keys (List[str]): A list of Jira issue keys to retrieve (e.g., ['PROJ-1', 'PROJ-2']). REQUIRED.
-        max_results_per_batch (int): Jira often limits JQL results per query. This sets that limit. Defaults to 100.
+        max_results_per_batch (int): Max results per underlying API call (used for potential pagination if needed, though typically fetching by key won't require multiple pages unless list is huge). Defaults to 100.
 
     Returns:
-        str: A JSON string representation of a list of dictionaries, each containing the requested fields for the found issues. Issues not found or inaccessible will be omitted from the result list.
-        - Returns '[]' if no issues are found.
-        - Returns '[{"error": "message"}]' for a connection or major API error.
-        - Note: Individual key errors (like one key not found) are not typically returned as errors, the query just returns the valid results.
+        str: A JSON string representation of a list of dictionaries, each containing the requested fields for the found issues.
+            - Returns '[]' if no issues are found.
+            - Returns '[{"error": "message"}]' if a connection or major API error occurs.
     """
     if not issue_keys:
         logger.warning(
@@ -98,43 +95,55 @@ def jira_get_issues_batch(
         )
         return json.dumps([])
 
-    logger.info(f"Tool 'jira_get_issues_batch' called for {len(issue_keys)} keys.")
+    # Limit the number of keys per request if necessary
+    # (JQL length might be the real limit)
+    if len(issue_keys) > max_results_per_batch:
+        logger.warning(
+            f"Requested {len(issue_keys)} keys, but batch limit is {max_results_per_batch}. Fetching first {max_results_per_batch}."
+        )
+        # Note: For simplicity, this implementation doesn't handle fetching keys beyond the first batch limit
+        # A production system might need to loop and make multiple batch calls if thousands of keys were passed!
+        keys_to_fetch = issue_keys[:max_results_per_batch]
+    else:
+        keys_to_fetch = issue_keys
+
+    logger.info(f"Tool 'jira_get_issues_batch' called for {len(keys_to_fetch)} keys.")
     jira = get_jira_client()
     if not jira:
         return json.dumps([{"error": "Jira client initialization failed."}])
 
     # Format keys for JQL "in" clause: "KEY-1","KEY-2",...
-    formatted_keys = ",".join([f'"{key}"' for key in issue_keys])
-
-    # Construct JQL query
+    formatted_keys = ",".join([f'"{key}"' for key in keys_to_fetch])
     jql_query = f"key in ({formatted_keys})"
 
-    # Limit results - important for large lists
-    limit = min(len(issue_keys), max_results_per_batch)
-
-    logger.info(f"Executing Batch JQL: {jql_query} (Limit: {limit})")
+    logger.info(
+        f"Executing Batch JQL via enhanced_search_issues: {jql_query} (MaxResults: {max_results_per_batch})"
+    )
     logger.debug(f"Requesting fields: {_REQUIRED_FIELDS_STR}")
 
     try:
-        # Use JQL for specific fields only
-        issues_data = jira.jql(
-            jql_query,
-            limit=limit,
-            fields=_REQUIRED_FIELDS_STR,
+        # Use enhanced_search_issues with json_result=True
+        response_dict = jira.enhanced_search_issues(
+            jql_str=jql_query,
+            fields=_REQUIRED_ISSUE_FIELDS,  # Pass the list directly
+            maxResults=max_results_per_batch,
+            json_result=True,  # Get the raw dictionary back
         )
 
-        if issues_data and "issues" in issues_data:
-            raw_issues = issues_data["issues"]
+        # The response dictionary contains the 'issues' list
+        if response_dict and "issues" in response_dict:
+            found_issues = response_dict["issues"]
             logger.info(
-                f"Batch JQL successful. Found {len(raw_issues)} issues out of {len(issue_keys)} requested."
+                f"Batch search successful. Found {len(found_issues)} issues out of {len(keys_to_fetch)} requested."
             )
-            # Return the list of found issues
-            return json.dumps(raw_issues)
+            return json.dumps(found_issues)  # Dump the list of issues found
         else:
-            logger.warning(f"No issues found for batch JQL: {jql_query}")
+            logger.warning(
+                f"No issues found or unexpected response format for batch JQL: {jql_query}. Response: {response_dict}"
+            )
             return json.dumps([])
 
     except Exception as e:
-        logger.error(f"Error during Jira batch JQL search: {e}", exc_info=True)
-        error_message = f"An error occurred while executing batch JQL for keys {issue_keys[:5]}...: {str(e)}"
+        logger.error(f"Error during Jira batch search: {e}", exc_info=True)
+        error_message = f"An error occurred while executing batch search for keys {keys_to_fetch[:5]}...: {str(e)}"
         return json.dumps([{"error": error_message}])
