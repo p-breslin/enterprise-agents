@@ -181,65 +181,63 @@ story_graph_prompt: |
   - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 issue_prompt: |
-  You are a Jira assistant enriching story data with full issue details. You have access to the `jira_get_issue` tool.
+  You are an efficient Jira assistant tasked with enriching story data with full issue details using batch processing. You MUST use the `jira_get_issues_batch` tool.
 
   **Task:** 
-  Retrieve detailed metadata for a list of Jira stories.
+  Retrieve detailed metadata for a list of Jira stories provided as input.
 
   **Input Stories Data:**
-  Here is the list of story objects you need to process:
+  Here is the list of story objects you need to process. Each object contains `story_key` and `epic_key`:
   {stories_data_input}
 
   **Processing Steps:**
-  1. Initialize an empty list to store the detailed issue results.
+  1. **Prepare:** 
+    a. Extract all story_key values from the Input Stories Data list into a single flat list of keys.
+    b. Create a mapping (e.g., a dictionary) to remember the epic_key associated with each story_key from the Input Stories Data. You will need this later.
 
-  2. For EACH story object in the list retrieved from the state:
-    a. Extract the `story_key` value.
-    b. Note the `epic_key` value from this input story object (you will need it later).
-    c. Call the `jira_get_issue` tool using the extracted `story_key`:
-      {
-        "issue_key": "<the extracted story_key>"
-      }
-    d. Process the response from *that specific tool call*. Create a detailed issue object by extracting the following fields from the tool result:
-      - story_key: issue.key
-      - summary: issue.fields.summary
-      - status: issue.fields.status.name
-      - assignee: issue.fields.assignee.displayName or null
-      - created: issue.fields.created
-      - resolved: issue.fields.resolutiondate or null
-      - priority: issue.fields.priority.name
-      - project: issue.fields.project.key
-    e. **Crucially:** Add the `epic_key` noted in step 2b directly to this newly created detailed issue object. Use the value from the *input* story object, not from the tool result.
-    f. Add the complete detailed issue object (including the copied `epic_key`) to your results list.
+  2. **Batch Fetch:**
+    a. Make one single call to the jira_get_issues_batch tool.
+    b. Pass the complete list of extracted story_keys (from step 1a) as the issue_keys argument. Example arguments: {"issue_keys": ["KEY-1", "KEY-2", ...]}.
 
-  3. After processing ALL stories from the input list, proceed to the output step.
+  3. **Process Results:**
+    a. Initialize an empty list to store the final detailed issue results.
+    b. Parse the JSON string returned by jira_get_issues_batch. This string contains a list of detailed issue dictionaries fetched from Jira.
+    c. For EACH detailed issue dictionary returned by the tool:
+      i. Extract the necessary fields (key, summary, status.name, assignee.displayName, created, resolutiondate, priority.name, project.key). Handle potential null values for assignee and resolutiondate appropriately (output null if the source is null or missing).
+      ii. Look up the corresponding epic_key for the current issue's story_key using the mapping you created in step 1b.
+      iii. Create a new detailed issue object containing all the extracted fields plus the crucial epic_key retrieved from your mapping.
+      iv. Add this complete detailed issue object to your results list (the one initialized in step 3a).
+
+  4. **Handle Tool Errors:**
+  If the jira_get_issues_batch tool returns a JSON string containing an 'error' key, STOP processing immediately. Your final output should clearly state the error encountered instead of the normal JSON output. For example: {"error": "Tool failed: [Error message from tool]"}.
+
+  5. **Final Output Generation:** 
+  After processing all issues returned by the successful batch call, proceed to format the output.
 
   **Output Instructions:**
-  - Format the final output as a single JSON object containing one key: `"issues"`.
-  - The value for `"issues"` must be the aggregated list of all detailed issue objects collected in step 2. The structure for each object in the list should be:
+   - Format the final output as a single JSON object containing ONLY one key: "issues". 
+   - The value for "issues" must be the aggregated list of all enriched, detailed issue objects collected in step 3c. 
+   - The structure for each object in the list MUST be:
     {
-      "issues": [
-        {
-          "story_key": string,
-          "summary": string,
-          "status": string,
-          "assignee": string or null,
-          "epic_key": string,
-          "created": string (ISO datetime),
-          "resolved": string or null,
-          "priority": string,
-          "project": string
-        },
-        ...
-      ]
+    "story_key": "string",
+    "summary": "string",
+    "status": "string",
+    "assignee": "string_or_null",
+    "epic_key": "string",
+    "created": "string_iso_datetime",
+    "resolved": "string_iso_datetime_or_null",
+    "priority": "string",
+    "project": "string"
     }
+  - If the batch tool returns an empty list or no issues are processed successfully, return an empty list in the JSON: {"issues": []}.
 
   **Strict Rules:**
-  - Use ONLY the values from the Input Stories Data provided above.
-  - Use only values returned by the `jira_get_issue` tool or copied directly from the corresponding input story object (specifically the `epic_key`).
+  - You MUST use the jira_get_issues_batch tool exactly once. Do NOT call jira_get_issue.
+  - Extract all keys first before calling the batch tool.
+  - Use ONLY the epic_key values from the Input Stories Data mapping created in Step 1b. Do not use any epic key information potentially present in the batch tool's result fields.
+  - Extract data carefully from the tool's response fields (e.g., status['name'], assignee['displayName'], priority['name'], project['key']). Use null if assignee or resolutiondate are missing/null in the tool response.
   - Do not fabricate or infer any fields.
-  - Ensure the final output is a valid JSON object. Do not include explanations, comments, or markdown.
-  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
+  - Ensure the final output is a valid JSON object matching the specified structure precisely. Do not include explanations, comments, or markdown outside the JSON object, unless reporting a tool error as specified in Step 4.
 
 issue_graph_prompt: |
   You are a knowledge graph assistant responsible for ingesting detailed Jira issue data into ArangoDB.
