@@ -14,6 +14,9 @@ load_dotenv()
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
+# --- Module-level cache for Jira client ---
+_cached_jira_client: Optional[Jira] = None
+
 
 def load_prompt(prompt_key: str) -> str:
     path = Path(__file__).parent / "prompts.yaml"
@@ -28,6 +31,18 @@ def load_config(folder):
 
 
 def get_jira_client() -> Optional[Jira]:
+    """
+    Returns a cached Jira client instance (initializes it on first call).
+    """
+    global _cached_jira_client
+
+    # Return cached client if already initialized
+    if _cached_jira_client is not None:
+        logger.debug("Returning cached Jira client.")
+        return _cached_jira_client
+
+    # Initialize client if not cached
+    logger.info("Initializing new Jira client...")
     JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
     JIRA_USERNAME = os.getenv("JIRA_USERNAME")
     JIRA_TOKEN = os.getenv("JIRA_TOKEN")
@@ -36,11 +51,22 @@ def get_jira_client() -> Optional[Jira]:
         jira = Jira(
             url=JIRA_SERVER_URL, username=JIRA_USERNAME, password=JIRA_TOKEN, cloud=True
         )
-        logger.info(f"Connected to Jira: {JIRA_SERVER_URL}")
-        return jira
+        logger.info(f"Connected to Jira: {JIRA_SERVER_URL}. Caching client.")
+        _cached_jira_client = jira  # Store client to cache
+        return _cached_jira_client
     except Exception as e:
         logger.error(f"Failed to connect to Jira: {e}")
+        _cached_jira_client = None
         return None
+
+
+def reset_jira_client_cache():
+    """
+    Resets the cached Jira client.
+    """
+    global _cached_jira_client
+    logger.debug("Resetting cached Jira client.")
+    _cached_jira_client = None
 
 
 def resolve_model(provider: str, model_id: str):
