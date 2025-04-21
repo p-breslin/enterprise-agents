@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @tool()
 def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> str:
     """
-    Purpose of Tool:
+    Tool Purpose:
         Searches for Jira issue keys belonging to a specific Epic using JQL. Queries Jira for issues linked to the Epic via 'parent' field and returns ONLY the issue keys.
 
     Args:
