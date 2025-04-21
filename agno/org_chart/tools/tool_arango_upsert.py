@@ -107,7 +107,7 @@ def arango_upsert(
             # Should not happen with RETURN NEW on success, but handle defensively
             logger.warning("Upsert executed but RETURN NEW yielded no document.")
 
-        return json.dumps({"status": "success", "result": result_document})
+        return json.dumps({"status": "success"})
 
     # Error handling
     except AQLQueryExecuteError as e:
