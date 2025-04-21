@@ -2,7 +2,7 @@ import os
 import yaml
 import logging
 from pathlib import Path
-from atlassian import Jira
+from jira import JIRA
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -14,8 +14,8 @@ load_dotenv()
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# --- Module-level cache for Jira client ---
-_cached_jira_client: Optional[Jira] = None
+# --- Module-level cache for JIRA client ---
+_cached_jira_client: Optional[JIRA] = None
 
 
 def load_prompt(prompt_key: str) -> str:
@@ -30,42 +30,40 @@ def load_config(folder):
         return yaml.safe_load(f)
 
 
-def get_jira_client() -> Optional[Jira]:
+def get_jira_client() -> Optional[JIRA]:
     """
-    Returns a cached Jira client instance (initializes it on first call).
+    Returns a cached JIRA client instance (initializes it on first call).
     """
     global _cached_jira_client
 
     # Return cached client if already initialized
     if _cached_jira_client is not None:
-        logger.debug("Returning cached Jira client.")
+        logger.debug("Returning cached JIRA client.")
         return _cached_jira_client
 
     # Initialize client if not cached
-    logger.info("Initializing new Jira client...")
+    logger.info("Initializing new JIRA client...")
     JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
     JIRA_USERNAME = os.getenv("JIRA_USERNAME")
     JIRA_TOKEN = os.getenv("JIRA_TOKEN")
 
     try:
-        jira = Jira(
-            url=JIRA_SERVER_URL, username=JIRA_USERNAME, password=JIRA_TOKEN, cloud=True
-        )
-        logger.info(f"Connected to Jira: {JIRA_SERVER_URL}. Caching client.")
+        jira = JIRA(server=JIRA_SERVER_URL, basic_auth=(JIRA_USERNAME, JIRA_TOKEN))
+        logger.info(f"Connected to JIRA: {JIRA_SERVER_URL}. Caching client.")
         _cached_jira_client = jira  # Store client to cache
         return _cached_jira_client
     except Exception as e:
-        logger.error(f"Failed to connect to Jira: {e}")
+        logger.error(f"Failed to connect to JIRA: {e}")
         _cached_jira_client = None
         return None
 
 
 def reset_jira_client_cache():
     """
-    Resets the cached Jira client.
+    Resets the cached JIRA client.
     """
     global _cached_jira_client
-    logger.debug("Resetting cached Jira client.")
+    logger.debug("Resetting cached JIRA client.")
     _cached_jira_client = None
 
 

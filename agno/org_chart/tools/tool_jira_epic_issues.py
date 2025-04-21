@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> str:
     """
     Tool Purpose:
-        Searches for Jira issue keys belonging to a specific Epic using JQL. Queries Jira for issues linked to the Epic via 'parent' field and returns ONLY the issue keys.
+        Searches for Jira issue keys belonging to a specific Epic using JQL via enhanced_search_issues. Queries Jira for issues linked to the Epic via 'parent' field and returns ONLY the issue keys as a JSON string.
 
     Args:
         epic_key (str): The key of the Epic issue (e.g., 'PROJ-123'). REQUIRED.
@@ -38,18 +38,19 @@ def jira_get_epic_issues(epic_key: str, max_results: int = 50) -> str:
 
     try:
         # Request ONLY the necessary fields for efficiency
-        issues_data = jira.jql(
-            jql_query,
-            limit=max_results,
-            fields="key",  # Critical for efficiency
+        issues = jira.enhanced_search_issues(
+            jql_str=jql_query,
+            fields=["key"],  # Critical for efficiency
+            maxResults=max_results,
+            json_result=True,
         )
 
         # Extract just the necessary part in-case more data is returned
-        if issues_data and "issues" in issues_data:
+        if issues and "issues" in issues:
             issue_keys = [
                 {"key": issue.get("key")}
-                for issue in issues_data["issues"]
-                if issue.get("key")
+                for issue in issues["issues"]
+                if issue.get("key")  # Ensure key exists
             ]
             logger.info(f"Found {len(issue_keys)} issue keys for Epic {epic_key}.")
             return json.dumps(issue_keys)

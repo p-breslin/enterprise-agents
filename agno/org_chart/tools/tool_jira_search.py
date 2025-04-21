@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-# --- Jira Tool Function: Searchs Jira ---
+# --- Jira Tool Function: Searches Jira ---
 @tool()
 def jira_search(jql: str, fields: List[str], limit: int = 50) -> str:
     """
@@ -34,33 +34,34 @@ def jira_search(jql: str, fields: List[str], limit: int = 50) -> str:
     if not jira:
         return json.dumps([{"error": "Jira client initialization failed."}])
 
-    # Join fields list into a comma-separated string for the API call
-    fields_str = ",".join(fields) if fields else "*all"
+    # Prepare fields argument for the API call
+    fields_list = fields if fields else ["*navigable"]
 
     try:
-        logger.info(f"Executing JQL: {jql} with fields: {fields_str}")
-        issues_data = jira.jql(
-            jql,
-            limit=limit,
-            fields=fields_str,
-            # validate_query=True # Validate JQL syntax server-side first
+        logger.info(
+            f"Executing JQL via enhanced_search_issues: {jql} with fields: {fields_list}, maxResults: {limit}"
+        )
+
+        # Use enhanced_search_issues from Jira API
+        issues_data = jira.enhanced_search_issues(
+            jql_str=jql, fields=fields_list, maxResults=limit, json_result=True
         )
 
         if issues_data and "issues" in issues_data:
-            raw_issues = issues_data["issues"]
-            logger.info(f"JQL search successful: {len(raw_issues)} issues.")
-            return json.dumps(raw_issues)  # Return the raw list directly
+            issues = issues_data["issues"]
+            logger.info(f"JQL search successful: {len(issues)} issues.")
+            return json.dumps(issues)  # Return the raw list directly
         else:
             logger.warning(f"No issues found for JQL: {jql}")
             return json.dumps([])  # Return empty list if no issues found
 
     except Exception as e:
-        logger.error(f"Error during Jira JQL search: {e}", exc_info=True)
+        logger.error(f"Error during Jira enhanced_search_issues: {e}", exc_info=True)
         error_message = f"Error occurred while executing JQL '{jql}': {str(e)}"
 
         # Check for common errors if possible (e.g., invalid JQL, permissions)
-        if "does not exist" in str(e) or "Invalid JQL" in str(e):
-            error_message = f"JQL query failed or contained invalid elements: {jql}. Error: {str(e)}"
+        if "Invalid JQL" in str(e):
+            error_message = f"Invalid JQL query: {jql}. Error: {str(e)}"
         elif "401" in str(e) or "Unauthorized" in str(e):
             error_message = "Authentification failed. Check Jira permissions."
         elif "403" in str(e) or "Forbidden" in str(e):

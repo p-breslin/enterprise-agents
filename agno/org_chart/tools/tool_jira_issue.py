@@ -23,12 +23,12 @@ _REQUIRED_ISSUE_FIELDS = [
 _REQUIRED_FIELDS_STR = ",".join(_REQUIRED_ISSUE_FIELDS)
 
 
-# --- Jira Tool Function: Get Issue (e.g. Story from Epic) ---
+# --- Jira Tool Function: Get Single Issue (e.g. Story from Epic) ---
 @tool()
 def jira_get_issue(issue_key: str) -> str:
     """
     Tool Purpose:
-        Retrieves the SPECIFIC details of a single Jira issue by its key as a JSON string. The agent using this tool will need to parse the returned dictionary to extract the specific fields it requires (e.g., summary, status.name, fields assignee.displayName).
+        Retrieves the SPECIFIC details of a single Jira issue by its key as a JSON string. Uses the jira.issue() method and requests only necessary fields.
 
     Args:
         issue_key (str): The key of the Jira issue to retrieve (e.g., 'PROJ-123'). REQUIRED.
@@ -44,11 +44,12 @@ def jira_get_issue(issue_key: str) -> str:
     try:
         # Fetch the specific issue details as defined above
         logger.debug(f"Requesting fields: {_REQUIRED_FIELDS_STR} for issue {issue_key}")
-        issue_data = jira.issue(issue_key, fields=_REQUIRED_FIELDS_STR)
+        issue_object = jira.issue(issue_key, fields=_REQUIRED_FIELDS_STR)
 
-        if issue_data:
+        # Complete dictionary structure is stored under the .raw attribute
+        if issue_object and hasattr(issue_object, "raw"):
             logger.info(f"Successfully retrieved issue details for {issue_key}.")
-            return json.dumps(issue_data)
+            return json.dumps(issue_object.raw)
         else:
             logger.warning(f"Jira API returned no data for issue {issue_key}.")
             return json.dumps(
@@ -90,9 +91,7 @@ def jira_get_issue_batch(
             - Returns '[{"error": "message"}]' if a connection or major API error occurs.
     """
     if not issue_keys:
-        logger.warning(
-            "Tool 'jira_get_issue_batch' called with empty issue_keys list."
-        )
+        logger.warning("Tool 'jira_get_issue_batch' called with empty issue_keys list.")
         return json.dumps([])
 
     # Limit the number of keys per request if necessary
