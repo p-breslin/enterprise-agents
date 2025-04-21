@@ -73,7 +73,7 @@ def jira_get_issue(issue_key: str) -> str:
 
 
 # --- Jira Tool Function: Get Batch Issues using enhanced_search_issues ---
-def jira_get_issues_batch(
+def jira_get_issue_batch(
     issue_keys: List[str], max_results_per_batch: int = 100
 ) -> str:
     """
@@ -91,7 +91,7 @@ def jira_get_issues_batch(
     """
     if not issue_keys:
         logger.warning(
-            "Tool 'jira_get_issues_batch' called with empty issue_keys list."
+            "Tool 'jira_get_issue_batch' called with empty issue_keys list."
         )
         return json.dumps([])
 
@@ -107,7 +107,7 @@ def jira_get_issues_batch(
     else:
         keys_to_fetch = issue_keys
 
-    logger.info(f"Tool 'jira_get_issues_batch' called for {len(keys_to_fetch)} keys.")
+    logger.info(f"Tool 'jira_get_issue_batch' called for {len(keys_to_fetch)} keys.")
     jira = get_jira_client()
     if not jira:
         return json.dumps([{"error": "Jira client initialization failed."}])

@@ -181,7 +181,7 @@ story_graph_prompt: |
   - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 issue_prompt: |
-  You are an efficient Jira assistant tasked with enriching story data with full issue details using batch processing. You MUST use the `jira_get_issues_batch` tool.
+  You are an efficient Jira assistant tasked with enriching story data with full issue details using batch processing. You MUST use the `jira_get_issue_batch` tool.
 
   **Task:** 
   Retrieve detailed metadata for a list of Jira stories provided as input.
@@ -196,12 +196,12 @@ issue_prompt: |
     b. Create a mapping (e.g., a dictionary) to remember the epic_key associated with each story_key from the Input Stories Data. You will need this later.
 
   2. **Batch Fetch:**
-    a. Make one single call to the jira_get_issues_batch tool.
+    a. Make one single call to the jira_get_issue_batch tool.
     b. Pass the complete list of extracted story_keys (from step 1a) as the issue_keys argument. Example arguments: {"issue_keys": ["KEY-1", "KEY-2", ...]}.
 
   3. **Process Results:**
     a. Initialize an empty list to store the final detailed issue results.
-    b. Parse the JSON string returned by jira_get_issues_batch. This string contains a list of detailed issue dictionaries fetched from Jira.
+    b. Parse the JSON string returned by jira_get_issue_batch. This string contains a list of detailed issue dictionaries fetched from Jira.
     c. For EACH detailed issue dictionary returned by the tool:
       i. Extract the necessary fields (key, summary, status.name, assignee.displayName, created, resolutiondate, priority.name, project.key). Handle potential null values for assignee and resolutiondate appropriately (output null if the source is null or missing).
       ii. Look up the corresponding epic_key for the current issue's story_key using the mapping you created in step 1b.
@@ -209,7 +209,7 @@ issue_prompt: |
       iv. Add this complete detailed issue object to your results list (the one initialized in step 3a).
 
   4. **Handle Tool Errors:**
-  If the jira_get_issues_batch tool returns a JSON string containing an 'error' key, STOP processing immediately. Your final output should clearly state the error encountered instead of the normal JSON output. For example: {"error": "Tool failed: [Error message from tool]"}.
+  If the jira_get_issue_batch tool returns a JSON string containing an 'error' key, STOP processing immediately. Your final output should clearly state the error encountered instead of the normal JSON output. For example: {"error": "Tool failed: [Error message from tool]"}.
 
   5. **Final Output Generation:** 
   After processing all issues returned by the successful batch call, proceed to format the output.
@@ -232,7 +232,7 @@ issue_prompt: |
   - If the batch tool returns an empty list or no issues are processed successfully, return an empty list in the JSON: {"issues": []}.
 
   **Strict Rules:**
-  - You MUST use the jira_get_issues_batch tool exactly once. Do NOT call jira_get_issue.
+  - You MUST use the jira_get_issue_batch tool exactly once. Do NOT call jira_get_issue.
   - Extract all keys first before calling the batch tool.
   - Use ONLY the epic_key values from the Input Stories Data mapping created in Step 1b. Do not use any epic key information potentially present in the batch tool's result fields.
   - Extract data carefully from the tool's response fields (e.g., status['name'], assignee['displayName'], priority['name'], project['key']). Use null if assignee or resolutiondate are missing/null in the tool response.
