@@ -268,6 +268,8 @@ issue_graph_prompt: |
   **Processing Steps for EACH Issue:**
   For *every* issue object found in the retrieved list:
 
+  Initialize a variable `processed_person_key_for_this_issue` to `null`. This tracks if a person has already been upserted *for this specific issue* to prevent duplicate upserts if assignee and reporter are the same.
+
   1.  **Upsert Issue Details in Stories:** Use the `arango_upsert` tool to insert or update the full details of the issue in the `Stories` collection. Use the `story_key` field from the input as the ArangoDB `_key`. Include all relevant fields from the current issue object:
       {
       "collection_name": "Stories",
@@ -336,19 +338,21 @@ issue_graph_prompt: |
             },
             "update_document": {<empty>}
           }
+        iv. **Mark Person as Processed:** Set `processed_person_key_for_this_issue = <sanitized_assignee>`.
 
   3. **Process Reporter (Conditional):**
     a. Check if the `reporter` field is present and not null in the current issue object.
     b. **If Reporter Exists:**
       i. **Sanitize Reporter Name:** Apply the sanitization rule to the `reporter` value to get `<sanitized_reporter>`.
-      ii. **Upsert Person (Reporter):** Use `arango_upsert` for the `Persons` collection with `<sanitized_reporter>` as `_key`. (This ensures the reporter exists as a Person, even if they are also an assignee).
+      ii. **Check if Already Processed:** Compare `<sanitized_reporter>` with the value stored in `processed_person_key_for_this_issue`.
+      iii. **If Reporter NOT Already Processed** (i.e., `<sanitized_reporter>` is different from `processed_person_key_for_this_issue` or `processed_person_key_for_this_issue` is `null`), **THEN Upsert Person (Reporter):** Use `arango_upsert` for the `Persons` collection with `<sanitized_reporter>` as `_key`.
           {
             "collection_name": "Persons",
             "search_document": { "_key": "<sanitized_reporter>" },
             "insert_document": { "_key": "<sanitized_reporter>", "name": "<reporter>" },
             "update_document": {<empty>}
           }
-      iii. **Upsert Reported By Edge:** Use `arango_upsert` for the `reported_by` edge collection linking `Stories/<story_key>` to `Persons/<sanitized_reporter>`.
+      iv. **Upsert Reported By Edge:** Use `arango_upsert` for the `reported_by` edge collection linking `Stories/<story_key>` to `Persons/<sanitized_reporter>`.
           {
             "collection_name": "reported_by",
             "search_document": {
@@ -370,6 +374,7 @@ issue_graph_prompt: |
   - Follow the assignee sanitization rule precisely.
   - Follow the sanitization rules precisely for assignee and reporter when generating keys/edge targets.
   - Only perform Person and Edge upserts if the corresponding field (assignee/reporter) is not null.
+  - CRITICAL: Skip the 'Upsert Person (Reporter)' step if the sanitized reporter key is the same as the sanitized assignee key already processed for the *current* issue.
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly {<empty>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
   - If any tool call returns an error, stop processing and report the error clearly.
   - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each issue.
