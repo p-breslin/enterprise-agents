@@ -1,19 +1,19 @@
-assignee: Assignee
-created: Created
-development: Development
-issue_size: Issue Size
-issuetype: Issue Type
-key: Issue key
-parent: Parent
-priority: Priority
-project: Project
-reporter: Reporter
-resolution: Resolution
-resolutiondate: Resolved
-severity: Severity
-sprint: Sprint
-status: Status
-story_points: Story Points
-summary: Summary
-team: Team Name
-updated: Updated
+assignee: assignee
+created: created
+development: customfield_10000
+issue_size: customfield_10124
+issuetype: issuetype
+key: issuekey
+parent: parent
+priority: priority
+project: project
+reporter: reporter
+resolution: resolution
+resolutiondate: resolutiondate
+severity: customfield_10188
+sprint: customfield_10008
+status: status
+story_points: customfield_10038
+summary: summary
+team: customfield_10162
+updated: updated

@@ -95,7 +95,7 @@ def generate_field_configs():
         for name in missing_mappings:
             print(f"- {name} (Tried to find: '{selected_ids.get(name)}')")
 
-    if not save_yaml(SELECTED_FIELDS_FILE_PATH, selected_ids):
+    if not save_yaml(SELECTED_FIELDS_FILE_PATH, selected_mappings):
         return False
 
     logger.info("Both configuration files generated successfully.")
