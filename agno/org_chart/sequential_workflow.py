@@ -6,6 +6,7 @@ from typing import Optional
 from agno.agent import Agent, RunResponse
 from agno.workflow import Workflow, RunEvent
 
+from callbacks import log_agno_callbacks
 from schemas import EpicList, StoryList, IssueList
 from utils_agno import load_config, resolve_model
 from agents.EpicAgent import build_epic_agent
@@ -81,7 +82,7 @@ class JiraGraphWorkflow(Workflow):
         Helper function to run an agent step, handle errors, and store state.
         """
         logger.info(f"--- Workflow Step: {step_name} ---")
-        agent.debug_mode = True
+        agent.debug_mode = False
         try:
             # Use the workflow's session_id for the agent run
             response: RunResponse = await agent.arun(
@@ -300,6 +301,8 @@ async def main():
 
     logger.info("Running workflow...")
     final_response = await workflow.arun()
+    run_label = "SequentialRun"
+    log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
     logger.info("Workflow finished.")
 
     logger.info(f"Final Workflow Status: {final_response.event}")
