@@ -15,7 +15,7 @@ from agents.GraphAgent import build_graph_agent
 from tools import (
     jira_search,
     jira_get_epic_issues,
-    jira_get_issue,
+    jira_get_issue_loop,
     arango_upsert,
 )
 
@@ -52,7 +52,7 @@ STATE_KEY_ISSUES = runtime_params["SESSION"]["state_issues"]
 # Tools lists
 TOOLS_EPIC = [jira_search]
 TOOLS_STORY = [jira_get_epic_issues]
-TOOLS_ISSUE = [jira_get_issue]
+TOOLS_ISSUE = [jira_get_issue_loop]
 TOOLS_GRAPH = [arango_upsert]
 
 
