@@ -1,26 +1,18 @@
 import json
 import logging
-from typing import List
+from typing import List, Dict, Any
 from agno.tools import tool
-from utils_agno import get_jira_client
+from utils_agno import get_jira_client, load_config
+from tools.extract_jira_issue_details import extract_details
 
 logging.basicConfig(
-    level=logging.INFO, format="%(levelname)s - %(filename)s:%(lineno)d - %(message)s"
+    level=logging.DEBUG, format="%(levelname)s - %(filename)s:%(lineno)d - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 # --- Define the specific fields to be returned ---
-_REQUIRED_ISSUE_FIELDS = [
-    "key",
-    "summary",
-    "status",
-    "assignee",
-    "created",
-    "resolutiondate",
-    "priority",
-    "project",
-]
-_REQUIRED_FIELDS_STR = ",".join(_REQUIRED_ISSUE_FIELDS)
+field_mappings = load_config("selected_jira_fields")
+_REQUIRED_FIELDS_STR = ",".join(field_mappings.values())
 
 
 # --- Jira Tool Function: Get Single Issue (e.g. Story from Epic) ---
@@ -73,11 +65,84 @@ def jira_get_issue(issue_key: str) -> str:
         return json.dumps({"error": error_message})
 
 
+# --- Jira Tool Function: Get mutiple Issues using single jira.issue() calls ---
+@tool
+def jira_get_issue_loop(issue_keys: List[str]) -> str:
+    """
+    Tool Purpose:
+        Retrieves SPECIFIC details for multiple Jira issues by fetching EACH issue individually using jira.issue().
+
+    Args:
+        issue_keys (List[str]): A list of Jira issue keys to retrieve (e.g., ['PROJ-1', 'PROJ-2']). REQUIRED.
+
+    Returns:
+        str: A JSON string representation of a list of dictionaries, each containing the full issue structure (including requested fields) for successfully found issues. Issues that failed to fetch (e.g., not found, permission error) will be omitted or could optionally be represented by an error object.
+            - Returns '[]' if the input list was empty or no issues could be successfully fetched. May contain a mix of successful issue data and error objects if desired (currently omits errors).
+    """
+    if not issue_keys:
+        logger.warning("Tool 'jira_get_issue_loop' called with empty issue_keys list.")
+        return json.dumps([])
+
+    logger.info(
+        f"Tool 'jira_get_issue_loop' called for {len(issue_keys)} keys (fetching individually)."
+    )
+    jira = get_jira_client()
+    if not jira:
+        logger.error("jira_get_issue_loop: Jira client initialization failed.")
+        return json.dumps([{"error": "Jira client initialization failed."}])
+
+    fetched_raw_issues: List[Dict[str, Any]] = []
+    fetch_errors: List[Dict[str, Any]] = []
+
+    logger.debug(f"Fetching details individually for fields: {_REQUIRED_FIELDS_STR}")
+
+    for key in issue_keys:
+        try:
+            logger.debug(f"Fetching issue: {key}")
+            issue_object = jira.issue(key, fields=_REQUIRED_FIELDS_STR)
+
+            if issue_object and hasattr(issue_object, "raw"):
+                fetched_raw_issues.append(issue_object.raw)
+                logger.debug(f"Successfully fetched {key}.")
+            else:
+                logger.warning(
+                    f"jira.issue({key}) returned None or no raw data, skipping."
+                )
+                fetch_errors.append(
+                    {"error": f"No data returned for issue '{key}'.", "failed_key": key}
+                )
+        except Exception as e:
+            logger.error(f"Unexpected error fetching issue {key}: {e}", exc_info=True)
+            fetch_errors.append(
+                {
+                    "error": f"Unexpected error for issue '{key}': {str(e)}",
+                    "failed_key": key,
+                }
+            )
+
+    # Decide what to return: only successes, or successes + errors? Not sure
+    if fetch_errors:
+        logger.warning(
+            f"Encountered {len(fetch_errors)} errors while fetching {len(issue_keys)} issues individually."
+        )
+
+    logger.info(
+        f"Finished fetching individually. Successfully retrieved data for {len(fetched_raw_issues)} out of {len(issue_keys)} issues."
+    )
+
+    # Process the list of raw dictionaries to extract relevant info
+    data = extract_details(json.dumps(fetched_raw_issues), field_mappings)
+    return json.dumps(data)
+
+
 # --- Jira Tool Function: Get Batch Issues using enhanced_search_issues ---
+@tool
 def jira_get_issue_batch(
     issue_keys: List[str], max_results_per_batch: int = 100
 ) -> str:
     """
+    THIS IS BROKEN! both the search_issues and enhanced_search_issues methods omit the fields parameter when making the GET requests. Means that only Issue IDs are returned! Bug with jira-python wrapper.
+
     Tool Purpose:
         Retrieves SPECIFIC details for multiple Jira issues using enhanced_search_issues from the Jira API. Fetches only necessary fields for a list of issue keys in potentially fewer requests.
 
@@ -124,7 +189,7 @@ def jira_get_issue_batch(
         # Use enhanced_search_issues with json_result=True
         response_dict = jira.enhanced_search_issues(
             jql_str=jql_query,
-            fields=_REQUIRED_ISSUE_FIELDS,  # Pass the list directly
+            fields=[_REQUIRED_FIELDS_STR],  # Pass the list directly
             maxResults=max_results_per_batch,
             json_result=True,  # Get the raw dictionary back
         )
@@ -135,6 +200,12 @@ def jira_get_issue_batch(
             logger.info(
                 f"Batch search successful. Found {len(found_issues)} issues out of {len(keys_to_fetch)} requested."
             )
+            if found_issues:
+                logger.debug(
+                    f"First found issue structure: {json.dumps(found_issues[0], indent=2)}"
+                )
+            else:
+                logger.debug("Found issues list is empty.")
             return json.dumps(found_issues)  # Dump the list of issues found
         else:
             logger.warning(

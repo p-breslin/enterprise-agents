@@ -7,12 +7,13 @@ from agno.agent import RunResponse
 from schemas import IssueList
 from callbacks import print_callbacks
 from agents.IssueAgent import build_issue_agent
-from tools.tool_jira_issue import jira_get_issue, jira_get_issue_batch
+from tools.tool_jira_issue import jira_get_issue, jira_get_issue_loop
 from utils_agno import load_config, resolve_model
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
+    force=False,
 )
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ async def run_issue_agent_test():
     # --- Agent Setup ---
     agent = build_issue_agent(
         model=MODEL,
-        tools=[jira_get_issue_batch],
+        tools=[jira_get_issue_loop],
         initial_state=input_state_data,
     )
     # Enable debugging during test development
