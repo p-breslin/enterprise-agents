@@ -184,46 +184,48 @@ issue_prompt: |
   You are an efficient Jira assistant tasked with enriching story data with full issue details. You MUST use the `jira_get_issue_loop` tool.
 
   **Task:** 
-  Retrieve detailed metadata for a list of Jira stories provided as input, extracting specific fields.
+  Retrieve detailed metadata for a list of Jira stories provided as inputl and format the results.
 
   **Input Stories Data:**
-  Here is the list of story objects you need to process. Each object contains at least a `story_key`:
+  Here is the list of story objects (containing story_key and epic_key) you need to process:
   {stories_data_input}
 
   **Processing Steps:**
   1. **Prepare:** 
-    a. Extract all `story_key` values from the Input Stories Data list into a single flat list of keys.
+    a. Create a list containing only the story_key values from the Input Stories Data.
+    b. Create a mapping dictionary where keys are story_keys and values are the corresponding epic_keys from the Input Stories Data.
 
-  2. **Batch Fetch:**
+  2. **Fetch Details:**
     a. Make one single call to the `jira_get_issue_loop` tool.
-    b. Pass the complete list of extracted story keys (from step 1a) as the `issue_keys` argument. Example arguments: `{"issue_keys": ["KEY-1", "KEY-2", ...]}`.
+    b. Pass the list of extracted story_keys (from step 1a) as the issue_keys argument.
     c. The tool will return a JSON string containing a list of simplified issue dictionaries (or error objects).
 
-  3. **Format Final Output:**
-    a. Parse the JSON string returned by `jira_get_issue_loop`.
-    b. Create the final list of issues by processing EACH dictionary in the list returned by the tool:
-      i. **Ignore** any dictionary that represents an error (e.g., contains an "error" key).
-      ii. For each **successful** issue dictionary from the tool:
-          - Create a **new** object containing only the fields specified in the "Output Instructions" below.
-          - **Map** the value from the tool dictionary's `key` field to the `story_key` field in the new object.
-          - **Map** the value from the tool dictionary's `parent` field to the `epic_key` field in the new object.
-          - Copy the values for all other required fields directly from the tool's dictionary to the new object.
-          - **Omit** any fields present in the tool's dictionary but *not* listed in the final required structure.
-    c. Aggregate these newly created objects into a single list.
+  3. **Combine and Format:**
+    a. Parse the JSON string returned by jira_get_issue_loop.
+    b. Initialize an empty list to store the final valid issue objects.
+    c. Iterate through the list parsed in step 3a:
+      i. Filter out any dictionary that contains an "error" key. Log or ignore these.
+      ii. For each valid simplified issue dictionary from the tool:
+        - Get its story_key if present.
+        - Look up the original epic_key using the story_key in the mapping created in Step 1b.
+        - Create a new final issue object.
+        - Copy all fields from the simplified issue dictionary (from the tool) into the new object.
+        - Add the looked-up epic_key to the new object.
+        - Add this complete, final issue object to the results list (from step 3b).
 
-  4. **Handle Tool Errors:** 
-  If the `jira_get_issue_loop` tool call itself fails (returns a JSON string representing a fundamental failure, not just a list with errors inside), STOP processing. Output only the error message. Example: `{"error": "Tool failed: [Error message from tool]"}`.
+  4. **Handle Fundamental Tool Errors:**
+  If the entire result from jira_get_issue_loop represents a fundamental failure (e.g., contains {"error": "Jira client initialization failed."}), STOP processing. Your final output MUST be only that error object. Example: {"error": "Tool failed: Jira client initialization failed."}.
 
-  5. **Final Output Generation:** 
-  Proceed to format the final output using the list created in step 3c.
+  5. **Final Output Generation:**
+  Assemble the final JSON output using the list created in step 3c.
 
   **Output Instructions:**
    - Format the final output as a single JSON object containing ONLY one key: `"issues"`. 
-   - The value for `"issues"` must be the aggregated list of final structured issue objects created in step 3c.
-   - The structure for each object in the list MUST precisely match:
+   - The value for `"issues"` must be the list of final issue objects created in step 3c.
+   - The structure for each object MUST precisely match:
     {
       "story_key": string, 
-      "epic_key": string or null, // Value comes from the 'parent' field in the tool's output
+      "epic_key": string or null,  # Added from input mapping
       "summary": string,
       "status": string,
       "issuetype": string,
@@ -240,15 +242,14 @@ issue_prompt: |
       "issue_size": string or null,
       "story_points": number or null 
     }
-  - If no successful issues were processed (e.g., tool returned empty list or only errors), return: `{"issues": []}`.
+  - If no successful issues were processed, return: `{"issues": []}`.
 
   **Strict Rules:**
   - You MUST use the `jira_get_issue_loop` tool exactly once.
-  - Extract all keys first before calling the batch tool.
-  - The value for the final `story_key` field MUST come from the `key` field in the tool's output dictionary.
-  - The value for the final `epic_key` field MUST come from the `parent` field in the tool's output dictionary.
-  - Only include the fields specified in the final Output Instructions structure.
-  - Ensure the final output is a valid JSON object matching the specified structure precisely. Do not include explanations, comments, or markdown outside the JSON object, unless reporting a tool error as specified in Step 4.
+  - Extract all keys first before calling the tool.
+  - You MUST use the `epic_key`` from the **Input Stories Data** via the mapping created in Step 1b. Do not attempt to derive it from the tool's output.
+  - Trust the simplified structure returned by the tool for all fields *except* `epic_key`.
+  - Ensure the final output is a valid JSON object matching the specified structure precisely. Do not include explanations, comments, or markdown outside the JSON object, unless reporting a fundamental tool error as specified in Step 4.
 
 issue_graph_prompt: |
   You are a knowledge graph assistant responsible for ingesting detailed Jira issue data into ArangoDB.

@@ -109,35 +109,38 @@ def extract_details(
 
         # Process a successfully fetched issue
         processed_issue: Dict[str, Any] = {}
-        issue_key = raw_issue.get("key")  # for logging/context
         fields_data = raw_issue.get("fields")  # main container for field values
 
         # --- Handle Top-Level Fields FIRST ---
-        issue_key = raw_issue.get("key")
-        if issue_key:
-            processed_issue["key"] = issue_key
+        story_key = raw_issue.get("key")
+        if story_key:
+            processed_issue["story_key"] = story_key
+        else:
+            logger.warning(
+                "Issue data missing top-level 'key'. Cannot set 'story_key'. Skipping issue."
+            )
+            processed_results.append(
+                {
+                    "error": "Missing key in raw issue data",
+                    "raw_id": raw_issue.get("id"),
+                }
+            )
+            continue
 
         # Check if fields_data is valid before proceeding
         if not isinstance(fields_data, dict):
-            logger.warning(
-                f"Issue {issue_key or 'Unknown'} missing 'fields' dictionary or it's not a dict. Only top-level info available."
-            )
-            # Add what we have (key) plus an error indicator if desired
-            if not processed_issue:  # If key failed
-                processed_issue["error"] = "Missing key and fields data."
-            else:
-                processed_issue["warning"] = (
-                    "Missing or invalid 'fields' data in raw response."
-                )
+            logger.warning(f"Issue {story_key} missing 'fields' dict.")
+            processed_issue["warning"] = "Missing 'fields' data in raw response"
             processed_results.append(processed_issue)
             continue
 
-        # --- Iterate through mappings for fields WITHIN the 'fields' dict ---
+        # Iterate through mappings for fields WITHIN the 'fields' dict
         for internal_name, jira_id in field_mappings.items():
             if internal_name in ["key", "id"]:
-                # Skip if the internal_name is one we handled already
+                # Skipping key and unwanted values (like ID)
                 continue
 
+            # Process the selected fields
             raw_value = fields_data.get(jira_id)
             processed_issue[internal_name] = _simplify_jira_field(
                 internal_name, jira_id, raw_value
