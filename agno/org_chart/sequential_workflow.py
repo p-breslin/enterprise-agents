@@ -156,7 +156,7 @@ class JiraGraphWorkflow(Workflow):
                 model=MODEL_GRAPH,
                 tools=TOOLS_GRAPH,
                 initial_state={STATE_KEY_EPICS: json.dumps(epics_data.model_dump())},
-                prompt_key="epic_graph_prompt",
+                prompt="epic_graph_prompt",
             )
             step2_success = await self._run_agent_step(
                 agent=graph_epic_agent,
@@ -208,7 +208,7 @@ class JiraGraphWorkflow(Workflow):
                 initial_state={
                     STATE_KEY_STORIES: json.dumps(stories_data.model_dump())
                 },
-                prompt_key="story_graph_prompt",
+                prompt="story_graph_prompt",
             )
             step4_success = await self._run_agent_step(
                 agent=graph_story_agent,
@@ -258,7 +258,7 @@ class JiraGraphWorkflow(Workflow):
                 model=MODEL_GRAPH,
                 tools=TOOLS_GRAPH,
                 initial_state={STATE_KEY_ISSUES: json.dumps(issues_data.model_dump())},
-                prompt_key="issue_graph_prompt",
+                prompt="issue_graph_prompt",
             )
             step6_success = await self._run_agent_step(
                 agent=graph_issue_agent,

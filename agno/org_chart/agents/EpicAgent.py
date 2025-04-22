@@ -3,12 +3,12 @@ from schemas import EpicList
 from utils_agno import load_prompt
 
 
-def build_epic_agent(model, tools):
+def build_epic_agent(model, tools, prompt="epic_prompt"):
     """
     Constructs the EpicAgent using Agno.
      - Returns an Agno Agent instance ready for execution.
     """
-    prompt_text = load_prompt("epic_prompt")
+    prompt_text = load_prompt(prompt)
 
     return Agent(
         model=model,

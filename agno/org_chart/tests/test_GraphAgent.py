@@ -42,17 +42,17 @@ async def run_graph_agent_test(test_type: str):
     # --- Determine Test Config ---
     if test_type == "epic":
         input_file_name = "test_epic_data.json"
-        prompt_key = "epic_graph_prompt"
+        prompt = "epic_graph_prompt"
         INPUT_STATE_KEY = "epics_data_input"
 
     elif test_type == "story":
         input_file_name = "test_story_data.json"
-        prompt_key = "story_graph_prompt"
+        prompt = "story_graph_prompt"
         INPUT_STATE_KEY = "stories_data_input"
 
     elif test_type == "issue":
         input_file_name = "test_issue_data.json"
-        prompt_key = "issue_graph_prompt"
+        prompt = "issue_graph_prompt"
         INPUT_STATE_KEY = "issues_data_input"
 
     TEST_SESSION_ID = f"test_session_graph_agent_{test_type}"
@@ -76,7 +76,7 @@ async def run_graph_agent_test(test_type: str):
         model=MODEL,
         tools=[arango_upsert],
         initial_state=input_state_data,
-        prompt_key=prompt_key,
+        prompt=prompt,
     )
     agent.debug_mode = True
     agent.show_tool_calls = True

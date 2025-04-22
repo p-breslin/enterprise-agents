@@ -3,13 +3,13 @@ from schemas import StoryList
 from utils_agno import load_prompt
 
 
-def build_story_agent(model, tools, initial_state: dict):
+def build_story_agent(model, tools, initial_state: dict, prompt="story_prompt"):
     """
     Constructs the StoryAgent using Agno.
      - Reads epic data from workflow session_state.
      - Returns an Agno Agent instance ready for execution.
     """
-    instruction_text = load_prompt("story_prompt")
+    instruction_text = load_prompt(prompt)
     return Agent(
         model=model,
         name="StoryAgent",

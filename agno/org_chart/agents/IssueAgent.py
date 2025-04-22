@@ -3,13 +3,13 @@ from schemas import IssueList
 from utils_agno import load_prompt
 
 
-def build_issue_agent(model, tools, initial_state: str):
+def build_issue_agent(model, tools, initial_state: str, prompt="issue_prompt"):
     """
     Constructs the IssueAgent using Agno Agent.
      - Reads story data from workflow session_state.
      - Returns an Agno Agent instance ready for execution.
     """
-    instruction_text = load_prompt("issue_prompt")
+    instruction_text = load_prompt(prompt)
     return Agent(
         model=model,
         name="IssueAgent",
