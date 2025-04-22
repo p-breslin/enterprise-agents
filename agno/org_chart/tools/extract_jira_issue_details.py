@@ -43,7 +43,7 @@ def _simplify_jira_field(internal_name: str, jira_id: str, raw_value: Any) -> An
         return _safe_get(raw_value, "key")
 
     # Fields with the 'value' sub-key (Issue Size, Team Name)
-    elif jira_id == ["customfield_10124", "customfield_10162"]:
+    elif jira_id in ["customfield_10124", "customfield_10162"]:
         return _safe_get(raw_value, "value")
 
     # Sprint (List of sprints) - extract info from the first sprint in the list
@@ -112,31 +112,31 @@ def extract_details(
         issue_key = raw_issue.get("key")  # for logging/context
         fields_data = raw_issue.get("fields")  # main container for field values
 
-        if not isinstance(fields_data, dict):
-            logger.warning(
-                f"Issue {issue_key} missing 'fields' dictionary or it's not a dict. Skipping field extraction."
-            )
-            # Still add basic info if possible, or an error entry
-            processed_results.append(
-                {
-                    "key": issue_key,
-                    "id": raw_issue.get("id"),
-                    "error": "Missing / invalid 'fields' data in raw response.",
-                }
-            )
-            continue
-
-        # Always try to add key and id if they exist at the top level
+        # --- Handle Top-Level Fields FIRST ---
+        issue_key = raw_issue.get("key")
         if issue_key:
             processed_issue["key"] = issue_key
-        if raw_issue.get("id"):
-            processed_issue["id"] = raw_issue["id"]
 
-        # Iterate through the fields wanted based on the mapping
+        # Check if fields_data is valid before proceeding
+        if not isinstance(fields_data, dict):
+            logger.warning(
+                f"Issue {issue_key or 'Unknown'} missing 'fields' dictionary or it's not a dict. Only top-level info available."
+            )
+            # Add what we have (key) plus an error indicator if desired
+            if not processed_issue:  # If key failed
+                processed_issue["error"] = "Missing key and fields data."
+            else:
+                processed_issue["warning"] = (
+                    "Missing or invalid 'fields' data in raw response."
+                )
+            processed_results.append(processed_issue)
+            continue
+
+        # --- Iterate through mappings for fields WITHIN the 'fields' dict ---
         for internal_name, jira_id in field_mappings.items():
-            # Must handle 'key' since it's top-level (not usually in 'fields')
-            if jira_id == "key" and "key" in processed_issue:
-                continue  # Already added
+            if internal_name in ["key", "id"]:
+                # Skip if the internal_name is one we handled already
+                continue
 
             raw_value = fields_data.get(jira_id)
             processed_issue[internal_name] = _simplify_jira_field(
