@@ -1,8 +1,8 @@
 import os
 import yaml
 import logging
-from pathlib import Path
 from jira import JIRA
+from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -24,10 +24,27 @@ def load_prompt(prompt_key: str) -> str:
         return yaml.safe_load(f)[prompt_key]
 
 
-def load_config(folder):
-    path = Path(__file__).parent / f"configs/{folder}.yaml"
+def load_config(file):
+    path = Path(__file__).parent / f"configs/{file}.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)
+
+
+def save_yaml(filepath, data):
+    """
+    Saves data to a YAML file.
+    """
+    try:
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+        with open(filepath, "w") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=True)
+        logger.info(f"Successfully saved YAML to {os.path.basename(filepath)}")
+        return True
+    except Exception as e:
+        logger.error(f"An error occurred saving: {e}", exc_info=True)
+        return False
 
 
 def get_jira_client() -> Optional[JIRA]:
@@ -48,7 +65,8 @@ def get_jira_client() -> Optional[JIRA]:
     JIRA_TOKEN = os.getenv("JIRA_TOKEN")
 
     try:
-        jira = JIRA(server=JIRA_SERVER_URL, basic_auth=(JIRA_USERNAME, JIRA_TOKEN))
+        jira_options = {"server": JIRA_SERVER_URL}
+        jira = JIRA(options=jira_options, basic_auth=(JIRA_USERNAME, JIRA_TOKEN))
         logger.info(f"Connected to JIRA: {JIRA_SERVER_URL}. Caching client.")
         _cached_jira_client = jira  # Store client to cache
         return _cached_jira_client
