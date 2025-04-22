@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class Epic(BaseModel):
@@ -22,18 +22,23 @@ class StoryList(BaseModel):
 
 
 class Issue(BaseModel):
-    story_key: str  # Match name used in prompt output
+    key: str
+    epic_key: Optional[str]
     summary: str
     status: str
+    issuetype: str
     assignee: Optional[str]
-    epic_key: str  # Explicitly add based on prompt instructions
-    created: str  # ISO 8601
-    updated: Optional[str] = None
-    resolved: Optional[str] = None
-    priority: Optional[str] = None
-    project: Optional[str] = None
-    reporter: Optional[str] = None
-    story_points: Optional[float] = None
+    reporter: Optional[str]
+    created: str
+    updated: str
+    resolutiondate: Optional[str]
+    resolution: Optional[str]
+    priority: str
+    project: str
+    sprint: Optional[str]
+    team: Optional[str]
+    issue_size: Optional[str]
+    story_points: Optional[Union[float, int]]
 
 
 class IssueList(BaseModel):

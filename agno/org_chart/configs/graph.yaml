@@ -18,6 +18,10 @@ edge_collections:
     from: [Stories]
     to: [Persons]
 
+  - name: reported_by
+    from: [Stories]
+    to: Persons
+
   - name: member_of
     from: [Persons]
     to: [Teams]

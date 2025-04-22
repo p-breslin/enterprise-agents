@@ -181,62 +181,71 @@ story_graph_prompt: |
   - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
 
 issue_prompt: |
-  You are an efficient Jira assistant tasked with enriching story data with full issue details using batch processing. You MUST use the `jira_get_issue_batch` tool.
+  You are an efficient Jira assistant tasked with enriching story data with full issue details. You MUST use the `jira_get_issue_loop` tool.
 
   **Task:** 
-  Retrieve detailed metadata for a list of Jira stories provided as input.
+  Retrieve detailed metadata for a list of Jira stories provided as input, extracting specific fields.
 
   **Input Stories Data:**
-  Here is the list of story objects you need to process. Each object contains `story_key` and `epic_key`:
+  Here is the list of story objects you need to process. Each object contains at least a `story_key`:
   {stories_data_input}
 
   **Processing Steps:**
   1. **Prepare:** 
-    a. Extract all story_key values from the Input Stories Data list into a single flat list of keys.
-    b. Create a mapping (e.g., a dictionary) to remember the epic_key associated with each story_key from the Input Stories Data. You will need this later.
+    a. Extract all `story_key` values from the Input Stories Data list into a single flat list of keys.
 
   2. **Batch Fetch:**
-    a. Make one single call to the jira_get_issue_batch tool.
-    b. Pass the complete list of extracted story_keys (from step 1a) as the issue_keys argument. Example arguments: {"issue_keys": ["KEY-1", "KEY-2", ...]}.
+    a. Make one single call to the `jira_get_issue_loop` tool.
+    b. Pass the complete list of extracted story keys (from step 1a) as the `issue_keys` argument. Example arguments: `{"issue_keys": ["KEY-1", "KEY-2", ...]}`.
+    c. The tool will return a JSON string containing a list of simplified issue dictionaries (or error objects).
 
-  3. **Process Results:**
-    a. Initialize an empty list to store the final detailed issue results.
-    b. Parse the JSON string returned by jira_get_issue_batch. This string contains a list of detailed issue dictionaries fetched from Jira.
-    c. For EACH detailed issue dictionary returned by the tool:
-      i. Extract the necessary fields (key, summary, status.name, assignee.displayName, created, resolutiondate, priority.name, project.key). Handle potential null values for assignee and resolutiondate appropriately (output null if the source is null or missing).
-      ii. Look up the corresponding epic_key for the current issue's story_key using the mapping you created in step 1b.
-      iii. Create a new detailed issue object containing all the extracted fields plus the crucial epic_key retrieved from your mapping.
-      iv. Add this complete detailed issue object to your results list (the one initialized in step 3a).
+  3. **Format Final Output:**
+    a. Parse the JSON string returned by `jira_get_issue_loop`.
+    b. Create the final list of issues by processing EACH dictionary in the list returned by the tool:
+      i. **Ignore** any dictionary that represents an error (e.g., contains an "error" key).
+      ii. For each **successful** issue dictionary from the tool:
+          - Create a **new** object containing only the fields specified in the "Output Instructions" below.
+          - **Map** the value from the tool dictionary's `parent` field to the `epic_key` field in the new object.
+          - Copy the values for all other required fields directly from the tool's dictionary to the new object.
+          - **Omit** any fields present in the tool's dictionary but *not* listed in the final required structure.
+    c. Aggregate these newly created objects into a single list.
 
-  4. **Handle Tool Errors:**
-  If the jira_get_issue_batch tool returns a JSON string containing an 'error' key, STOP processing immediately. Your final output should clearly state the error encountered instead of the normal JSON output. For example: {"error": "Tool failed: [Error message from tool]"}.
+  4. **Handle Tool Errors:** 
+  If the `jira_get_issue_loop` tool call itself fails (returns a JSON string representing a fundamental failure, not just a list with errors inside), STOP processing. Output only the error message. Example: `{"error": "Tool failed: [Error message from tool]"}`.
 
   5. **Final Output Generation:** 
-  After processing all issues returned by the successful batch call, proceed to format the output.
+  Proceed to format the final output using the list created in step 3c.
 
   **Output Instructions:**
-   - Format the final output as a single JSON object containing ONLY one key: "issues". 
-   - The value for "issues" must be the aggregated list of all enriched, detailed issue objects collected in step 3c. 
-   - The structure for each object in the list MUST be:
+   - Format the final output as a single JSON object containing ONLY one key: `"issues"`. 
+   - The value for `"issues"` must be the aggregated list of final structured issue objects created in step 3c.
+   - The structure for each object in the list MUST precisely match:
     {
-    "story_key": "string",
-    "summary": "string",
-    "status": "string",
-    "assignee": "string_or_null",
-    "epic_key": "string",
-    "created": "string_iso_datetime",
-    "resolved": "string_iso_datetime_or_null",
-    "priority": "string",
-    "project": "string"
+      "key": string, 
+      "epic_key": string or null, // Value comes from the 'parent' field in the tool's output
+      "summary": string,
+      "status": string,
+      "issuetype": string,
+      "assignee": string or null,
+      "reporter": string or null,
+      "created": string (iso datetime),
+      "updated": string (iso datetime),
+      "resolutiondate": string (iso datetime) or null,
+      "resolution": string or null,
+      "priority": string,
+      "project": string, 
+      "sprint": string or null,
+      "team": string or null, 
+      "issue_size": string or null,
+      "story_points": number or null 
     }
-  - If the batch tool returns an empty list or no issues are processed successfully, return an empty list in the JSON: {"issues": []}.
+  - If no successful issues were processed (e.g., tool returned empty list or only errors), return: `{"issues": []}`.
 
   **Strict Rules:**
-  - You MUST use the jira_get_issue_batch tool exactly once. Do NOT call jira_get_issue.
+  - You MUST use the `jira_get_issue_loop` tool exactly once.
   - Extract all keys first before calling the batch tool.
-  - Use ONLY the epic_key values from the Input Stories Data mapping created in Step 1b. Do not use any epic key information potentially present in the batch tool's result fields.
-  - Extract data carefully from the tool's response fields (e.g., status['name'], assignee['displayName'], priority['name'], project['key']). Use null if assignee or resolutiondate are missing/null in the tool response.
-  - Do not fabricate or infer any fields.
+  - The value for the final `epic_key` field MUST come from the `parent` field in the tool's output dictionary.
+  - Only include the fields specified in the final Output Instructions structure.
   - Ensure the final output is a valid JSON object matching the specified structure precisely. Do not include explanations, comments, or markdown outside the JSON object, unless reporting a tool error as specified in Step 4.
 
 issue_graph_prompt: |
@@ -257,68 +266,108 @@ issue_graph_prompt: |
   **Processing Steps for EACH Issue:**
   For *every* issue object found in the retrieved list:
 
-  1.  **Upsert Issue Details in Stories:** Use the `arango_upsert` tool to insert or update the full details of the issue in the `Stories` collection. Use all relevant fields from the current issue object (`story_key`, `summary`, `status`, `assignee` (original value), `epic_key`, `created`, `resolved`, `priority`, `project`):
-    {
+  1.  **Upsert Issue Details in Stories:** Use the `arango_upsert` tool to insert or update the full details of the issue in the `Stories` collection. Include all relevant fields from the current issue object:
+      {
       "collection_name": "Stories",
-      "search_document": { "_key": "<story_key>" },
+      "search_document": { "_key": "<key>" }, // Use 'key' from input
       "insert_document": {
-        "_key": "<story_key>",
+        "_key": "<key>",                 // Use 'key' from input
+        "epic_key": "<epic_key>",
         "summary": "<summary>",
         "status": "<status>",
+        "issuetype": "<issuetype>",
         "assignee": "<assignee>",
-        "epic_key": "<epic_key>",
+        "reporter": "<reporter>",
         "created": "<created>",
-        "resolved": "<resolved>",
+        "updated": "<updated>",
+        "resolutiondate": "<resolutiondate>",
+        "resolution": "<resolution>",
         "priority": "<priority>",
-        "project": "<project>"
+        "project": "<project>", 
+        "sprint": "<sprint>",
+        "team": "<team>", 
+        "issue_size": "<issue_size>",
+        "story_points": "<story_points>" 
       },
       "update_document": {
+        // Update all fields in case they changed
+        "epic_key": "<epic_key>",
         "summary": "<summary>",
         "status": "<status>",
+        "issuetype": "<issuetype>",
         "assignee": "<assignee>",
-        "epic_key": "<epic_key>",
+        "reporter": "<reporter>",
         "created": "<created>",
-        "resolved": "<resolved>",
+        "updated": "<updated>",
+        "resolutiondate": "<resolutiondate>",
+        "resolution": "<resolution>",
         "priority": "<priority>",
-        "project": "<project>"
+        "project": "<project>", 
+        "sprint": "<sprint>",
+        "team": "<team>", 
+        "issue_size": "<issue_size>",
+        "story_points": "<story_points>" 
       }
     }
 
-  2.  **Check Assignee:** Determine if the `assignee` field in the current issue object is present and not null.
+  2. **Process Assignee (Conditional):**
+    a. Check if the `assignee` field is present and not null in the current issue object.
+    b. **If Assignee Exists:**
+      i. **Sanitize Assignee Name:** Apply the sanitization rule to the `assignee` value to get `<sanitized_assignee>`.
+      ii. **Upsert Person (Assignee):** Use `arango_upsert` for the `Persons` collection with `<sanitized_assignee>` as `_key`.
+          {
+            "collection_name": "Persons",
+            "search_document": { "_key": "<sanitized_assignee>" },
+            "insert_document": { "_key": "<sanitized_assignee>", "name": "<assignee>" },
+            "update_document": {<empty>}
+          }
+      iii. **Upsert Assignment Edge:** Use `arango_upsert` for the `assigned_to` collection linking `Stories/<key>` to `Persons/<sanitized_assignee>`.
+          {
+            "collection_name": "assigned_to",
+            "search_document": {
+              "_from": "Stories/<key>",
+              "_to": "Persons/<sanitized_assignee>"
+            },
+            "insert_document": {
+              "_from": "Stories/<key>",
+              "_to": "Persons/<sanitized_assignee>"
+            },
+            "update_document": {<empty>}
+          }
 
-  3.  **If Assignee Exists (Conditional Steps):**
-    a. **Sanitize Assignee Name:** Apply the sanitization rule mentioned above to the `assignee` value.
-    b. **Upsert Person Vertex:** Use `arango_upsert` to ensure the person exists in the `Persons` collection, using the `<sanitized_assignee>` value as the `_key`:
-      {
-        "collection_name": "Persons",
-        "search_document": { "_key": "<sanitized_assignee>" },
-        "insert_document": { "_key": "<sanitized_assignee>" },
-        "update_document": {<empty>}  # No fields to update
-      }
-    c. **Upsert Assignment Edge:** Use `arango_upsert` to ensure an edge exists in the `assigned_to` collection linking the story to the person. Use `story_key` and `<sanitized_assignee>`:
-      {
-        "collection_name": "assigned_to",
-        "search_document": {
-          "_from": "Stories/<story_key>",
-          "_to": "Persons/<sanitized_assignee>"
-        },
-        "insert_document": {
-          "_from": "Stories/<story_key>",
-          "_to": "Persons/<sanitized_assignee>"
-        },
-        "update_document": {<empty>}  # No edge properties to update
-      }
+  3. **Process Reporter (Conditional):**
+    a. Check if the `reporter` field is present and not null in the current issue object.
+    b. **If Reporter Exists:**
+      i. **Sanitize Reporter Name:** Apply the sanitization rule to the `reporter` value to get `<sanitized_reporter>`.
+      ii. **Upsert Person (Reporter):** Use `arango_upsert` for the `Persons` collection with `<sanitized_reporter>` as `_key`. (This ensures the reporter exists as a Person, even if they are also an assignee).
+          {
+            "collection_name": "Persons",
+            "search_document": { "_key": "<sanitized_reporter>" },
+            "insert_document": { "_key": "<sanitized_reporter>", "name": "<reporter>" },
+            "update_document": {<empty>}
+          }
+      iii. **Upsert Reported By Edge:** Use `arango_upsert` for the `reported_by` edge collection linking `Stories/<key>` to `Persons/<sanitized_reporter>`.
+          {
+            "collection_name": "reported_by",
+            "search_document": {
+              "_from": "Stories/<key>",
+              "_to": "Persons/<sanitized_reporter>"
+            },
+            "insert_document": {
+              "_from": "Stories/<key>",
+              "_to": "Persons/<sanitized_reporter>"
+            },
+            "update_document": {<empty>}
+          }
 
-  4.  **If Assignee is Null:** Skip steps 3a, 3b, and 3c for this issue.
 
   **Strict Instructions:**
-  - Use ONLY the values from the Input Issues Data provided above.
+  - Use ONLY the values from the Input Issues Data provided above. Do not fabricate or infer data.
   - **Case Sensitivity:** The values for `collection_name` (e.g., 'Stories', 'Persons', 'assigned_to') and the collection prefixes in `_from`/`_to` fields (e.g., 'Stories/', 'Persons/') **are case-sensitive**. You MUST use the exact capitalization provided in these instructions and examples.
-  - Use *only* the `arango_upsert` tool for all database operations.
-  - Execute tool calls one at a time per operation described.
+  - Use *only* the `arango_upsert` tool. Execute one call per operation described (one for Story, one for Assignee Person if needed, one for Assignment Edge if needed, one for Reporter Person if needed, one for Reported By Edge if needed).
   - Follow the assignee sanitization rule precisely.
-  - Only perform the Person and Edge upserts if the assignee is not null.
-  - Use only the values present in the input issue objects. Do not fabricate or infer data.
-  - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each issue.
+  - Follow the sanitization rules precisely for assignee and reporter when generating keys/edge targets.
+  - Only perform Person and Edge upserts if the corresponding field (assignee/reporter) is not null.
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly {<empty>} as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value.
-  - If any tool call returns a JSON string containing an 'error' key, stop processing and report the error clearly in your final response instead of attempting to generate the normal output format.
+  - If any tool call returns an error, stop processing and report the error clearly.
+  - Do not provide any explanations, comments, or summaries in your response. Simply execute the required tool calls sequentially for each issue.
