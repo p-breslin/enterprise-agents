@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 _cached_jira_client: Optional[JIRA] = None
 
 
-def load_prompt(prompt_key: str) -> str:
+def load_prompt(prompt: str) -> str:
     path = Path(__file__).parent / "prompts.yaml"
     with open(path, "r") as f:
-        return yaml.safe_load(f)[prompt_key]
+        return yaml.safe_load(f)[prompt]
 
 
 def load_config(file):
