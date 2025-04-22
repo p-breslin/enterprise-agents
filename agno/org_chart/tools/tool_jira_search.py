@@ -2,7 +2,7 @@ import json
 import logging
 from agno.tools import tool
 from typing import List
-from utils_agno import get_jira_client
+from utils_agno import get_atlassian_client
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -30,38 +30,37 @@ def jira_search(jql: str, fields: List[str], limit: int = 50) -> str:
     logger.info(
         f"Tool 'jira_search' called with JQL: '{jql}', fields: {fields}, limit: {limit}"
     )
-    jira = get_jira_client()
+    jira = get_atlassian_client()
     if not jira:
         return json.dumps([{"error": "Jira client initialization failed."}])
 
-    # Prepare fields argument for the API call
-    fields_list = fields if fields else ["*navigable"]
+    # Join fields list into a comma-separated string for the API call
+    fields_str = ",".join(fields) if fields else "*all"
 
     try:
-        logger.info(
-            f"Executing JQL via enhanced_search_issues: {jql} with fields: {fields_list}, maxResults: {limit}"
-        )
-
-        # Use enhanced_search_issues from Jira API
-        issues_data = jira.enhanced_search_issues(
-            jql_str=jql, fields=fields_list, maxResults=limit, json_result=True
+        logger.info(f"Executing JQL: {jql} with fields: {fields_str}")
+        issues_data = jira.jql(
+            jql,
+            limit=limit,
+            fields=fields_str,
+            # validate_query=True # Validate JQL syntax server-side first
         )
 
         if issues_data and "issues" in issues_data:
-            issues = issues_data["issues"]
-            logger.info(f"JQL search successful: {len(issues)} issues.")
-            return json.dumps(issues)  # Return the raw list directly
+            raw_issues = issues_data["issues"]
+            logger.info(f"JQL search successful: {len(raw_issues)} issues.")
+            return json.dumps(raw_issues)  # Return the raw list directly
         else:
             logger.warning(f"No issues found for JQL: {jql}")
             return json.dumps([])  # Return empty list if no issues found
 
     except Exception as e:
-        logger.error(f"Error during Jira enhanced_search_issues: {e}", exc_info=True)
+        logger.error(f"Error during Jira JQL search: {e}", exc_info=True)
         error_message = f"Error occurred while executing JQL '{jql}': {str(e)}"
 
         # Check for common errors if possible (e.g., invalid JQL, permissions)
-        if "Invalid JQL" in str(e):
-            error_message = f"Invalid JQL query: {jql}. Error: {str(e)}"
+        if "does not exist" in str(e) or "Invalid JQL" in str(e):
+            error_message = f"JQL query failed or contained invalid elements: {jql}. Error: {str(e)}"
         elif "401" in str(e) or "Unauthorized" in str(e):
             error_message = "Authentification failed. Check Jira permissions."
         elif "403" in str(e) or "Forbidden" in str(e):

@@ -1,10 +1,12 @@
 import os
 import yaml
 import logging
-from jira import JIRA
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
+
+from jira import JIRA
+from atlassian import Jira  # for JQL queries
 
 from agno.models.google import Gemini
 from agno.models.openai import OpenAIChat
@@ -83,6 +85,22 @@ def reset_jira_client_cache():
     global _cached_jira_client
     logger.debug("Resetting cached JIRA client.")
     _cached_jira_client = None
+
+
+def get_atlassian_client() -> Optional[Jira]:
+    JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
+    JIRA_USERNAME = os.getenv("JIRA_USERNAME")
+    JIRA_TOKEN = os.getenv("JIRA_TOKEN")
+
+    try:
+        jira = Jira(
+            url=JIRA_SERVER_URL, username=JIRA_USERNAME, password=JIRA_TOKEN, cloud=True
+        )
+        logger.info(f"Connected to Jira: {JIRA_SERVER_URL}")
+        return jira
+    except Exception as e:
+        logger.error(f"Failed to connect to Jira: {e}")
+        return None
 
 
 def resolve_model(provider: str, model_id: str):
