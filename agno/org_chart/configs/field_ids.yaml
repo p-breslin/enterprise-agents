@@ -1,4 +1,4 @@
-# Defines the mapping between the application's internal canonical names and the common display names expected in Jira instances.
+# Defines the mapping between the application's internal internal names and the common display names expected in Jira instances.
 # Canonical Name = Common Jira Display Name. Must be verified.
 # The configuration script uses this file to search for the actual field IDs.
 # Adjust this based on the specific fields used by the user.

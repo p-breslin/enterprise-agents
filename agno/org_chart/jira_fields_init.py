@@ -63,32 +63,32 @@ def generate_field_configs():
     # --- Create and save selected field mappings ---
     selected_mappings = {}
     missing_mappings = []
-    logger.info("Attempting to map canonical names to actual field IDs...")
+    logger.info("Attempting to map internal names to actual field IDs...")
 
     selected_ids = load_config(FIELD_IDS_FILENAME)
-    for canonical_name, common_jira_name in selected_ids.items():
+    for internal_name, common_jira_name in selected_ids.items():
         # Try case-insensitive lookup using the common name
         actual_field_id = field_name_to_id_lower.get(common_jira_name.lower())
 
         if actual_field_id:
-            selected_mappings[canonical_name] = actual_field_id
+            selected_mappings[internal_name] = actual_field_id
             logger.info(
-                f"Mapped '{canonical_name}' -> '{actual_field_id}' (found via '{common_jira_name}')"
+                f"Mapped '{internal_name}' -> '{actual_field_id}' (found via '{common_jira_name}')"
             )
         else:
             # Handle special cases or known variations if needed
             # Example: If 'Issue key' wasn't found, maybe try 'key'
-            if canonical_name == "key" and "key" in field_name_to_id_lower:
-                selected_mappings[canonical_name] = field_name_to_id_lower["key"]
+            if internal_name == "key" and "key" in field_name_to_id_lower:
+                selected_mappings[internal_name] = field_name_to_id_lower["key"]
                 logger.info(
-                    f"Mapped '{canonical_name}' -> '{field_name_to_id_lower['key']}' (found via alternative 'key')"
+                    f"Mapped '{internal_name}' -> '{field_name_to_id_lower['key']}' (found via alternative 'key')"
                 )
             # Add more specific fallbacks if necessary...
             else:
                 logger.warning(
-                    f"Could not find Jira field matching common name '{common_jira_name}' for canonical name '{canonical_name}'. This mapping will be missing."
+                    f"Could not find Jira field matching common name '{common_jira_name}' for internal name '{internal_name}'. This mapping will be missing."
                 )
-                missing_mappings.append(canonical_name)
+                missing_mappings.append(internal_name)
 
     if missing_mappings:
         print("WARNING: Could not map the following required fields:")
