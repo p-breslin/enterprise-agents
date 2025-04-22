@@ -22,7 +22,7 @@ class StoryList(BaseModel):
 
 
 class Issue(BaseModel):
-    key: str
+    story_key: str
     epic_key: Optional[str]
     summary: str
     status: str

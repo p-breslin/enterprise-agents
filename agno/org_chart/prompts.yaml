@@ -205,6 +205,7 @@ issue_prompt: |
       i. **Ignore** any dictionary that represents an error (e.g., contains an "error" key).
       ii. For each **successful** issue dictionary from the tool:
           - Create a **new** object containing only the fields specified in the "Output Instructions" below.
+          - **Map** the value from the tool dictionary's `key` field to the `story_key` field in the new object.
           - **Map** the value from the tool dictionary's `parent` field to the `epic_key` field in the new object.
           - Copy the values for all other required fields directly from the tool's dictionary to the new object.
           - **Omit** any fields present in the tool's dictionary but *not* listed in the final required structure.
@@ -221,7 +222,7 @@ issue_prompt: |
    - The value for `"issues"` must be the aggregated list of final structured issue objects created in step 3c.
    - The structure for each object in the list MUST precisely match:
     {
-      "key": string, 
+      "story_key": string, 
       "epic_key": string or null, // Value comes from the 'parent' field in the tool's output
       "summary": string,
       "status": string,
@@ -244,6 +245,7 @@ issue_prompt: |
   **Strict Rules:**
   - You MUST use the `jira_get_issue_loop` tool exactly once.
   - Extract all keys first before calling the batch tool.
+  - The value for the final `story_key` field MUST come from the `key` field in the tool's output dictionary.
   - The value for the final `epic_key` field MUST come from the `parent` field in the tool's output dictionary.
   - Only include the fields specified in the final Output Instructions structure.
   - Ensure the final output is a valid JSON object matching the specified structure precisely. Do not include explanations, comments, or markdown outside the JSON object, unless reporting a tool error as specified in Step 4.
@@ -266,12 +268,12 @@ issue_graph_prompt: |
   **Processing Steps for EACH Issue:**
   For *every* issue object found in the retrieved list:
 
-  1.  **Upsert Issue Details in Stories:** Use the `arango_upsert` tool to insert or update the full details of the issue in the `Stories` collection. Include all relevant fields from the current issue object:
+  1.  **Upsert Issue Details in Stories:** Use the `arango_upsert` tool to insert or update the full details of the issue in the `Stories` collection. Use the `story_key` field from the input as the ArangoDB `_key`. Include all relevant fields from the current issue object:
       {
       "collection_name": "Stories",
-      "search_document": { "_key": "<key>" }, // Use 'key' from input
+      "search_document": { "_key": "<story_key>" }, // Use 'story_key' from input
       "insert_document": {
-        "_key": "<key>",                 // Use 'key' from input
+        "_key": "<story_key>",  // Use 'story_key' from input
         "epic_key": "<epic_key>",
         "summary": "<summary>",
         "status": "<status>",
@@ -321,15 +323,15 @@ issue_graph_prompt: |
             "insert_document": { "_key": "<sanitized_assignee>", "name": "<assignee>" },
             "update_document": {<empty>}
           }
-      iii. **Upsert Assignment Edge:** Use `arango_upsert` for the `assigned_to` collection linking `Stories/<key>` to `Persons/<sanitized_assignee>`.
+      iii. **Upsert Assignment Edge:** Use `arango_upsert` for the `assigned_to` collection linking `Stories/<story_key>` to `Persons/<sanitized_assignee>`.
           {
             "collection_name": "assigned_to",
             "search_document": {
-              "_from": "Stories/<key>",
+              "_from": "Stories/<story_key>", // Use 'story_key' from input
               "_to": "Persons/<sanitized_assignee>"
             },
             "insert_document": {
-              "_from": "Stories/<key>",
+              "_from": "Stories/<story_key>", // Use 'story_key' from input
               "_to": "Persons/<sanitized_assignee>"
             },
             "update_document": {<empty>}
@@ -346,15 +348,15 @@ issue_graph_prompt: |
             "insert_document": { "_key": "<sanitized_reporter>", "name": "<reporter>" },
             "update_document": {<empty>}
           }
-      iii. **Upsert Reported By Edge:** Use `arango_upsert` for the `reported_by` edge collection linking `Stories/<key>` to `Persons/<sanitized_reporter>`.
+      iii. **Upsert Reported By Edge:** Use `arango_upsert` for the `reported_by` edge collection linking `Stories/<story_key>` to `Persons/<sanitized_reporter>`.
           {
             "collection_name": "reported_by",
             "search_document": {
-              "_from": "Stories/<key>",
+              "_from": "Stories/<story_key>", // Use 'story_key' from input
               "_to": "Persons/<sanitized_reporter>"
             },
             "insert_document": {
-              "_from": "Stories/<key>",
+              "_from": "Stories/<story_key>", // Use 'story_key' from input
               "_to": "Persons/<sanitized_reporter>"
             },
             "update_document": {<empty>}
