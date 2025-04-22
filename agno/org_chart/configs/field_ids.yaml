@@ -1,0 +1,27 @@
+# Defines the mapping between the application's internal canonical names and the common display names expected in Jira instances.
+# Canonical Name = Common Jira Display Name. Must be verified.
+# The configuration script uses this file to search for the actual field IDs.
+# Adjust this based on the specific fields used by the user.
+
+# Standard field IDs
+key: Issue key
+summary: Summary
+issuetype: Issue Type
+status: Status
+assignee: Assignee
+reporter: Reporter
+priority: Priority
+resolution: Resolution
+resolutiondate: Resolved
+created: Created
+updated: Updated
+project: Project
+parent: Parent
+
+# Custom field IDs
+sprint: Sprint
+story_points: Story Points
+team: Team Name
+severity: Severity
+issue_size: Issue Size
+development: Development

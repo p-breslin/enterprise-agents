@@ -1,0 +1,197 @@
+Acceptance Approval Date: customfield_10206
+Acceptance Approver: customfield_10207
+Acceptance Criteria: customfield_10132
+Actual end: customfield_10195
+Actual start: customfield_10194
+Affected hardware: customfield_10189
+Affected services: customfield_10105
+Affects versions: versions
+Approvals: customfield_10102
+Approver groups: customfield_10120
+Approvers: customfield_10104
+Assignee: assignee
+Atlas goals: customfield_10243
+Atlas project: customfield_10244
+Atlas project status: customfield_10245
+Atlassian project: customfield_10277
+Atlassian project status: customfield_10278
+Attachment: attachment
+Backout plan: customfield_10197
+Baseline end date: customfield_10101
+Baseline start date: customfield_10100
+Bug Type: customfield_10142
+Category: customfield_10087
+Change reason: customfield_10200
+Change risk: customfield_10190
+Change type: customfield_10193
+Client: customfield_10109
+Comment: comment
+Comments: customfield_10251
+Company size: customfield_10115
+Components: components
+Confidence: customfield_10268
+Content type: customfield_10090
+Created: created
+Creator: creator
+Customer Name: customfield_10088
+Customer segments: customfield_10259
+Customers: customfield_10121
+Date of hire: customfield_10179
+Definition of Done: customfield_10133
+Delivery progress: customfield_10249
+Delivery status: customfield_10248
+Department: customfield_10112
+Description: description
+Design: customfield_10174
+Designs ready: customfield_10261
+Dev Component: customfield_10074
+Developer Reasons for Test Failed: customfield_10158
+Development: customfield_10000
+Documentation: customfield_10076
+Documents: customfield_10269
+Due date: duedate
+ETA: customfield_10075
+Effort: customfield_10266
+Email: customfield_10117
+End date: customfield_10063
+Engineering REP: customfield_10138
+Environment: environment
+Epic Colour: customfield_10005
+Epic Link: customfield_10006
+Epic Name: customfield_10003
+Epic Status: customfield_10004
+Executed By: customfield_10096
+Expected Result: customfield_10095
+Features: customfield_10144
+Fix versions: fixVersions
+Flagged: customfield_10039
+Goals: customfield_10182
+Group Assignee: customfield_10040
+Hiring manager: customfield_10176
+Idea archived: customfield_10256
+Idea archived by: customfield_10254
+Idea archived on: customfield_10255
+Idea short description: customfield_10267
+Images: thumbnail
+Impact: customfield_10246
+Impact score: customfield_10258
+Implementation plan: customfield_10196
+Insights: customfield_10247
+Investigation reason: customfield_10203
+Issue Category: customfield_10122
+Issue Size: customfield_10124
+Issue Type: issuetype
+Issue color: customfield_10083
+Job role: customfield_10177
+Key: issuekey
+Labels: labels
+Last Comment: customfield_10171
+Last Viewed: lastViewed
+Linked Issues: issuelinks
+Linked issues: customfield_10250
+Location: customfield_10180
+Locked forms: customfield_10152
+Log Work: worklog
+Major incident: customfield_10186
+Open forms: customfield_10150
+Organizations: customfield_10002
+Original estimate: timeoriginalestimate
+PM: customfield_10134
+Parent: parent
+Parent Link: customfield_10007
+Pending reason: customfield_10185
+Phone number: customfield_10118
+Planned end: customfield_10192
+Planned start: customfield_10191
+Platform: customfield_10147
+Priority: priority
+Product Area: customfield_10270
+Product Manager: customfield_10172
+Product Suite: customfield_10137
+Production Date: customfield_10078
+Program Increment: customfield_10086
+Progress: progress
+Project: project
+Project overview key: customfield_10166
+Project overview status: customfield_10167
+Project start: customfield_10262
+Project target: customfield_10263
+Publication date: customfield_10091
+QA REP: customfield_10149
+QA Reasons for Test Failed: customfield_10159
+RCA Description: customfield_10123
+Rank: customfield_10009
+Reference: customfield_10110
+Remaining Estimate: timeestimate
+Reporter: reporter
+Request Type: customfield_10080
+Request language: customfield_10108
+Request participants: customfield_10081
+Resolution: resolution
+Resolved: resolutiondate
+Responders: customfield_10187
+Restrict to: issuerestriction
+Result: customfield_10099
+Risk consequence: customfield_10073
+Risk probability: customfield_10072
+Roadmap: customfield_10253
+Root cause: customfield_10204
+Satisfaction: customfield_10084
+Satisfaction date: customfield_10103
+Scope: customfield_10041
+Score: customfield_10148
+Security Level: security
+Sentiment: customfield_10181
+Severity: customfield_10188
+Skills Needed: customfield_10146
+Source: customfield_10202
+Spec ready: customfield_10260
+Sprint: customfield_10008
+Sprint Week: customfield_10156
+Stage Date: customfield_10077
+Start date: customfield_10062
+Status: status
+Status Category: statusCategory
+Status Category Changed: statuscategorychangedate
+Steps: customfield_10094
+Steps to Reproduce: customfield_10143
+Story Points: customfield_10038
+Story point estimate: customfield_10082
+Sub-tasks: subtasks
+Submitted forms: customfield_10151
+Summary: summary
+Target end: customfield_10093
+Target start: customfield_10092
+Task Type: customfield_10140
+Task mode: customfield_10085
+Task progress: customfield_10061
+Team: customfield_10001
+Team Name: customfield_10162
+Teams: customfield_10257
+Test plan: customfield_10198
+Theme: customfield_10252
+Time Spent: timespent
+Time to close after resolution: customfield_10199
+Time to done: customfield_10208
+Time to first response: customfield_10107
+Time to resolution: customfield_10106
+Time to review normal change: customfield_10201
+Time tracking: timetracking
+Total forms: customfield_10153
+Updated: updated
+Urgency: customfield_10183
+Value: customfield_10265
+Value Proposition: customfield_10141
+Votes: votes
+Vulnerability: customfield_10175
+Watchers: watches
+Website: customfield_10116
+Work Ratio: workratio
+Work category: customfield_10119
+Workaround: customfield_10205
+'[CHART] Date of First Response': customfield_10010
+'[CHART] Time in Status': customfield_10011
+"\u03A3 Original Estimate": aggregatetimeoriginalestimate
+"\u03A3 Progress": aggregateprogress
+"\u03A3 Remaining Estimate": aggregatetimeestimate
+"\u03A3 Time Spent": aggregatetimespent
