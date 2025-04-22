@@ -22,6 +22,4 @@ parent: Parent
 sprint: Sprint
 story_points: Story Points
 team: Team Name
-severity: Severity
 issue_size: Issue Size
-development: Development

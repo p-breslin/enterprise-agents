@@ -42,8 +42,8 @@ def _simplify_jira_field(internal_name: str, jira_id: str, raw_value: Any) -> An
     elif jira_id in ["project", "parent"]:
         return _safe_get(raw_value, "key")
 
-    # Fields with the 'value' sub-key (Issue Size, Team Name, Severity)
-    elif jira_id == ["customfield_10124", "customfield_10162", "customfield_10188"]:
+    # Fields with the 'value' sub-key (Issue Size, Team Name)
+    elif jira_id == ["customfield_10124", "customfield_10162"]:
         return _safe_get(raw_value, "value")
 
     # Sprint (List of sprints) - extract info from the first sprint in the list
@@ -51,9 +51,6 @@ def _simplify_jira_field(internal_name: str, jira_id: str, raw_value: Any) -> An
         if isinstance(raw_value, list) and raw_value:
             return _safe_get(raw_value[0], "name")  # also ID, state, dates
         return None
-
-    elif jira_id == "customfield_10000":  # Development Field (complex)
-        return str(raw_value)
 
     # --- Fallback for unhandled fields ---
     logger.warning(

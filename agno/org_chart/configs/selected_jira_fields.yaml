@@ -1,6 +1,5 @@
 assignee: assignee
 created: created
-development: customfield_10000
 issue_size: customfield_10124
 issuetype: issuetype
 key: issuekey
@@ -10,7 +9,6 @@ project: project
 reporter: reporter
 resolution: resolution
 resolutiondate: resolutiondate
-severity: customfield_10188
 sprint: customfield_10008
 status: status
 story_points: customfield_10038
