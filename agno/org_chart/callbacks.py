@@ -36,6 +36,7 @@ def log_agno_callbacks(
     response: Union[RunResponse, Iterator[RunResponse]],
     run_label: str,
     filename: Optional[str] = None,
+    overwrite=True,
 ):
     """
     Logs key events and tool calls from an Agno RunResponse or stream.
@@ -44,6 +45,7 @@ def log_agno_callbacks(
         response: The RunResponse object or iterator from agent.run().
         run_label: A descriptive label for this run (e.g., test name).
         filename: Optional filename to save the log within the predefined CALLBACK_LOG_DIR.
+        overwrite: Determines if callbacks saved file are written over appended.
     """
 
     console.print(
@@ -175,15 +177,16 @@ def log_agno_callbacks(
             log_entries.append(log_entry)
 
     # --- Write logs to file ---
+    write_type = "w" if overwrite else "a"
     if output_path and log_entries:
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
+            with open(output_path, f"{write_type}", encoding="utf-8") as f:
                 for entry in log_entries:
                     # Ensure serializability for JSON Lines
                     json_line = json.dumps(entry, default=str)
                     f.write(json_line + "\n")
             console.print(
-                f"\nCallbacks appended to: [bold green]{output_path}[/bold green]"
+                f"\nCallbacks written to: [bold green]{output_path}[/bold green]"
             )
         except Exception as e:
             console.print(
