@@ -5,7 +5,7 @@ import pathlib
 from agno.agent import RunResponse
 
 from schemas import StoryList
-from callbacks import print_callbacks
+from callbacks import log_agno_callbacks
 from agents.StoryAgent import build_story_agent
 from tools.tool_jira_epic_issues import jira_get_epic_issues
 from utils_agno import load_config, resolve_model
@@ -75,7 +75,8 @@ async def run_story_agent_test():
         # Provide input state here
         response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response
-        print_callbacks(final_response, "StoryAgentTest")
+        run_label = "StoryAgentTest"
+        log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
 
     except Exception as e:
         logger.exception("StoryAgent execution failed.")

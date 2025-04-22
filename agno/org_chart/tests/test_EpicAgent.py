@@ -5,7 +5,7 @@ import pathlib
 from agno.agent import RunResponse
 
 from schemas import EpicList
-from callbacks import print_callbacks
+from callbacks import log_agno_callbacks
 from agents.EpicAgent import build_epic_agent
 from tools.tool_jira_search import jira_search
 from utils_agno import load_config, resolve_model
@@ -54,10 +54,8 @@ async def run_epic_agent_test():
         # Pass session_id for tracking/state if needed later
         response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response  # Since it's not streaming
-
-        # Print detailed response info using the helper
-        print_callbacks(final_response, "EpicAgentTest")
-
+        run_label = "EpicAgentTest"
+        log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
     except Exception as e:
         logger.exception("EpicAgent execution failed.")
         raise

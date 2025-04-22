@@ -5,9 +5,9 @@ import pathlib
 from agno.agent import RunResponse
 
 from schemas import IssueList
-from callbacks import print_callbacks
+from callbacks import log_agno_callbacks
 from agents.IssueAgent import build_issue_agent
-from tools.tool_jira_issue import jira_get_issue, jira_get_issue_loop
+from tools.tool_jira_issue import jira_get_issue_loop
 from utils_agno import load_config, resolve_model
 
 logging.basicConfig(
@@ -74,7 +74,8 @@ async def run_issue_agent_test():
         # Provide input state here
         response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response
-        print_callbacks(final_response, "IssueAgentTest")
+        run_label = "IssueAgentTest"
+        log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
 
     except Exception as e:
         logger.exception("IssueAgent execution failed.")

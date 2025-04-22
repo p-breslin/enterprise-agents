@@ -5,7 +5,7 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
-from callbacks import print_callbacks
+from callbacks import log_agno_callbacks
 from agents.GraphAgent import build_graph_agent
 from tools.tool_arango_upsert import arango_upsert
 from utils_agno import load_config, resolve_model
@@ -92,7 +92,8 @@ async def run_graph_agent_test(test_type: str):
         # Provide input state here
         response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response
-        print_callbacks(final_response, f"GraphUpdateAgent_{test_type}_Test")
+        run_label = f"GraphUpdateAgent_{test_type}_Test"
+        log_agno_callbacks(final_response, run_label, filename="{run_label}_callbacks")
 
     except Exception as e:
         logger.exception(f"GraphUpdateAgent ({test_type}) execution failed.")
