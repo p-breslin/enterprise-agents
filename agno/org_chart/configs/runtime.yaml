@@ -9,7 +9,7 @@ MODELS:
     epic: "gpt-4.1-nano"
     story: "gpt-4.1-nano"
     issue: "gpt-4.1-nano"
-    graph: "gpt-4.1-nano"
+    graph: "gpt-4o-mini"
 
 SESSION:
   session_id: "org_chart_run"
