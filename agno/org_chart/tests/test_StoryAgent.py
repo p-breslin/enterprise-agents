@@ -4,7 +4,7 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
-from schemas import StoryList
+from models.schemas import StoryList
 from utils.callbacks import log_agno_callbacks
 from agents.StoryAgent import build_story_agent
 from tools.tool_jira_epic_issues import jira_get_epic_issues

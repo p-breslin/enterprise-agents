@@ -1,5 +1,5 @@
 from agno.agent import Agent
-from schemas import EpicList
+from models.schemas import EpicList
 from utils.helpers import load_prompt
 
 

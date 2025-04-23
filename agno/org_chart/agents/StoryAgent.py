@@ -1,5 +1,5 @@
 from agno.agent import Agent
-from schemas import StoryList
+from models.schemas import StoryList
 from utils.helpers import load_prompt
 
 

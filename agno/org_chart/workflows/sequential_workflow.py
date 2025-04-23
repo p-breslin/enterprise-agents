@@ -8,7 +8,7 @@ from agno.agent import Agent, RunResponse
 from agno.workflow import Workflow, RunEvent
 
 from utils.callbacks import log_agno_callbacks
-from schemas import EpicList, StoryList, IssueList
+from models.schemas import EpicList, StoryList, IssueList
 from utils.helpers import load_config, resolve_model
 from agents.EpicAgent import build_epic_agent
 from agents.StoryAgent import build_story_agent

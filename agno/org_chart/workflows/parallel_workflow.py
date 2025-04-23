@@ -9,7 +9,7 @@ from agno.workflow import RunEvent, Workflow
 from utils.logging_setup import setup_logging
 from utils.callbacks import log_agno_callbacks
 from utils.helpers import load_config, resolve_model
-from schemas import Epic, EpicList, Story, StoryList, Issue, IssueList
+from models.schemas import Epic, EpicList, Story, StoryList, Issue, IssueList
 
 from agents.EpicAgent import build_epic_agent
 from agents.StoryAgent import build_story_agent

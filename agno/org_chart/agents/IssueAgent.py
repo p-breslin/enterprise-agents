@@ -1,5 +1,5 @@
 from agno.agent import Agent
-from schemas import IssueList
+from models.schemas import IssueList
 from utils.helpers import load_prompt
 
 
