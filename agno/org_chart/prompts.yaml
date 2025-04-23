@@ -177,7 +177,7 @@ epic_graph_prompt: |
   **Processing Steps for the Input Epic:**
   Generate the following THREE `arango_upsert` tool calls based *only* on the single epic object provided in **Input Epic Data**:
 
-  1.  **Upsert Epic Vertex:** Generate one `arango_upsert` tool call for the `Epics` collection using the input epic's `epic_key`, `epic_summary`, and `project`.
+  1.  **Upsert Epic Vertex:** Generate one `arango_upsert` tool call for the `Epics` collection using the input epic's `epic_key`, `epic_summary`, and `project`:
       ```json
       {
         "collection_name": "Epics",
@@ -187,7 +187,7 @@ epic_graph_prompt: |
       }
       ```
 
-  2.  **Upsert Project Vertex:** Generate one `arango_upsert` tool call for the `Projects` collection using the input epic's `project` key.
+  2.  **Upsert Project Vertex:** Generate one `arango_upsert` tool call for the `Projects` collection using the input epic's `project` key:
       ```json
       {
         "collection_name": "Projects",
@@ -197,7 +197,7 @@ epic_graph_prompt: |
       }
       ```
 
-  3.  **Upsert Epic-Project Edge:** Generate one `arango_upsert` tool call for the `epic_of_project` collection linking the epic to its project.
+  3.  **Upsert Epic-Project Edge:** Generate one `arango_upsert` tool call for the `epic_of_project` collection linking the epic to its project:
       ```json
       {
         "collection_name": "epic_of_project",
@@ -235,7 +235,7 @@ story_graph_prompt: |
   **Processing Steps for the Input Story:**
   Generate the following TWO `arango_upsert` tool calls based *only* on the single story object provided in **Input Story Data**:
 
-  1.  **Upsert Story Vertex:** Generate one `arango_upsert` tool call for the `Stories` collection using the input story's `story_key` and `epic_key`.
+  1.  **Upsert Story Vertex:** Generate one `arango_upsert` tool call for the `Stories` collection using the input story's `story_key` and `epic_key`:
       ```json
       {
         "collection_name": "Stories",
@@ -245,7 +245,7 @@ story_graph_prompt: |
       }
       ```
 
-  2.  **Upsert Story-Epic Edge:** Generate one `arango_upsert` tool call for the `story_belongs_to_epic` collection linking the story to its epic.
+  2.  **Upsert Story-Epic Edge:** Generate one `arango_upsert` tool call for the `story_belongs_to_epic` collection linking the story to its epic:
       ```json
       {
         "collection_name": "story_belongs_to_epic",
@@ -335,11 +335,11 @@ issue_graph_prompt: |
 
   2.  **Process Assignee (Conditional):** If the input issue's `assignee` is not null:
       a. Sanitize the `assignee` name -> `<sanitized_assignee>`.
-      b. Generate one `arango_upsert` call for `Persons` collection (key=`<sanitized_assignee>`, name=`<assignee>`).
+      b. Generate one `arango_upsert` call for `Persons` collection (key=`<sanitized_assignee>`, name=`<assignee>`):
           ```json
           { "collection_name": "Persons", "search_document": { "_key": "<sanitized_assignee>" }, "insert_document": { "_key": "<sanitized_assignee>", "name": "<assignee>" }, "update_document": {<empty>} }
           ```
-      c. Generate one `arango_upsert` call for `assigned_to` edge (from=`Stories/<story_key>`, to=`Persons/<sanitized_assignee>`).
+      c. Generate one `arango_upsert` call for `assigned_to` edge (from=`Stories/<story_key>`, to=`Persons/<sanitized_assignee>`):
           ```json
           { "collection_name": "assigned_to", "search_document": { "_from": "Stories/<story_key>", "_to": "Persons/<sanitized_assignee>" }, "insert_document": { "_from": "Stories/<story_key>", "_to": "Persons/<sanitized_assignee>" }, "update_document": {<empty>} }
           ```
@@ -347,11 +347,11 @@ issue_graph_prompt: |
 
   3.  **Process Reporter (Conditional):** If the input issue's `reporter` is not null:
       a. Sanitize the `reporter` name -> `<sanitized_reporter>`.
-      b. **If `<sanitized_reporter>` is DIFFERENT from the person key processed in step 2 (if any):** Generate one `arango_upsert` call for `Persons` collection (key=`<sanitized_reporter>`, name=`<reporter>`).
+      b. **If `<sanitized_reporter>` is DIFFERENT from the person key processed in step 2 (if any):** Generate one `arango_upsert` call for `Persons` collection (key=`<sanitized_reporter>`, name=`<reporter>`):
           ```json
           { "collection_name": "Persons", "search_document": { "_key": "<sanitized_reporter>" }, "insert_document": { "_key": "<sanitized_reporter>", "name": "<reporter>" }, "update_document": {<empty>} }
           ```
-      c. Generate one `arango_upsert` call for `reported_by` edge (from=`Stories/<story_key>`, to=`Persons/<sanitized_reporter>`).
+      c. Generate one `arango_upsert` call for `reported_by` edge (from=`Stories/<story_key>`, to=`Persons/<sanitized_reporter>`):
           ```json
           { "collection_name": "reported_by", "search_document": { "_from": "Stories/<story_key>", "_to": "Persons/<sanitized_reporter>" }, "insert_document": { "_from": "Stories/<story_key>", "_to": "Persons/<sanitized_reporter>" }, "update_document": {<empty>} }
           ```
