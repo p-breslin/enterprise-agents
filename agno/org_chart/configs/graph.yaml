@@ -4,6 +4,7 @@ vertex_collections:
   - Stories
   - Persons
   - Teams
+  - Sprints
 
 edge_collections:
   - name: epic_of_project
@@ -20,7 +21,7 @@ edge_collections:
 
   - name: reported_by
     from: [Stories]
-    to: Persons
+    to: [Persons]
 
   - name: member_of
     from: [Persons]
@@ -33,3 +34,7 @@ edge_collections:
   - name: team_works_on_project
     from: [Teams]
     to: [Projects]
+
+  - name: issue_in_sprint
+    from: [Stories]
+    to: [Sprints]
