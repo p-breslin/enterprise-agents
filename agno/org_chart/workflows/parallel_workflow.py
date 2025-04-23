@@ -1,13 +1,12 @@
-import json
+import sys
 import asyncio
 import logging
-from typing import Any, Coroutine, List
+from typing import Any, List, Coroutine, Iterable
 
 from agno.agent import Agent, RunResponse
 from agno.workflow import RunEvent, Workflow
 
 from utils.logging_setup import setup_logging
-from utils.callbacks import log_agno_callbacks
 from utils.helpers import load_config, resolve_model
 from models.schemas import Epic, EpicList, Story, StoryList, Issue, IssueList
 
@@ -30,6 +29,7 @@ from tools import (
 # ---------------------------------------------------------------------------
 DEBUG = True  # Agno debugging
 PROVIDER = "openai"
+BATCH_SIZE = 50  # for IssueAgent
 
 
 # ---------------------------------------------------------------------------
@@ -66,8 +66,10 @@ TOOLS = {
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-setup_logging()
-log = logging.getLogger(__name__)
+setup_logging(
+    level=logging.INFO, stream=True, abort_on_log=True, abort_level=logging.ERROR
+)
+root_log = logging.getLogger()
 
 # Save logs to file
 file_handler = logging.FileHandler("workflow.log", mode="w", encoding="utf-8")
@@ -77,7 +79,8 @@ formatter = logging.Formatter(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 file_handler.setFormatter(formatter)
-log.addHandler(file_handler)
+root_log.addHandler(file_handler)
+log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -94,11 +97,19 @@ async def run_with_semaphore(
      - Error instead of crashing the gather process
     """
     async with sem:
-        try:
-            return await coro
-        except Exception as exc:
-            log.error("Task %s failed: %s", label, exc, exc_info=True)
-            return exc
+        log.debug(f"Starting task: {label}")
+        result = await coro
+        log.debug(f"Finished task: {label}")
+        return result
+
+
+def _chunks(lst: List[Any], n: int) -> Iterable[List[Any]]:
+    """
+    Helper to slice lists into chunks (used for IssueAgent).
+    Yields successive n-sized chunks from a list.
+    """
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
 
 
 # ---------------------------------------------------------------------------
@@ -171,21 +182,51 @@ class JiraGraphWorkflow(Workflow):
             f"Update graph for story {story.story_key}.", session_id=self.session_id
         )
 
-    async def _fetch_issues(self, stories: List[Story]) -> IssueList:
-        state = {STATE_KEYS["STORIES"]: StoryList(stories=stories).model_dump()}
-        agent = build_issue_agent(
-            model=MODEL_ISSUE,
-            tools=TOOLS["ISSUE"],
-            initial_state=state,
-            prompt=PROMPTS["issue"],
-            debug=DEBUG,
-        )
-        resp = await agent.arun(
-            f"Fetch details for {len(stories)} stories.", session_id=self.session_id
-        )
-        if not isinstance(resp.content, IssueList):
-            raise TypeError("Issue agent returned wrong type")
-        return resp.content
+    async def _fetch_issues_batched(self, stories: List[Story]) -> IssueList:
+        """
+        Splits the Story list into BATCH_SIZE chunks and spawns N parallel IssueAgents. Each agent now handles <= BATCH_SIZE Jira calls.
+        """
+        batch_tasks = []
+        chunks = _chunks(stories, BATCH_SIZE)
+        sem = asyncio.Semaphore(MAX_CONCURRENCY)
+
+        for idx, chunk in enumerate(chunks, start=1):
+            state = {STATE_KEYS["STORIES"]: StoryList(stories=chunk).model_dump()}
+            agent = build_issue_agent(
+                model=MODEL_ISSUE,
+                tools=TOOLS["ISSUE"],
+                initial_state=state,
+                prompt=PROMPTS["issue"],
+                debug=DEBUG,
+            )
+            label = f"issues-batch-{idx}"
+
+            batch_tasks.append(
+                run_with_semaphore(
+                    agent.arun(
+                        f"Fetch {len(chunk)} stories (batch {idx}).",
+                        session_id=self.session_id,
+                    ),
+                    sem,
+                    label,
+                )
+            )
+
+        # Fan-out; everything runs under semaphore control
+        batch_results = await asyncio.gather(*batch_tasks)
+
+        # Keep only successful IssueLists
+        issues: list[Issue] = []
+        for res in batch_results:
+            if isinstance(res, Exception):
+                log.warning("Batch failed: %s", res)
+                continue
+            if not isinstance(res.content, IssueList):
+                log.error("Unexpected type from IssueAgent: %s", type(res.content))
+                continue
+            issues.extend(res.content.issues)
+
+        return IssueList(issues=issues)
 
     # -------------------------------------------------------------------
     # Stage 4 – graph issues
@@ -234,7 +275,7 @@ class JiraGraphWorkflow(Workflow):
             for s in stories
         ]
         issue_task = run_with_semaphore(
-            self._fetch_issues(stories), sem, "fetch-issues"
+            self._fetch_issues_batched(stories), sem, "fetch-issues"
         )
         issues_result, *_ = await asyncio.gather(issue_task, *graph_tasks)
         if isinstance(issues_result, Exception):
@@ -274,10 +315,13 @@ class JiraGraphWorkflow(Workflow):
 # Run entire pipeline
 # ---------------------------------------------------------------------------
 async def _main():
-    workflow = JiraGraphWorkflow(session_id=SESSION_ID)
-    resp = await workflow.arun()
-    log.info("Workflow finished: %s", resp.content)
-    log_agno_callbacks(resp, "Workflow", SAVE_NAME, overwrite=True)
+    try:
+        workflow = JiraGraphWorkflow(session_id=SESSION_ID)
+        resp = await workflow.arun()
+        log.info("Workflow finished: %s", resp.content)
+    except Exception as e:
+        log.critical("WORKFLOW ABORTED: %s", e, exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
