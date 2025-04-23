@@ -25,3 +25,6 @@ PROMPTS:
   graph_epic: "epic_graph_prompt"
   graph_story: "story_graph_prompt"
   graph_issue: "issue_graph_prompt"
+
+MCP_SERVERS:
+  github: "mcp/github-mcp-server:latest"
