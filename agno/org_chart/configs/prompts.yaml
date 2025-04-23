@@ -269,7 +269,7 @@ story_graph_prompt: |
 
 
 issue_graph_prompt: |
-  You are a data integration assistant responsible for updating an ArangoDB knowledge graph by processing a **single** detailed Jira issue. You MUST use the `arango_upsert` tool for all database operations.
+  You are a data integration assistant responsible for updating an ArangoDB knowledge graph by processing a **single** detailed Jira issue. You MUST use the `arango_upsert` tool for all database operations. **For every `arango_upsert` call, you MUST generate all four required arguments: `collection_name`, `search_document`, `insert_document`, and `update_document`.**
 
   **Task:**
   Process the detailed Jira issue provided below and generate all necessary `arango_upsert` tool calls to update the graph, including handling the assignee, reporter, and sprint.
@@ -280,11 +280,12 @@ issue_graph_prompt: |
   {issues_data_input}
   ```
 
-  **Important Prerequisite: Assignee/Reporter Sanitization**
-  - **Sanitization Rule**: Before using an assignee or reporter name in ArangoDB keys or edges, replace all spaces with underscores (e.g., "First Last" becomes "First_Last"). Apply this only if the name is not null.
+  **Important Prerequisites: Sanitization Rules for ArangoDB Keys**
+  - **Assignee/Reporter Rule**: Before using an assignee or reporter name in ArangoDB keys (`_key`) or edge references (`_from`, `_to`), replace all spaces with underscores (`_`). Example: "First Last" becomes "First_Last". Apply this only if the name is not null.
+  - **Sprint Rule**: Before using a sprint name in ArangoDB keys (`_key`) or edge references (`_to`), replace all spaces AND periods (`.`) with underscores (`_`). Example: "Team Platform Sprint 2025.14" becomes "Team_Platform_Sprint_2025_14". Apply this only if the sprint name is not null or empty.
 
   **Processing Steps for the Input Issue:**
-  Process the single issue object provided in the **Input Issue Data** according to the following steps:
+  Process the single issue object provided in the **Input Issue Data** according to the following steps. . Remember to provide all four arguments for every `arango_upsert` call:
 
   Initialize `processed_person_key_for_this_issue = null`.
 
@@ -307,7 +308,7 @@ issue_graph_prompt: |
           "resolution": "<resolution>",
           "priority": "<priority>",
           "project": "<project>",
-          "sprint": "<sprint>",
+          "sprint": "<sprint>", # Store original sprint name here
           "team": "<team>",
           "issue_size": "<issue_size>",
           "story_points": "<story_points>"
@@ -325,7 +326,7 @@ issue_graph_prompt: |
           "resolution": "<resolution>",
           "priority": "<priority>",
           "project": "<project>",
-          "sprint": "<sprint>",
+          "sprint": "<sprint>", # Update with original sprint name
           "team": "<team>",
           "issue_size": "<issue_size>",
           "story_points": "<story_points>"
@@ -357,22 +358,23 @@ issue_graph_prompt: |
           ```
 
   4.  **Process Sprint (Conditional):** If the input issue's `sprint` field is not null and not an empty string:
-      a. Extract the sprint name -> `<sprint_name>`.
-      b. Generate one `arango_upsert` call for the `Sprints` collection using `<sprint_name>` as the `_key`:
+      a. Extract the original sprint name -> `<original_sprint_name>`.
+      b. Sanitize the sprint name using the **Sprint Rule** -> `<sanitized_sprint_name>`.
+      c. Generate one `arango_upsert` call for the `Sprints` collection using `<sanitized_sprint_name>` as the `_key` and `<original_sprint_name>` as the `name`. **Provide all 4 arguments:**
           ```json
           {
             "collection_name": "Sprints",
-            "search_document": { "_key": "<sprint_name>" },
-            "insert_document": { "_key": "<sprint_name>", "name": "<sprint_name>" },
+            "search_document": { "_key": "<sanitized_sprint_name>" },
+            "insert_document": { "_key": "<sanitized_sprint_name>", "name": "<original_sprint_name>" },
             "update_document": {<empty>}
           }
           ```
-      c. Generate one `arango_upsert` call for the `issue_in_sprint` edge linking the Story to the Sprint:
+      d. Generate one `arango_upsert` call for the `issue_in_sprint` edge linking the Story to the Sprint using the sanitized key. **Provide all 4 arguments, including `insert_document`:**
           ```json
           {
             "collection_name": "issue_in_sprint",
-            "search_document": { "_from": "Stories/<story_key>", "_to": "Sprints/<sprint_name>" },
-            "insert_document": { "_from": "Stories/<story_key>", "_to": "Sprints/<sprint_name>" },
+            "search_document": { "_from": "Stories/<story_key>", "_to": "Sprints/<sanitized_sprint_name>" },
+            "insert_document": { "_from": "Stories/<story_key>", "_to": "Sprints/<sanitized_sprint_name>" },
             "update_document": {<empty>}
           }
           ```
@@ -384,12 +386,12 @@ issue_graph_prompt: |
   **Strict Rules:**
   - Process ONLY the single issue object provided in **Input Issue Data**.
   - Generate the correct number of `arango_upsert` calls based on the logic.
-  - Follow the Sanitization Rule exactly.
+  - Follow the **Sanitization Rules** exactly for keys and edge references.
   - Use ONLY values from the Input Issue Data.
   - Use exact collection names/case sensitivity.
-  - CRITICAL: Skip upserting the Reporter into Persons if they are the same sanitized key as the Assignee already processed for this issue.
+  - CRITICAL: Skip upserting the Reporter into Persons if their sanitized key is the same as the Assignee's sanitized key already processed for this issue.
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
-  - Process the sprint only if the `sprint` field in the input is present and not null/empty. Use the exact `sprint` value from the input as the `_key` for the `Sprints` vertex and in the edge definition.
+  - Process the sprint only if the `sprint` field in the input is present and not null/empty. Use the **sanitized** sprint name for the `Sprints` vertex `_key` and in the `_to` part of the `issue_in_sprint` edge.
   - Do not provide explanations beyond the final confirmation message.
 
 
