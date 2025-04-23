@@ -5,8 +5,8 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
+from agents import build_graph_agent
 from utils.callbacks import log_agno_callbacks
-from agents.GraphAgent import build_graph_agent
 from tools.tool_arango_upsert import arango_upsert
 from utils.helpers import load_config, resolve_model
 

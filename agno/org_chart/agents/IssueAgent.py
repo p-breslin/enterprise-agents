@@ -1,26 +1,22 @@
-from agno.agent import Agent
 from models.schemas import IssueList
-from utils.helpers import load_prompt
+from .BaseAgent import _build_base_agent
 
 
 def build_issue_agent(
     model, tools, initial_state: str, prompt="issue_prompt", debug=False
 ):
     """
-    Constructs the IssueAgent using Agno Agent.
-     - Reads story data from workflow session_state.
-     - Returns an Agno Agent instance ready for execution.
+    Constructs the IssueAgent using the base builder.
+     - Reads Story data from workflow session_state.
     """
-    instruction_text = load_prompt(prompt)
-    return Agent(
+    return _build_base_agent(
         model=model,
+        tools=tools,
         name="IssueAgent",
         description="Reads story data provided and fetches metadata from Jira issues using available tools.",
-        instructions=[instruction_text],
-        tools=tools,
-        session_state=initial_state,
-        add_state_in_messages=True,  # Enable agent access to session_state
+        prompt_key=prompt,
         response_model=IssueList,  # Expecting structured output
+        initial_state=initial_state,
         markdown=False,  # Output should be JSON
-        debug_mode=debug,
+        debug=debug,
     )

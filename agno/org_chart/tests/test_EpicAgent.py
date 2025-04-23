@@ -4,9 +4,9 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
+from agents import build_epic_agent
 from models.schemas import EpicList
 from utils.callbacks import log_agno_callbacks
-from agents.EpicAgent import build_epic_agent
 from tools.tool_jira_search import jira_search
 from utils.helpers import load_config, resolve_model
 

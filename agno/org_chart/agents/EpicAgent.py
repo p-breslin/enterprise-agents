@@ -1,22 +1,18 @@
-from agno.agent import Agent
 from models.schemas import EpicList
-from utils.helpers import load_prompt
+from .BaseAgent import _build_base_agent
 
 
 def build_epic_agent(model, tools, prompt="epic_prompt", debug=False):
     """
-    Constructs the EpicAgent using Agno.
-     - Returns an Agno Agent instance ready for execution.
+    Constructs the EpicAgent using the base builder.
     """
-    prompt_text = load_prompt(prompt)
-
-    return Agent(
+    return _build_base_agent(
         model=model,
+        tools=tools,
         name="EpicAgent",
         description="Fetches all Jira epics using the jira_search tool and formats them as JSON.",
-        instructions=[prompt_text],
-        tools=tools,
+        prompt_key=prompt,
         response_model=EpicList,  # Expecting structured output
         markdown=False,  # Output must be pure JSON
-        debug_mode=debug,
+        debug=debug,
     )

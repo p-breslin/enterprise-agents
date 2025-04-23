@@ -11,11 +11,12 @@ from utils.callbacks import log_agno_callbacks
 from utils.helpers import load_config, resolve_model
 from models.schemas import Epic, EpicList, Story, StoryList, Issue, IssueList
 
-from agents.EpicAgent import build_epic_agent
-from agents.StoryAgent import build_story_agent
-from agents.IssueAgent import build_issue_agent
-from agents.GraphAgent import build_graph_agent
-
+from agents import (
+    build_epic_agent,
+    build_story_agent,
+    build_issue_agent,
+    build_graph_agent,
+)
 from tools import (
     jira_search,
     jira_get_epic_issues,

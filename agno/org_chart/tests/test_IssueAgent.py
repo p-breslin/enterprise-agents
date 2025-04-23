@@ -4,9 +4,9 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
+from agents import build_issue_agent
 from models.schemas import IssueList
 from utils.callbacks import log_agno_callbacks
-from agents.IssueAgent import build_issue_agent
 from tools.tool_jira_issue import jira_get_issue_loop
 from utils.helpers import load_config, resolve_model
 

@@ -1,24 +1,19 @@
-from agno.agent import Agent
-from utils.helpers import load_prompt
+from .BaseAgent import _build_base_agent
 
 
 def build_graph_agent(model, tools, initial_state: str, prompt: str, debug=False):
     """
-    Constructs the GraphAgent using Agno Agent.
+    Constructs the GraphAgent using the base agent.
      - Reads data from workflow session_state based on initial_state.
-     - Uses the specified prompt_key.
-     - Returns an Agno Agent instance ready for execution.
     """
-    instruction_text = load_prompt(prompt)
-    return Agent(
+    return _build_base_agent(
         model=model,
+        tools=tools,
         name=f"GraphAgent_{prompt}",
         description="Reads data provided and updates an ArangoDB knowledge graph using available tools.",
-        instructions=[instruction_text],
-        tools=tools,
-        session_state=initial_state,
-        add_state_in_messages=True,
+        prompt_key=prompt,
+        initial_state=initial_state,
         response_model=None,  # Not required to return response
         markdown=False,  # No specific formatting needed for final output
-        debug_mode=debug,
+        debug=debug,
     )
