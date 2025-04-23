@@ -22,11 +22,18 @@ from tools import (
     arango_upsert,
 )
 
+
+# ---------------------------------------------------------------------------
+# Variables
+# ---------------------------------------------------------------------------
+DEBUG = True  # Agno debugging
+PROVIDER = "openai"
+
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 CFG = load_config("runtime")
-PROVIDER = "openai"
 MODELS = CFG["MODELS"][PROVIDER]
 PROMPTS = CFG["PROMPTS"]
 SESSION_PARAMS = CFG["SESSION"]
@@ -53,6 +60,7 @@ TOOLS = {
     "GRAPH": [arango_upsert],
 }
 
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -64,7 +72,15 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-DEBUG = True
+# Save logs to file
+file_handler = logging.FileHandler("workflow.log", mode="w", encoding="utf-8")
+file_handler.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+file_handler.setFormatter(formatter)
+log.addHandler(file_handler)
 
 
 # ---------------------------------------------------------------------------
@@ -73,11 +89,17 @@ DEBUG = True
 async def run_with_semaphore(
     coro: Coroutine, sem: asyncio.Semaphore, label: str
 ) -> Any:
-    """Wrapper that limits concurrency and converts exceptions to results."""
+    """
+    Utility to limit concurrency by running the coroutine under the semaphore.
+
+    Returns either the:
+     - Result of an async function
+     - Error instead of crashing the gather process
+    """
     async with sem:
         try:
             return await coro
-        except Exception as exc:  # noqa: BLE001 – we *want* the object
+        except Exception as exc:
             log.error("Task %s failed: %s", label, exc, exc_info=True)
             return exc
 
@@ -86,7 +108,11 @@ async def run_with_semaphore(
 # Workflow
 # ---------------------------------------------------------------------------
 class JiraGraphWorkflow(Workflow):
-    """Fetch Jira data and update the ArangoDB graph with four async stages."""
+    """
+    Fetches Jira data and updates the ArangoDB graph in async stages.
+    - Inherits from Agno's Workflow class.
+    - Prebuilds the EpicAGent as an attribute to save time on first call.
+    """
 
     epic_agent: Agent = build_epic_agent(
         model=MODEL_EPIC, tools=TOOLS["EPIC"], prompt=PROMPTS["epic"], debug=DEBUG
@@ -126,14 +152,8 @@ class JiraGraphWorkflow(Workflow):
             debug=DEBUG,
         ).arun(f"Fetch stories for epic {epic.epic_key}.", session_id=self.session_id)
 
-        graph_resp, story_resp = await asyncio.gather(graph_coro, story_coro)
-        # log_agno_callbacks(
-        #     graph_resp, f"EpicGraph_{epic.epic_key}", SAVE_NAME, overwrite=False
-        # )
-        # log_agno_callbacks(
-        #     story_resp, f"StoryAgent_{epic.epic_key}", SAVE_NAME, overwrite=False
-        # )
-
+        # Run both agents concurrently
+        _, story_resp = await asyncio.gather(graph_coro, story_coro)
         if isinstance(story_resp.content, StoryList):
             return story_resp.content.stories
         raise TypeError("Story agent returned wrong type")
@@ -150,12 +170,9 @@ class JiraGraphWorkflow(Workflow):
             prompt=PROMPTS["graph_story"],
             debug=DEBUG,
         )
-        graph_resp = await agent.arun(
+        await agent.arun(
             f"Update graph for story {story.story_key}.", session_id=self.session_id
         )
-        # log_agno_callbacks(
-        #     graph_resp, f"StoryGraph_{story.story_key}", SAVE_NAME, overwrite=False
-        # )
 
     async def _fetch_issues(self, stories: List[Story]) -> IssueList:
         state = {
@@ -171,7 +188,6 @@ class JiraGraphWorkflow(Workflow):
         resp = await agent.arun(
             f"Fetch details for {len(stories)} stories.", session_id=self.session_id
         )
-        # log_agno_callbacks(resp, "IssueAgent", SAVE_NAME, overwrite=False)
         if not isinstance(resp.content, IssueList):
             raise TypeError("Issue agent returned wrong type")
         return resp.content
@@ -188,12 +204,9 @@ class JiraGraphWorkflow(Workflow):
             prompt=PROMPTS["graph_issue"],
             debug=DEBUG,
         )
-        graph_resp = await agent.arun(
+        await agent.arun(
             f"Update graph for issue {issue.story_key}.", session_id=self.session_id
         )
-        # log_agno_callbacks(
-        #     graph_resp, f"IssueGraph_{issue.story_key}", SAVE_NAME, overwrite=False
-        # )
 
     # -------------------------------------------------------------------
     # Entrypoint
@@ -202,23 +215,25 @@ class JiraGraphWorkflow(Workflow):
         log.info("Workflow start (session_id=%s)", self.session_id)
         sem = asyncio.Semaphore(MAX_CONCURRENCY)
 
-        # Stage 1
+        # Stage 1: Runs the EpicAgent
         epics = await self._get_epics(trigger_msg)
         log.info("Stage 1: %d epics", len(epics.epics))
 
-        # Stage 2
+        # Stage 2: Runs GraphAgent + StoryAgent instances in parallel per-epic
         story_tasks = [
             run_with_semaphore(self._process_epic(e), sem, f"epic-{e.epic_key}")
             for e in epics.epics
         ]
         story_results = await asyncio.gather(*story_tasks)
+
+        # Flatten and store the Story results
         stories = [
             s for sub in story_results if not isinstance(sub, Exception) for s in sub
         ]
         self.session_state[STATE_KEYS["STORIES"]] = StoryList(stories=stories)
         log.info("Stage 2: %d stories", len(stories))
 
-        # Stage 3
+        # Stage 3: Runs Story GraphAgent and IssueAgent concurrently
         graph_tasks = [
             run_with_semaphore(self._graph_story(s), sem, f"story-{s.story_key}")
             for s in stories
@@ -232,14 +247,14 @@ class JiraGraphWorkflow(Workflow):
         self.session_state[STATE_KEYS["ISSUES"]] = issues_result
         log.info("Stage 3: %d issues", len(issues_result.issues))
 
-        # Stage 4
+        # Stage 4: Runs GraphAgent for each issue in parallel
         issue_tasks = [
             run_with_semaphore(self._graph_issue(i), sem, f"issue-{i.story_key}")
             for i in issues_result.issues
         ]
         graph_issues_resp = await asyncio.gather(*issue_tasks)
 
-        # might report "success" even if some issue graph updates fail
+        # Might report "success" even if some graph updates fail; catch error
         IssueGraph_failure = any(isinstance(r, Exception) for r in graph_issues_resp)
         if IssueGraph_failure:
             log.warning(
@@ -253,20 +268,22 @@ class JiraGraphWorkflow(Workflow):
         )
         if IssueGraph_failure:
             summary += " Some final graph updates failed."
+
+        # Final return object; triggers Agno post-processing
         return RunResponse(
             content=summary, event=RunEvent.workflow_completed, run_id=self.run_id
         )
 
 
 # ---------------------------------------------------------------------------
-# CLI helper
+# Run entire pipeline
 # ---------------------------------------------------------------------------
-async def _cli():
+async def _main():
     workflow = JiraGraphWorkflow(session_id=SESSION_ID)
     resp = await workflow.arun()
     log.info("Workflow finished: %s", resp.content)
-    log_agno_callbacks(resp, "Workflow", SAVE_NAME, overwrite=False)
+    log_agno_callbacks(resp, "Workflow", SAVE_NAME, overwrite=True)
 
 
 if __name__ == "__main__":
-    asyncio.run(_cli())
+    asyncio.run(_main())
