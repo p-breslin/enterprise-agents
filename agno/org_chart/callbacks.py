@@ -45,7 +45,7 @@ def log_agno_callbacks(
         response: The RunResponse object or iterator from agent.run().
         run_label: A descriptive label for this run (e.g., test name).
         filename: Optional filename to save the log within the predefined CALLBACK_LOG_DIR.
-        overwrite: Determines if callbacks saved file are written over appended.
+        overwrite: Determines if callbacks file are written new or appended.
     """
 
     console.print(

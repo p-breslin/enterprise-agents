@@ -93,7 +93,7 @@ async def run_graph_agent_test(test_type: str):
         response = await agent.arun(trigger_message, session_id=TEST_SESSION_ID)
         final_response = response
         run_label = f"GraphUpdateAgent_{test_type}_Test"
-        log_agno_callbacks(final_response, run_label, filename="{run_label}_callbacks")
+        log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
 
     except Exception as e:
         logger.exception(f"GraphUpdateAgent ({test_type}) execution failed.")
