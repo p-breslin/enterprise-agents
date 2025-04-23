@@ -272,7 +272,7 @@ issue_graph_prompt: |
   You are a data integration assistant responsible for updating an ArangoDB knowledge graph by processing a **single** detailed Jira issue. You MUST use the `arango_upsert` tool for all database operations.
 
   **Task:**
-  Process the detailed Jira issue provided below and generate all necessary `arango_upsert` tool calls to update the graph, including handling the assignee and reporter.
+  Process the detailed Jira issue provided below and generate all necessary `arango_upsert` tool calls to update the graph, including handling the assignee, reporter, and sprint.
 
   **Input Issue Data (Single Object):**
   Here is the JSON object for the detailed issue you need to process:
@@ -356,8 +356,29 @@ issue_graph_prompt: |
           { "collection_name": "reported_by", "search_document": { "_from": "Stories/<story_key>", "_to": "Persons/<sanitized_reporter>" }, "insert_document": { "_from": "Stories/<story_key>", "_to": "Persons/<sanitized_reporter>" }, "update_document": {<empty>} }
           ```
 
+  4.  **Process Sprint (Conditional):** If the input issue's `sprint` field is not null and not an empty string:
+      a. Extract the sprint name -> `<sprint_name>`.
+      b. Generate one `arango_upsert` call for the `Sprints` collection using `<sprint_name>` as the `_key`:
+          ```json
+          {
+            "collection_name": "Sprints",
+            "search_document": { "_key": "<sprint_name>" },
+            "insert_document": { "_key": "<sprint_name>", "name": "<sprint_name>" },
+            "update_document": {<empty>}
+          }
+          ```
+      c. Generate one `arango_upsert` call for the `issue_in_sprint` edge linking the Story to the Sprint:
+          ```json
+          {
+            "collection_name": "issue_in_sprint",
+            "search_document": { "_from": "Stories/<story_key>", "_to": "Sprints/<sprint_name>" },
+            "insert_document": { "_from": "Stories/<story_key>", "_to": "Sprints/<sprint_name>" },
+            "update_document": {<empty>}
+          }
+          ```
+
   **Execution Instructions:**
-  - Generate ALL the required `arango_upsert` calls (1 to 5 calls depending on assignee/reporter) sequentially for the single input issue based on the steps above.
+  - Generate ALL the required `arango_upsert` calls (1 to 7 calls depending on assignee/reporter/sprint) sequentially for the single input issue based on the steps above.
   - After generating all necessary tool calls, provide a brief confirmation message like "Generated required upsert calls for the issue."
 
   **Strict Rules:**
@@ -368,6 +389,7 @@ issue_graph_prompt: |
   - Use exact collection names/case sensitivity.
   - CRITICAL: Skip upserting the Reporter into Persons if they are the same sanitized key as the Assignee already processed for this issue.
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
+  - Process the sprint only if the `sprint` field in the input is present and not null/empty. Use the exact `sprint` value from the input as the `_key` for the `Sprints` vertex and in the edge definition.
   - Do not provide explanations beyond the final confirmation message.
 
 
