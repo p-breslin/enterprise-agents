@@ -29,7 +29,7 @@ from tools import (
 # ---------------------------------------------------------------------------
 DEBUG = True  # Agno debugging
 PROVIDER = "openai"
-BATCH_SIZE = 50  # for IssueAgent
+BATCH_SIZE = 25  # for IssueAgent
 
 
 # ---------------------------------------------------------------------------
