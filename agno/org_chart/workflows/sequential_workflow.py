@@ -154,7 +154,7 @@ class JiraGraphWorkflow(Workflow):
             graph_epic_agent = build_graph_agent(
                 model=MODEL_GRAPH,
                 tools=TOOLS_GRAPH,
-                initial_state={STATE_KEY_EPICS: json.dumps(epics_data.model_dump())},
+                initial_state={STATE_KEY_EPICS: epics_data.model_dump()},
                 prompt="epic_graph_prompt",
             )
             step2_success = await self._run_agent_step(
@@ -178,7 +178,7 @@ class JiraGraphWorkflow(Workflow):
             story_agent = build_story_agent(
                 model=MODEL_STORY,
                 tools=TOOLS_STORY,
-                initial_state={STATE_KEY_EPICS: json.dumps(epics_data.model_dump())},
+                initial_state={STATE_KEY_EPICS: epics_data.model_dump()},
             )
             step3_success = await self._run_agent_step(
                 agent=story_agent,
@@ -204,9 +204,7 @@ class JiraGraphWorkflow(Workflow):
             graph_story_agent = build_graph_agent(
                 model=MODEL_GRAPH,
                 tools=TOOLS_GRAPH,
-                initial_state={
-                    STATE_KEY_STORIES: json.dumps(stories_data.model_dump())
-                },
+                initial_state={STATE_KEY_STORIES: stories_data.model_dump()},
                 prompt="story_graph_prompt",
             )
             step4_success = await self._run_agent_step(
@@ -230,9 +228,7 @@ class JiraGraphWorkflow(Workflow):
             issue_agent = build_issue_agent(
                 model=MODEL_ISSUE,
                 tools=TOOLS_ISSUE,
-                initial_state={
-                    STATE_KEY_STORIES: json.dumps(stories_data.model_dump())
-                },
+                initial_state={STATE_KEY_STORIES: stories_data.model_dump()},
             )
             step5_success = await self._run_agent_step(
                 agent=issue_agent,
@@ -256,7 +252,7 @@ class JiraGraphWorkflow(Workflow):
             graph_issue_agent = build_graph_agent(
                 model=MODEL_GRAPH,
                 tools=TOOLS_GRAPH,
-                initial_state={STATE_KEY_ISSUES: json.dumps(issues_data.model_dump())},
+                initial_state={STATE_KEY_ISSUES: issues_data.model_dump()},
                 prompt="issue_graph_prompt",
             )
             step6_success = await self._run_agent_step(
