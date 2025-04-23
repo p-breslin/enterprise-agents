@@ -1,7 +1,7 @@
 import json
 import logging
 from agno.tools import tool
-from utils.helpers import get_atlassian_client
+from integrations.jira_client import get_atlassian_client
 
 log = logging.getLogger(__name__)
 

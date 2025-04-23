@@ -2,7 +2,8 @@ import json
 import logging
 from typing import List, Dict, Any
 from agno.tools import tool
-from utils.helpers import get_jira_client, load_config
+from utils.helpers import load_config
+from integrations.jira_client import get_jira_client
 from tools.extract_jira_issue_details import extract_details
 
 log = logging.getLogger(__name__)

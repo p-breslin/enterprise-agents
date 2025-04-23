@@ -1,7 +1,8 @@
 import os
 import logging
-from utils.helpers import get_jira_client, load_config, save_yaml
 from utils.logging_setup import setup_logging
+from utils.helpers import load_config, save_yaml
+from integrations.jira_client import get_jira_client
 
 setup_logging()
 log = logging.getLogger(__name__)
