@@ -3,7 +3,9 @@ from schemas import IssueList
 from utils_agno import load_prompt
 
 
-def build_issue_agent(model, tools, initial_state: str, prompt="issue_prompt"):
+def build_issue_agent(
+    model, tools, initial_state: str, prompt="issue_prompt", debug=False
+):
     """
     Constructs the IssueAgent using Agno Agent.
      - Reads story data from workflow session_state.
@@ -20,4 +22,5 @@ def build_issue_agent(model, tools, initial_state: str, prompt="issue_prompt"):
         add_state_in_messages=True,  # Enable agent access to session_state
         response_model=IssueList,  # Expecting structured output
         markdown=False,  # Output should be JSON
+        debug_mode=debug,
     )

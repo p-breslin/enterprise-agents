@@ -3,7 +3,9 @@ from schemas import StoryList
 from utils_agno import load_prompt
 
 
-def build_story_agent(model, tools, initial_state: dict, prompt="story_prompt"):
+def build_story_agent(
+    model, tools, initial_state: dict, prompt="story_prompt", debug=False
+):
     """
     Constructs the StoryAgent using Agno.
      - Reads epic data from workflow session_state.
@@ -20,4 +22,5 @@ def build_story_agent(model, tools, initial_state: dict, prompt="story_prompt"):
         add_state_in_messages=True,  # Enable agent access to session_state
         response_model=StoryList,  # Expecting structured output
         markdown=False,  # Output should be JSON
+        debug_mode=debug,
     )

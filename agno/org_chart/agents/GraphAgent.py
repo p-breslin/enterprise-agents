@@ -2,7 +2,7 @@ from agno.agent import Agent
 from utils_agno import load_prompt
 
 
-def build_graph_agent(model, tools, initial_state: str, prompt: str):
+def build_graph_agent(model, tools, initial_state: str, prompt: str, debug=False):
     """
     Constructs the GraphAgent using Agno Agent.
      - Reads data from workflow session_state based on initial_state.
@@ -20,4 +20,5 @@ def build_graph_agent(model, tools, initial_state: str, prompt: str):
         add_state_in_messages=True,
         response_model=None,  # Not required to return response
         markdown=False,  # No specific formatting needed for final output
+        debug_mode=debug,
     )
