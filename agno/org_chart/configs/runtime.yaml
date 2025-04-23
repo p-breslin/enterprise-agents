@@ -9,10 +9,19 @@ MODELS:
     epic: "gpt-4.1-nano"
     story: "gpt-4.1-nano"
     issue: "gpt-4.1-nano"
-    graph: "gpt-4.1-mini"
+    graph: "gpt-4.1-nano"
 
 SESSION:
   session_id: "org_chart_run"
+  max_concurrency: 20
   state_epics: "epics_data_input"
   state_stories: "stories_data_input"
   state_issues: "issues_data_input"
+
+PROMPTS:
+  epic: "epic_prompt"
+  story: "story_prompt"
+  issue: "issue_prompt"
+  graph_epic: "epic_graph_prompt"
+  graph_story: "story_graph_prompt"
+  graph_issue: "issue_graph_prompt"
