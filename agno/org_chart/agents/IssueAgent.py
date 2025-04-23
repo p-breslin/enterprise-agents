@@ -1,9 +1,14 @@
+from typing import Dict, List, Any
 from models.schemas import IssueList
 from .BaseAgent import _build_base_agent
 
 
 def build_issue_agent(
-    model, tools, initial_state: str, prompt="issue_prompt", debug=False
+    model: str,
+    tools: List[Any],
+    initial_state: Dict[str, Any],
+    prompt="issue_prompt",
+    debug=False,
 ):
     """
     Constructs the IssueAgent using the base builder.

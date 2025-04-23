@@ -1,7 +1,14 @@
+from typing import Dict, List, Any
 from .BaseAgent import _build_base_agent
 
 
-def build_graph_agent(model, tools, initial_state: str, prompt: str, debug=False):
+def build_graph_agent(
+    model: str,
+    tools: List[Any],
+    initial_state: Dict[str, Any],
+    prompt: str,
+    debug=False,
+):
     """
     Constructs the GraphAgent using the base agent.
      - Reads data from workflow session_state based on initial_state.

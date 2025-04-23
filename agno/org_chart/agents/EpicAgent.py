@@ -1,8 +1,9 @@
+from typing import List, Any
 from models.schemas import EpicList
 from .BaseAgent import _build_base_agent
 
 
-def build_epic_agent(model, tools, prompt="epic_prompt", debug=False):
+def build_epic_agent(model: str, tools: List[Any], prompt="epic_prompt", debug=False):
     """
     Constructs the EpicAgent using the base builder.
     """

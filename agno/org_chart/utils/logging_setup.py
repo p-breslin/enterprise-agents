@@ -2,9 +2,9 @@ import sys
 import logging
 
 
-def setup_logging(level=logging.INFO, stream=False):
+def setup_logging(level=logging.INFO, stream=None):
     """Configures root logger."""
-    stdout = sys.stdout if stream else False
+    stdout = sys.stdout if stream else None
 
     logging.basicConfig(
         level=level,

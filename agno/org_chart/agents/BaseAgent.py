@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 def _build_base_agent(
-    model: Any,
+    model: str,
     tools: List[Any],
     name: str,
     description: str,

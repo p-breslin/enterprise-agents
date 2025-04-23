@@ -131,7 +131,7 @@ class JiraGraphWorkflow(Workflow):
     # Stage 2 – graph epics & fetch stories
     # -------------------------------------------------------------------
     async def _process_epic(self, epic: Epic) -> List[Story]:
-        epic_state = {STATE_KEYS["EPICS"]: json.dumps(epic.model_dump())}
+        epic_state = {STATE_KEYS["EPICS"]: epic.model_dump()}
 
         graph_coro = build_graph_agent(
             model=MODEL_GRAPH,
@@ -159,7 +159,7 @@ class JiraGraphWorkflow(Workflow):
     # Stage 3 – graph stories & fetch issues
     # -------------------------------------------------------------------
     async def _graph_story(self, story: Story) -> None:
-        story_state = {STATE_KEYS["STORIES"]: json.dumps(story.model_dump())}
+        story_state = {STATE_KEYS["STORIES"]: story.model_dump()}
         agent = build_graph_agent(
             model=MODEL_GRAPH,
             tools=TOOLS["GRAPH"],
@@ -172,9 +172,7 @@ class JiraGraphWorkflow(Workflow):
         )
 
     async def _fetch_issues(self, stories: List[Story]) -> IssueList:
-        state = {
-            STATE_KEYS["STORIES"]: json.dumps(StoryList(stories=stories).model_dump())
-        }
+        state = {STATE_KEYS["STORIES"]: StoryList(stories=stories).model_dump()}
         agent = build_issue_agent(
             model=MODEL_ISSUE,
             tools=TOOLS["ISSUE"],
@@ -193,7 +191,7 @@ class JiraGraphWorkflow(Workflow):
     # Stage 4 – graph issues
     # -------------------------------------------------------------------
     async def _graph_issue(self, issue: Issue) -> None:
-        state = {STATE_KEYS["ISSUES"]: json.dumps(issue.model_dump())}
+        state = {STATE_KEYS["ISSUES"]: issue.model_dump()}
         agent = build_graph_agent(
             model=MODEL_GRAPH,
             tools=TOOLS["GRAPH"],
