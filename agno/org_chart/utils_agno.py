@@ -107,4 +107,4 @@ def resolve_model(provider: str, model_id: str):
     if provider == "google":
         return Gemini(id=model_id)
     if provider == "openai":
-        return OpenAIChat(id=model_id)
+        return OpenAIChat(id=model_id, temperature=0)
