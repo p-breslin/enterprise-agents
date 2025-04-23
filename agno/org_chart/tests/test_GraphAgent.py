@@ -5,16 +5,13 @@ import asyncio
 import pathlib
 from agno.agent import RunResponse
 
-from callbacks import log_agno_callbacks
+from utils.callbacks import log_agno_callbacks
 from agents.GraphAgent import build_graph_agent
 from tools.tool_arango_upsert import arango_upsert
-from utils_agno import load_config, resolve_model
+from utils.helpers import load_config, resolve_model
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-)
-logger = logging.getLogger(__name__)
+
+log = logging.getLogger(__name__)
 
 
 # === Runtime params ===
@@ -35,9 +32,9 @@ async def run_graph_agent_test(test_type: str):
     Runs the GrapAgent test for 'epic', 'story', or 'issue'.
     """
     if test_type not in ["epic", "story", "issue"]:
-        logger.critical(f"Invalid test_type '{test_type}'.")
+        log.critical(f"Invalid test_type '{test_type}'.")
         return
-    logger.info(f"--- Starting Isolated Agno GraphAgent Test ({test_type.upper()}) ---")
+    log.info(f"--- Starting Isolated Agno GraphAgent Test ({test_type.upper()}) ---")
 
     # --- Determine Test Config ---
     if test_type == "epic":
@@ -64,11 +61,11 @@ async def run_graph_agent_test(test_type: str):
         with open(INPUT_FILE, "r") as f:
             raw_input_data = json.load(f)
             input_state_data[INPUT_STATE_KEY] = raw_input_data
-            logger.info(
+            log.info(
                 f"Loaded input data from {INPUT_FILE} into state key '{INPUT_STATE_KEY}'."
             )
     except Exception as e:
-        logger.critical(f"Failed to load input file {INPUT_FILE}: {e}")
+        log.critical(f"Failed to load input file {INPUT_FILE}: {e}")
         raise
 
     # --- Agent Setup ---
@@ -80,13 +77,13 @@ async def run_graph_agent_test(test_type: str):
     )
     agent.debug_mode = True
     agent.show_tool_calls = True
-    logger.info(f"Built Agno GraphAgent using model {model_id}")
+    log.info(f"Built Agno GraphAgent using model {model_id}")
 
     # --- Run Agent ---
     trigger_message = f"Update graph for {test_type} data in state"
     final_response: RunResponse = None
 
-    logger.info("Running GraphAgent...")
+    log.info("Running GraphAgent...")
     try:
         # Use agent.arun for async execution, or agent.run for sync
         # Provide input state here
@@ -96,7 +93,7 @@ async def run_graph_agent_test(test_type: str):
         log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
 
     except Exception as e:
-        logger.exception(f"GraphUpdateAgent ({test_type}) execution failed.")
+        log.exception(f"GraphUpdateAgent ({test_type}) execution failed.")
         raise
 
     if final_response:
@@ -105,12 +102,12 @@ async def run_graph_agent_test(test_type: str):
             f"GraphUpdateAgent ({test_type}) failed to produce a response."
         )
     else:
-        logger.error(
+        log.error(
             f"GraphUpdateAgent ({test_type}) did not produce a final response object."
         )
         assert False, f"GraphUpdateAgent ({test_type}) test failed: No final response."
 
-    logger.info(
+    log.info(
         f"--- Finished Isolated Agno GraphUpdateAgent Test ({test_type.upper()}) ---"
     )
 
@@ -124,7 +121,7 @@ if __name__ == "__main__":
 
     try:
         asyncio.run(run_graph_agent_test(test_type_arg))
-        logger.info(f"GraphUpdateAgent test ({test_type_arg}) completed.")
+        log.info(f"GraphUpdateAgent test ({test_type_arg}) completed.")
     except Exception:
-        logger.exception(f"GraphUpdateAgent test ({test_type_arg}) failed.")
+        log.exception(f"GraphUpdateAgent test ({test_type_arg}) failed.")
         sys.exit(1)  # Exit with error code on failure

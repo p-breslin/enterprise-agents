@@ -1,6 +1,6 @@
 from agno.agent import Agent
 from schemas import StoryList
-from utils_agno import load_prompt
+from utils.helpers import load_prompt
 
 
 def build_story_agent(

@@ -6,11 +6,8 @@ from arango import ArangoClient
 from arango.database import StandardDatabase
 
 load_dotenv()
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
+
 
 # --- Module-level cache for ArangoDB connection ---
 _cached_arango_conn: Optional[StandardDatabase] = None
@@ -24,11 +21,11 @@ def arango_connect(db_name="ARANGO_DB_JIRA") -> Optional[StandardDatabase]:
 
     # Return cached connection if already initialized
     if _cached_arango_conn is not None:
-        logger.debug("Returning cached ArangoDB connection.")
+        log.debug("Returning cached ArangoDB connection.")
         return _cached_arango_conn
 
     # Initialize connection if not cached
-    logger.info("Initializing new ArangoDB connection...")
+    log.info("Initializing new ArangoDB connection...")
     try:
         DB = os.getenv(db_name)
         HST = os.getenv("ARANGO_HOST")
@@ -41,12 +38,12 @@ def arango_connect(db_name="ARANGO_DB_JIRA") -> Optional[StandardDatabase]:
 
         # Verify connection
         conn.version()
-        logger.info(f"Successfully connected to ArangoDB: {HST}, DB: {DB}")
+        log.info(f"Successfully connected to ArangoDB: {HST}, DB: {DB}")
         _cached_arango_conn = conn  # Cache the connection
         return _cached_arango_conn
 
     except Exception as e:
-        logger.error(f"Failed to connect to ArangoDB server: {e}")
+        log.error(f"Failed to connect to ArangoDB server: {e}")
         _cached_arango_conn = None
         return None
 
@@ -56,5 +53,5 @@ def reset_arango_connection_cache():
     Resets the cached ArangoDB connection.
     """
     global _cached_arango_conn
-    logger.debug("Resetting cached ArangoDB connection.")
+    log.debug("Resetting cached ArangoDB connection.")
     _cached_arango_conn = None

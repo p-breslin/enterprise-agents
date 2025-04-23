@@ -2,10 +2,9 @@ import json
 import logging
 from agno.tools import tool
 from typing import List
-from utils_agno import get_atlassian_client
+from utils.helpers import get_atlassian_client
 
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 # --- Jira Tool Function: Searches Jira ---
@@ -27,7 +26,7 @@ def jira_search(jql: str, fields: List[str], limit: int = 50) -> str:
             - Returns a JSON string of an empty list '[]' if no issues match.
             - Returns a JSON string of a list containing a single error object(e.g., '[{"error": "message"}]') if an error occurs.
     """
-    logger.info(
+    log.info(
         f"Tool 'jira_search' called with JQL: '{jql}', fields: {fields}, limit: {limit}"
     )
     jira = get_atlassian_client()
@@ -38,7 +37,7 @@ def jira_search(jql: str, fields: List[str], limit: int = 50) -> str:
     fields_str = ",".join(fields) if fields else "*all"
 
     try:
-        logger.info(f"Executing JQL: {jql} with fields: {fields_str}")
+        log.info(f"Executing JQL: {jql} with fields: {fields_str}")
         issues_data = jira.jql(
             jql,
             limit=limit,
@@ -48,14 +47,14 @@ def jira_search(jql: str, fields: List[str], limit: int = 50) -> str:
 
         if issues_data and "issues" in issues_data:
             raw_issues = issues_data["issues"]
-            logger.info(f"JQL search successful: {len(raw_issues)} issues.")
+            log.info(f"JQL search successful: {len(raw_issues)} issues.")
             return json.dumps(raw_issues)  # Return the raw list directly
         else:
-            logger.warning(f"No issues found for JQL: {jql}")
+            log.warning(f"No issues found for JQL: {jql}")
             return json.dumps([])  # Return empty list if no issues found
 
     except Exception as e:
-        logger.error(f"Error during Jira JQL search: {e}", exc_info=True)
+        log.error(f"Error during Jira JQL search: {e}", exc_info=True)
         error_message = f"Error occurred while executing JQL '{jql}': {str(e)}"
 
         # Check for common errors if possible (e.g., invalid JQL, permissions)

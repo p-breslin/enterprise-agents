@@ -5,17 +5,13 @@ import pathlib
 from agno.agent import RunResponse
 
 from schemas import IssueList
-from callbacks import log_agno_callbacks
+from utils.callbacks import log_agno_callbacks
 from agents.IssueAgent import build_issue_agent
 from tools.tool_jira_issue import jira_get_issue_loop
-from utils_agno import load_config, resolve_model
+from utils.helpers import load_config, resolve_model
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-    force=False,
-)
-logger = logging.getLogger(__name__)
+
+log = logging.getLogger(__name__)
 
 
 # === Runtime params ===
@@ -38,7 +34,7 @@ OUTPUT_FILE = output_dir / f"issue_output_{model_id}.json"
 
 
 async def run_issue_agent_test():
-    logger.info("--- Starting Isolated Agno IssueAgent Test ---")
+    log.info("--- Starting Isolated Agno IssueAgent Test ---")
 
     # --- Load Input Data ---
     input_state_data = {}
@@ -46,11 +42,11 @@ async def run_issue_agent_test():
         with open(INPUT_FILE, "r") as f:
             raw_input_data = json.load(f)
             input_state_data[INPUT_STATE_KEY] = json.dumps(raw_input_data, indent=2)
-            logger.info(
+            log.info(
                 f"Loaded input data from {INPUT_FILE} into state key '{INPUT_STATE_KEY}'."
             )
     except Exception as e:
-        logger.critical(f"Failed to load input file {INPUT_FILE}: {e}")
+        log.critical(f"Failed to load input file {INPUT_FILE}: {e}")
         raise
 
     # --- Agent Setup ---
@@ -62,13 +58,13 @@ async def run_issue_agent_test():
     # Enable debugging during test development
     agent.debug_mode = True
     agent.show_tool_calls = True
-    logger.info(f"Built Agno IssueAgent using model {model_id}")
+    log.info(f"Built Agno IssueAgent using model {model_id}")
 
     # --- Run Agent ---
     trigger_message = "Find issue details based on input state"
     final_response: RunResponse = None
 
-    logger.info("Running IssueAgent...")
+    log.info("Running IssueAgent...")
     try:
         # Use agent.arun for async execution, or agent.run for sync
         # Provide input state here
@@ -78,19 +74,19 @@ async def run_issue_agent_test():
         log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
 
     except Exception as e:
-        logger.exception("IssueAgent execution failed.")
+        log.exception("IssueAgent execution failed.")
         raise
 
     # --- Save & Verify Output ---
     if final_response and final_response.content:
-        logger.info(f"Saving IssueAgent output to: {OUTPUT_FILE}")
+        log.info(f"Saving IssueAgent output to: {OUTPUT_FILE}")
         output_content = final_response.content
 
         # --- Verification ---
         assert isinstance(output_content, IssueList), (
             f"Expected output type IssueList, but got {type(output_content)}"
         )
-        logger.info(
+        log.info(
             f"Output validation successful (type: IssueList). Found {len(output_content.issues)} issues."
         )
 
@@ -98,13 +94,13 @@ async def run_issue_agent_test():
             # Save the validated Pydantic model data
             with open(OUTPUT_FILE, "w") as f:
                 json.dump(output_content.model_dump(), f, indent=4)
-                logger.info(f"Saved structured output to {OUTPUT_FILE}")
+                log.info(f"Saved structured output to {OUTPUT_FILE}")
         except IOError as e:
-            logger.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
+            log.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
 
         # Handle case if content isn't a Pydantic model after all
         except AttributeError:
-            logger.error("Output content does not have model_dump method.")
+            log.error("Output content does not have model_dump method.")
 
             # Fallback: try saving raw content if content exists
             if not isinstance(output_content, IssueList):
@@ -112,17 +108,17 @@ async def run_issue_agent_test():
                     with open(OUTPUT_FILE.with_suffix(".raw.json"), "w") as f:
                         json.dump(output_content, f, indent=4)
                 except Exception:
-                    logger.error("Could not save raw output content.")
+                    log.error("Could not save raw output content.")
 
     else:
-        logger.error("IssueAgent did not produce a final response content.")
+        log.error("IssueAgent did not produce a final response content.")
         assert False, "IssueAgent test failed: No final content."
 
-    logger.info("--- Finished Isolated Agno IssueAgent Test ---")
+    log.info("--- Finished Isolated Agno IssueAgent Test ---")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(run_issue_agent_test())
     except Exception:
-        logger.exception("IssueAgent test failed with unhandled exception.")
+        log.exception("IssueAgent test failed with unhandled exception.")

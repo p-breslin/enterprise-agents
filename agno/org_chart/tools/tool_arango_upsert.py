@@ -2,14 +2,10 @@ import json
 import logging
 from agno.tools import tool
 from typing import Dict, Any, Optional
-from utils_arango import arango_connect
+from integrations.arango_client import arango_connect
 from arango.exceptions import AQLQueryExecuteError, ArangoServerError
 
-
-logging.basicConfig(
-    level=logging.WARNING, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 @tool
@@ -51,8 +47,8 @@ def arango_upsert(
                     "status_code": Optional HTTP status code if available.
                 }
     """
-    logger.info(f"Tool 'arango_upsert' called for collection '{collection_name}'")
-    logger.debug(
+    log.info(f"Tool 'arango_upsert' called for collection '{collection_name}'")
+    log.debug(
         f"Search: {search_document}, Insert: {insert_document}, Update: {update_document}, Options: {options}"
     )
 
@@ -76,9 +72,9 @@ def arango_upsert(
         if isinstance(options, dict):
             aql_parts.append("OPTIONS @options")
             bind_vars["options"] = options
-            logger.debug(f"Applying UPSERT options: {options}")
+            log.debug(f"Applying UPSERT options: {options}")
         else:
-            logger.warning(
+            log.warning(
                 f"Ignoring invalid 'options' parameter (must be a dictionary): {options}"
             )
 
@@ -86,8 +82,8 @@ def arango_upsert(
     aql_parts.append("RETURN NEW")
 
     query = "\n".join(aql_parts)
-    logger.debug(f"Executing AQL: {query}")
-    logger.debug(
+    log.debug(f"Executing AQL: {query}")
+    log.debug(
         f"With Bind Vars: {bind_vars}"
     )  # Be cautious logging sensitive data in production
 
@@ -100,18 +96,18 @@ def arango_upsert(
         result_list = [doc for doc in cursor]
         if result_list:
             result_document = result_list[0]
-            logger.info(
+            log.info(
                 f"Upsert successful, returned document with key '{result_document.get('_key')}'"
             )
         else:
             # Should not happen with RETURN NEW on success, but handle defensively
-            logger.warning("Upsert executed but RETURN NEW yielded no document.")
+            log.warning("Upsert executed but RETURN NEW yielded no document.")
 
         return json.dumps({"status": "success"})
 
     # Error handling
     except AQLQueryExecuteError as e:
-        logger.error("AQL Execution Error during UPSERT", exc_info=True)
+        log.error("AQL Execution Error during UPSERT", exc_info=True)
         return json.dumps(
             {
                 "status": "error",
@@ -133,7 +129,7 @@ def arango_upsert(
             else None
         )
         error_msg = "ArangoDB Server Error during UPSERT"
-        logger.error(f"{error_msg}: {details}")
+        log.error(f"{error_msg}: {details}")
         return json.dumps(
             {
                 "status": "error",
@@ -144,14 +140,14 @@ def arango_upsert(
         )
     except ConnectionError as e:  # Catch connection errors from db connection
         error_msg = f"Database connection failed: {e}"
-        logger.error(error_msg)
+        log.error(error_msg)
         return json.dumps(
             {"status": "error", "error": "Connection Error", "details": str(e)}
         )
     except Exception as e:
         # Catch-all for unexpected errors
         error_msg = f"An unexpected error occurred in arango_upsert: {e}"
-        logger.exception(error_msg)  # Include traceback
+        log.exception(error_msg)  # Include traceback
         return json.dumps(
             {"status": "error", "error": "Unexpected Tool Error", "details": str(e)}
         )

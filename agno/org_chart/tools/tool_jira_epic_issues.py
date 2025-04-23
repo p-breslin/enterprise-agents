@@ -1,12 +1,9 @@
 import json
 import logging
 from agno.tools import tool
-from utils_agno import get_atlassian_client
+from utils.helpers import get_atlassian_client
 
-logging.basicConfig(
-    level=logging.INFO, format="%(levelname)s - %(filename)s:%(lineno)d - %(message)s"
-)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 # --- Jira Tool Function: Search Issues from Epics ---
@@ -29,7 +26,7 @@ def jira_get_epic_issues(epic_key: str) -> str:
         return json.dumps([{"error": "Failed to initialize Jira client."}])
 
     try:
-        logger.debug(f"Calling jira.epic_issues for epic '{epic_key}'")
+        log.debug(f"Calling jira.epic_issues for epic '{epic_key}'")
         results = jira.epic_issues(
             epic=epic_key,
             fields=["key"],  # Request only the key (story_key)
@@ -41,22 +38,22 @@ def jira_get_epic_issues(epic_key: str) -> str:
             issue_keys = [
                 {"key": issue.get("key")} for issue in issues_list if issue.get("key")
             ]
-            logger.info(f"Found {len(issue_keys)} issue keys for Epic {epic_key}.")
+            log.info(f"Found {len(issue_keys)} issue keys for Epic {epic_key}.")
             return json.dumps(issue_keys)
         elif isinstance(results, list):  # If it directly returns a list
             issue_keys = [
                 {"key": issue.get("key")} for issue in results if issue.get("key")
             ]
-            logger.info(f"Found {len(issue_keys)} issue keys for Epic {epic_key}.")
+            log.info(f"Found {len(issue_keys)} issue keys for Epic {epic_key}.")
             return json.dumps(issue_keys)
         else:
-            logger.warning(
+            log.warning(
                 f"No issues found or unexpected result format for Epic {epic_key}. Result: {results}"
             )
             return json.dumps([])
 
     except Exception as e:
-        logger.error(f"Error during search for Epic {epic_key}: {e}", exc_info=True)
+        log.error(f"Error during search for Epic {epic_key}: {e}", exc_info=True)
         error_message = (
             f"An error occurred while searching Jira for epic '{epic_key}': {str(e)}"
         )

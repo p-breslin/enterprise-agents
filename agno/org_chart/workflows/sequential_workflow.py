@@ -2,13 +2,14 @@ import json
 import logging
 import asyncio
 from typing import Optional
+from utils.logging_setup import setup_logging
 
 from agno.agent import Agent, RunResponse
 from agno.workflow import Workflow, RunEvent
 
-from callbacks import log_agno_callbacks
+from utils.callbacks import log_agno_callbacks
 from schemas import EpicList, StoryList, IssueList
-from utils_agno import load_config, resolve_model
+from utils.helpers import load_config, resolve_model
 from agents.EpicAgent import build_epic_agent
 from agents.StoryAgent import build_story_agent
 from agents.IssueAgent import build_issue_agent
@@ -22,13 +23,8 @@ from tools import (
 
 
 # === Setup Logging ===
-logging.basicConfig(
-    level=logging.INFO,  # Set to DEBUG for more verbose Agno internal logs
-    format="%(asctime)s - %(levelname)s - %(name)s - %(filename)s:%(lineno)d - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    force=True,
-)
-logger = logging.getLogger(__name__)
+setup_logging()
+log = logging.getLogger(__name__)
 
 # === Load Configuration ===
 runtime_params = load_config("runtime")
@@ -81,7 +77,7 @@ class JiraGraphWorkflow(Workflow):
         """
         Helper function to run an agent step, handle errors, and store state.
         """
-        logger.info(f"--- Workflow Step: {step_name} ---")
+        log.info(f"--- Workflow Step: {step_name} ---")
         agent.debug_mode = False
         try:
             # Use the workflow's session_id for the agent run
@@ -90,7 +86,7 @@ class JiraGraphWorkflow(Workflow):
             )
 
             if not response or response.content is None:
-                logger.error(f"{step_name} failed: No content from Agent.")
+                log.error(f"{step_name} failed: No content from Agent.")
                 self.session_state[f"{step_name}_error"] = "Agent returned no content"
                 return False
 
@@ -98,7 +94,7 @@ class JiraGraphWorkflow(Workflow):
             if expected_output_type and not isinstance(
                 response.content, expected_output_type
             ):
-                logger.error(
+                log.error(
                     f"{step_name} failed: Expected output type {expected_output_type}, got {type(response.content)}"
                 )
                 self.session_state[f"{step_name}_error"] = (
@@ -108,17 +104,17 @@ class JiraGraphWorkflow(Workflow):
                     response.content
                 )  # Store raw output for debugging
                 return False
-            logger.info(f"{step_name} completed successfully.")
+            log.info(f"{step_name} completed successfully.")
 
             # Store successful output in session_state if key provided
             if output_state_key:
                 self.session_state[output_state_key] = response.content
-                logger.info(f"Stored result in session_state key: '{output_state_key}'")
+                log.info(f"Stored result in session_state key: '{output_state_key}'")
 
             return True
 
         except Exception as e:
-            logger.exception(f"{step_name} failed with exception.")
+            log.exception(f"{step_name} failed with exception.")
             self.session_state[f"{step_name}_error"] = str(e)
             return False
 
@@ -128,7 +124,7 @@ class JiraGraphWorkflow(Workflow):
         """
         Executes the sequential Jira to Graph workflow.
         """
-        logger.info(f"Starting JiraGraphWorkflow with session_id: {self.session_id}")
+        log.info(f"Starting JiraGraphWorkflow with session_id: {self.session_id}")
 
         # === Step 1: Fetch Epics ===
         step1_success = await self._run_agent_step(
@@ -148,7 +144,7 @@ class JiraGraphWorkflow(Workflow):
         # === Step 2: Graph Epics ===
         epics_data = self.session_state.get(STATE_KEY_EPICS)
         if not epics_data or not epics_data.epics:
-            logger.warning(
+            log.warning(
                 "No epics found or loaded to graph. Skipping GraphEpics and subsequent steps."
             )
         else:
@@ -172,7 +168,7 @@ class JiraGraphWorkflow(Workflow):
 
         # === Step 3: Fetch Stories ===
         if not epics_data or not epics_data.epics:
-            logger.warning(
+            log.warning(
                 "No epics data available. Skipping FetchStories and subsequent steps."
             )
         else:
@@ -198,7 +194,7 @@ class JiraGraphWorkflow(Workflow):
         # === Step 4: Graph Stories ===
         stories_data = self.session_state.get(STATE_KEY_STORIES)
         if not stories_data or not stories_data.stories:
-            logger.warning(
+            log.warning(
                 "No stories found or loaded to graph. Skipping GraphStories and subsequent steps."
             )
         else:
@@ -224,7 +220,7 @@ class JiraGraphWorkflow(Workflow):
 
         # === Step 5: Fetch Issues ===
         if not stories_data or not stories_data.stories:
-            logger.warning(
+            log.warning(
                 "No stories data available. Skipping FetchIssues and subsequent steps."
             )
         else:
@@ -252,7 +248,7 @@ class JiraGraphWorkflow(Workflow):
         # === Step 6: Graph Issues ===
         issues_data = self.session_state.get(STATE_KEY_ISSUES)
         if not issues_data or not issues_data.issues:
-            logger.warning("No issues found or loaded to graph. Skipping GraphIssues.")
+            log.warning("No issues found or loaded to graph. Skipping GraphIssues.")
         else:
             graph_issue_agent = build_graph_agent(
                 model=MODEL_GRAPH,
@@ -273,7 +269,7 @@ class JiraGraphWorkflow(Workflow):
                 )
 
         # === Workflow Complete ===
-        logger.info(
+        log.info(
             f"JiraGraphWorkflow completed successfully for session_id: {self.session_id}"
         )
         final_message = "Workflow completed successfully."
@@ -292,26 +288,26 @@ async def main():
     """
     Runs the sequential workflow.
     """
-    logger.info(f"Initializing workflow with session ID: {SESSION_ID}")
+    log.info(f"Initializing workflow with session ID: {SESSION_ID}")
 
     # Create or load the workflow session
     workflow = JiraGraphWorkflow(
         session_id=SESSION_ID,
     )
 
-    logger.info("Running workflow...")
+    log.info("Running workflow...")
     final_response = await workflow.arun()
     run_label = "SequentialRun"
     log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
-    logger.info("Workflow finished.")
+    log.info("Workflow finished.")
 
-    logger.info(f"Final Workflow Status: {final_response.event}")
-    logger.info(f"Final Workflow Message: {final_response.content}")
+    log.info(f"Final Workflow Status: {final_response.event}")
+    log.info(f"Final Workflow Message: {final_response.content}")
 
     # Optional: Inspect final workflow state
-    logger.debug("--- Final Workflow Session State ---")
-    logger.debug(workflow.session_state)
-    logger.debug("--- End Final Workflow State ---")
+    log.debug("--- Final Workflow Session State ---")
+    log.debug(workflow.session_state)
+    log.debug("--- End Final Workflow State ---")
 
 
 if __name__ == "__main__":

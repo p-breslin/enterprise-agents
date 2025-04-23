@@ -1,13 +1,9 @@
 import os
 import logging
 from dotenv import load_dotenv
-from utils_agno import load_config
+from utils.helpers import load_config
 
 load_dotenv()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)-8s | %(name)s:%(lineno)d | %(message)s",
-)
 log = logging.getLogger(__name__)
 
 

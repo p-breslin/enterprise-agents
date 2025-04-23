@@ -2,7 +2,7 @@ import json
 import logging
 from typing import List, Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def _safe_get(data: Optional[Dict], key: str, default: Any = None) -> Any:
@@ -53,7 +53,7 @@ def _simplify_jira_field(internal_name: str, jira_id: str, raw_value: Any) -> An
         return None
 
     # --- Fallback for unhandled fields ---
-    logger.warning(
+    log.warning(
         f"Unhandled field structure for internal_name='{internal_name}' "
         f"(jira_id='{jira_id}'). Type: {type(raw_value)}. Returning raw value as string."
     )
@@ -78,20 +78,20 @@ def extract_details(
     try:
         raw_issue_list = json.loads(raw_issue_list_json)
         if not isinstance(raw_issue_list, list):
-            logger.error("Input JSON is not a list.")
+            log.error("Input JSON is not a list.")
             return [{"error": "Invalid input format: Expected JSON list."}]
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to decode input JSON string: {e}")
+        log.error(f"Failed to decode input JSON string: {e}")
         return [{"error": f"Invalid JSON input: {e}"}]
     except Exception as e:
-        logger.error(f"Unexpected error loading JSON data: {e}", exc_info=True)
+        log.error(f"Unexpected error loading JSON data: {e}", exc_info=True)
         return [{"error": f"Unexpected error loading JSON: {str(e)}"}]
 
     processed_results: List[Dict[str, Any]] = []
 
     for raw_issue in raw_issue_list:
         if not isinstance(raw_issue, dict):
-            logger.warning(
+            log.warning(
                 f"Skipping invalid item in list (not a dictionary): {raw_issue}"
             )
             processed_results.append(
@@ -116,7 +116,7 @@ def extract_details(
         if story_key:
             processed_issue["story_key"] = story_key
         else:
-            logger.warning(
+            log.warning(
                 "Issue data missing top-level 'key'. Cannot set 'story_key'. Skipping issue."
             )
             processed_results.append(
@@ -129,7 +129,7 @@ def extract_details(
 
         # Check if fields_data is valid before proceeding
         if not isinstance(fields_data, dict):
-            logger.warning(f"Issue {story_key} missing 'fields' dict.")
+            log.warning(f"Issue {story_key} missing 'fields' dict.")
             processed_issue["warning"] = "Missing 'fields' data in raw response"
             processed_results.append(processed_issue)
             continue

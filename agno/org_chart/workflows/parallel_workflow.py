@@ -6,8 +6,9 @@ from typing import Any, Coroutine, List
 from agno.agent import Agent, RunResponse
 from agno.workflow import RunEvent, Workflow
 
-from callbacks import log_agno_callbacks
-from utils_agno import load_config, resolve_model
+from utils.logging_setup import setup_logging
+from utils.callbacks import log_agno_callbacks
+from utils.helpers import load_config, resolve_model
 from schemas import Epic, EpicList, Story, StoryList, Issue, IssueList
 
 from agents.EpicAgent import build_epic_agent
@@ -64,12 +65,7 @@ TOOLS = {
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    force=True,
-)
+setup_logging()
 log = logging.getLogger(__name__)
 
 # Save logs to file

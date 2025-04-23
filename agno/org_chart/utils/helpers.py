@@ -13,8 +13,7 @@ from agno.models.openai import OpenAIChat
 
 
 load_dotenv()
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # --- Module-level cache for JIRA client ---
 _cached_jira_client: Optional[JIRA] = None
@@ -42,10 +41,10 @@ def save_yaml(filepath, data):
 
         with open(filepath, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=True)
-        logger.info(f"Successfully saved YAML to {os.path.basename(filepath)}")
+        log.info(f"Successfully saved YAML to {os.path.basename(filepath)}")
         return True
     except Exception as e:
-        logger.error(f"An error occurred saving: {e}", exc_info=True)
+        log.error(f"An error occurred saving: {e}", exc_info=True)
         return False
 
 
@@ -57,11 +56,11 @@ def get_jira_client() -> Optional[JIRA]:
 
     # Return cached client if already initialized
     if _cached_jira_client is not None:
-        logger.debug("Returning cached JIRA client.")
+        log.debug("Returning cached JIRA client.")
         return _cached_jira_client
 
     # Initialize client if not cached
-    logger.info("Initializing new JIRA client...")
+    log.info("Initializing new JIRA client...")
     JIRA_SERVER_URL = os.getenv("JIRA_SERVER_URL")
     JIRA_USERNAME = os.getenv("JIRA_USERNAME")
     JIRA_TOKEN = os.getenv("JIRA_TOKEN")
@@ -69,11 +68,11 @@ def get_jira_client() -> Optional[JIRA]:
     try:
         jira_options = {"server": JIRA_SERVER_URL}
         jira = JIRA(options=jira_options, basic_auth=(JIRA_USERNAME, JIRA_TOKEN))
-        logger.info(f"Connected to JIRA: {JIRA_SERVER_URL}. Caching client.")
+        log.info(f"Connected to JIRA: {JIRA_SERVER_URL}. Caching client.")
         _cached_jira_client = jira  # Store client to cache
         return _cached_jira_client
     except Exception as e:
-        logger.error(f"Failed to connect to JIRA: {e}")
+        log.error(f"Failed to connect to JIRA: {e}")
         _cached_jira_client = None
         return None
 
@@ -83,7 +82,7 @@ def reset_jira_client_cache():
     Resets the cached JIRA client.
     """
     global _cached_jira_client
-    logger.debug("Resetting cached JIRA client.")
+    log.debug("Resetting cached JIRA client.")
     _cached_jira_client = None
 
 
@@ -96,10 +95,10 @@ def get_atlassian_client() -> Optional[Jira]:
         jira = Jira(
             url=JIRA_SERVER_URL, username=JIRA_USERNAME, password=JIRA_TOKEN, cloud=True
         )
-        logger.info(f"Connected to Jira: {JIRA_SERVER_URL}")
+        log.info(f"Connected to Jira: {JIRA_SERVER_URL}")
         return jira
     except Exception as e:
-        logger.error(f"Failed to connect to Jira: {e}")
+        log.error(f"Failed to connect to Jira: {e}")
         return None
 
 

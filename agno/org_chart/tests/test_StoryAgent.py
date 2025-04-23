@@ -5,17 +5,13 @@ import pathlib
 from agno.agent import RunResponse
 
 from schemas import StoryList
-from callbacks import log_agno_callbacks
+from utils.callbacks import log_agno_callbacks
 from agents.StoryAgent import build_story_agent
 from tools.tool_jira_epic_issues import jira_get_epic_issues
-from utils_agno import load_config, resolve_model
+from utils.helpers import load_config, resolve_model
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-    force=False,
-)
-logger = logging.getLogger(__name__)
+
+log = logging.getLogger(__name__)
 
 
 # === Runtime params ===
@@ -38,7 +34,7 @@ OUTPUT_FILE = output_dir / f"story_output_{model_id}.json"
 
 
 async def run_story_agent_test():
-    logger.info("--- Starting Isolated Agno StoryAgent Test ---")
+    log.info("--- Starting Isolated Agno StoryAgent Test ---")
 
     # --- Load Input Data ---
     input_state_data = {}
@@ -46,12 +42,12 @@ async def run_story_agent_test():
         with open(INPUT_FILE, "r") as f:
             raw_input_data = json.load(f)
             input_state_data[INPUT_STATE_KEY] = json.dumps(raw_input_data, indent=2)
-            logger.info(
+            log.info(
                 f"Loaded input data from {INPUT_FILE} into state key '{INPUT_STATE_KEY}'."
             )
-            logger.debug(json.dumps(input_state_data, indent=2))
+            log.debug(json.dumps(input_state_data, indent=2))
     except Exception as e:
-        logger.critical(f"Failed to load input file {INPUT_FILE}: {e}")
+        log.critical(f"Failed to load input file {INPUT_FILE}: {e}")
         raise
 
     # --- Agent Setup ---
@@ -63,13 +59,13 @@ async def run_story_agent_test():
     # Enable debugging during test development
     agent.debug_mode = True
     agent.show_tool_calls = True
-    logger.info(f"Built Agno StoryAgent using model {model_id}")
+    log.info(f"Built Agno StoryAgent using model {model_id}")
 
     # --- Run Agent ---
     trigger_message = "Get stories/tasks from Jira Epics"
     final_response: RunResponse = None
 
-    logger.info("Running StoryAgent...")
+    log.info("Running StoryAgent...")
     try:
         # Use agent.arun for async execution, or agent.run for sync
         # Provide input state here
@@ -79,24 +75,24 @@ async def run_story_agent_test():
         log_agno_callbacks(final_response, run_label, filename=f"{run_label}_callbacks")
 
     except Exception as e:
-        logger.exception("StoryAgent execution failed.")
+        log.exception("StoryAgent execution failed.")
         raise
     finally:  # Print state even if an exception occurred mid-run
         if agent and hasattr(agent, "session_state"):
-            logger.debug("--- Agent's final internal session_state ---")
-            logger.debug(json.dumps(agent.session_state, indent=2))
-            logger.debug("--- End agent final state ---")
+            log.debug("--- Agent's final internal session_state ---")
+            log.debug(json.dumps(agent.session_state, indent=2))
+            log.debug("--- End agent final state ---")
 
     # --- Save & Verify Output ---
     if final_response and final_response.content:
-        logger.info(f"Saving StoryAgent output to: {OUTPUT_FILE}")
+        log.info(f"Saving StoryAgent output to: {OUTPUT_FILE}")
         output_content = final_response.content
 
         # --- Verification ---
         assert isinstance(output_content, StoryList), (
             f"Expected output type StoryList, but got {type(output_content)}"
         )
-        logger.info(
+        log.info(
             f"Output validation successful (type: StoryList). Found {len(output_content.stories)} stories."
         )
 
@@ -104,13 +100,13 @@ async def run_story_agent_test():
             # Save the validated Pydantic model data
             with open(OUTPUT_FILE, "w") as f:
                 json.dump(output_content.model_dump(), f, indent=4)
-                logger.info(f"Saved structured output to {OUTPUT_FILE}")
+                log.info(f"Saved structured output to {OUTPUT_FILE}")
         except IOError as e:
-            logger.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
+            log.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
 
         # Handle case if content isn't a Pydantic model after all
         except AttributeError:
-            logger.error("Output content does not have model_dump method.")
+            log.error("Output content does not have model_dump method.")
 
             # Fallback: try saving raw content if content exists
             if not isinstance(output_content, StoryList):
@@ -118,17 +114,17 @@ async def run_story_agent_test():
                     with open(OUTPUT_FILE.with_suffix(".raw.json"), "w") as f:
                         json.dump(output_content, f, indent=4)
                 except Exception:
-                    logger.error("Could not save raw output content.")
+                    log.error("Could not save raw output content.")
 
     else:
-        logger.error("StoryAgent did not produce a final response content.")
+        log.error("StoryAgent did not produce a final response content.")
         assert False, "StoryAgent test failed: No final content."
 
-    logger.info("--- Finished Isolated Agno StoryAgent Test ---")
+    log.info("--- Finished Isolated Agno StoryAgent Test ---")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(run_story_agent_test())
     except Exception:
-        logger.exception("StoryAgent test failed with unhandled exception.")
+        log.exception("StoryAgent test failed with unhandled exception.")

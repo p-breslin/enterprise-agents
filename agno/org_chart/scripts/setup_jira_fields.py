@@ -1,13 +1,10 @@
 import os
 import logging
-from utils_agno import get_jira_client, load_config, save_yaml
+from utils.helpers import get_jira_client, load_config, save_yaml
+from utils.logging_setup import setup_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-    force=True,
-)
-logger = logging.getLogger(__name__)
+setup_logging()
+log = logging.getLogger(__name__)
 
 # --- Configuration ---
 SCRIPT_DIR = os.path.dirname(__file__)
@@ -33,14 +30,14 @@ def generate_field_configs():
     """
     jira = get_jira_client()
     if not jira:
-        logger.error("Failed to initialize Jira client.")
+        log.error("Failed to initialize Jira client.")
         return False
 
     try:
         all_fields_list = jira.fields()
-        logger.info(f"Successfully fetched {len(all_fields_list)} fields.")
+        log.info(f"Successfully fetched {len(all_fields_list)} fields.")
     except Exception as e:
-        logger.error(f"Failed to fetch fields from Jira: {e}", exc_info=True)
+        log.error(f"Failed to fetch fields from Jira: {e}", exc_info=True)
         return False
 
     # --- Create and save ALL field mappings ---
@@ -55,7 +52,7 @@ def generate_field_configs():
             all_field_map[field_name] = field_id
             field_name_to_id_lower[field_name.lower()] = field_id
         else:
-            logger.warning(f"Skipping field due to missing name or ID: {field}")
+            log.warning(f"Skipping field due to missing name or ID: {field}")
 
     if not save_yaml(ALL_FIELDS_FILE_PATH, all_field_map):
         return False  # Stop if we can't save the first file
@@ -63,7 +60,7 @@ def generate_field_configs():
     # --- Create and save selected field mappings ---
     selected_mappings = {}
     missing_mappings = []
-    logger.info("Attempting to map internal names to actual field IDs...")
+    log.info("Attempting to map internal names to actual field IDs...")
 
     selected_ids = load_config(FIELD_IDS_FILENAME)
     for internal_name, common_jira_name in selected_ids.items():
@@ -72,7 +69,7 @@ def generate_field_configs():
 
         if actual_field_id:
             selected_mappings[internal_name] = actual_field_id
-            logger.info(
+            log.info(
                 f"Mapped '{internal_name}' -> '{actual_field_id}' (found via '{common_jira_name}')"
             )
         else:
@@ -80,12 +77,12 @@ def generate_field_configs():
             # Example: If 'Issue key' wasn't found, maybe try 'key'
             if internal_name == "key" and "key" in field_name_to_id_lower:
                 selected_mappings[internal_name] = field_name_to_id_lower["key"]
-                logger.info(
+                log.info(
                     f"Mapped '{internal_name}' -> '{field_name_to_id_lower['key']}' (found via alternative 'key')"
                 )
             # Add more specific fallbacks if necessary...
             else:
-                logger.warning(
+                log.warning(
                     f"Could not find Jira field matching common name '{common_jira_name}' for internal name '{internal_name}'. This mapping will be missing."
                 )
                 missing_mappings.append(internal_name)
@@ -98,13 +95,13 @@ def generate_field_configs():
     if not save_yaml(SELECTED_FIELDS_FILE_PATH, selected_mappings):
         return False
 
-    logger.info("Both configuration files generated successfully.")
+    log.info("Both configuration files generated successfully.")
     return True
 
 
 # --- Main Execution ---
 if __name__ == "__main__":
     if generate_field_configs():
-        logger.info("Field configuration generation process completed.")
+        log.info("Field configuration generation process completed.")
     else:
-        logger.error("Field configuration generation process failed.")
+        log.error("Field configuration generation process failed.")

@@ -1,6 +1,6 @@
 from agno.agent import Agent
 from schemas import EpicList
-from utils_agno import load_prompt
+from utils.helpers import load_prompt
 
 
 def build_epic_agent(model, tools, prompt="epic_prompt", debug=False):
