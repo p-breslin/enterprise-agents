@@ -13,13 +13,13 @@ log = logging.getLogger(__name__)
 
 
 def load_prompt(prompt: str) -> str:
-    path = Path(__file__).parent / "configs/prompts.yaml"
+    path = Path(__file__).parent / "../configs/prompts.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)[prompt]
 
 
 def load_config(file):
-    path = Path(__file__).parent / f"configs/{file}.yaml"
+    path = Path(__file__).parent / f"../configs/{file}.yaml"
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
