@@ -38,6 +38,9 @@ PROMPTS:
   review: "review_prompt"
   commit: "commit_prompt"
 
+GITHUB:
+  org: "omantra"
+
 
 MCP_SERVERS:
   github: "mcp/github-mcp-server:latest"
