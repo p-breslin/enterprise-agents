@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 # === Runtime params ===
 PROVIDER = "openai"
 TEST_SESSION_ID = "test_parallel_issue_agent"
-BATCH_SIZE = 50
+BATCH_SIZE = 25
 
 RUNTIME = load_config("runtime")
 MAX_CONCURRENCY = RUNTIME["SESSION"].get("max_concurrency", 10)
