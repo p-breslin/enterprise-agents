@@ -21,8 +21,8 @@ model_provider = "openai"
 model_id = runtime_params["MODELS"][model_provider]["graph"]
 MODEL = resolve_model(provider=model_provider, model_id=model_id)
 
-input_dir = pathlib.Path(__file__).parent / "test_data"
-output_dir = pathlib.Path(__file__).parent / "test_output"
+input_dir = pathlib.Path(__file__).parent / "../test_data"
+output_dir = pathlib.Path(__file__).parent / "../test_output"
 output_dir.mkdir(exist_ok=True)
 # ======================
 

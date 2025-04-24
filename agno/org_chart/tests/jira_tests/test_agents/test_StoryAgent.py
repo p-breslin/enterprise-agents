@@ -23,11 +23,11 @@ model_id = runtime_params["MODELS"][model_provider]["story"]
 MODEL = resolve_model(provider=model_provider, model_id=model_id)
 
 # Define Input (epics data from EpicAgent)
-input_dir = pathlib.Path(__file__).parent / "test_data"
+input_dir = pathlib.Path(__file__).parent / "../test_data"
 INPUT_FILE = input_dir / "test_epic_data.json"
 INPUT_STATE_KEY = "epics_data_input"  # MUST match StoryAgent's prompt template
 
-output_dir = pathlib.Path(__file__).parent / "test_output"
+output_dir = pathlib.Path(__file__).parent / "../test_output"
 output_dir.mkdir(exist_ok=True)
 OUTPUT_FILE = output_dir / f"story_output_{model_id}.json"
 # ======================

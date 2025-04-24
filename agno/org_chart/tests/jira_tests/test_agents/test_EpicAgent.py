@@ -22,7 +22,7 @@ model_provider = "openai"
 model_id = runtime_params["MODELS"][model_provider]["epic"]
 MODEL = resolve_model(provider=model_provider, model_id=model_id)
 
-output_dir = pathlib.Path(__file__).parent / "test_output"
+output_dir = pathlib.Path(__file__).parent / "../test_output"
 output_dir.mkdir(exist_ok=True)
 OUTPUT_FILE = output_dir / f"epic_output_{model_id}.json"
 # ======================

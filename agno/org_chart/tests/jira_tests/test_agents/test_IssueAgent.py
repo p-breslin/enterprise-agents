@@ -23,11 +23,11 @@ model_id = runtime_params["MODELS"][model_provider]["issue"]
 MODEL = resolve_model(provider=model_provider, model_id=model_id)
 
 # Define Input (stories data from StoryAgent)
-input_dir = pathlib.Path(__file__).parent / "test_data"
+input_dir = pathlib.Path(__file__).parent / "../test_data"
 INPUT_FILE = input_dir / "test_story_data.json"
 INPUT_STATE_KEY = "stories_data_input"  # Must match IssueAgent's prompt
 
-output_dir = pathlib.Path(__file__).parent / "test_output"
+output_dir = pathlib.Path(__file__).parent / "../test_output"
 output_dir.mkdir(exist_ok=True)
 OUTPUT_FILE = output_dir / f"issue_output_{model_id}.json"
 # ======================
