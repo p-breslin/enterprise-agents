@@ -11,12 +11,19 @@ MODELS:
     issue: "gpt-4.1-nano"
     graph: "gpt-4o-mini"
 
+    repo: "gpt-4.1-nano"
+    pr: "gpt-4.1-nano"
+    review: "gpt-4.1-nano"
+    commit: "gpt-4.1-nano"
+
+
 SESSION:
   session_id: "org_chart_run"
   max_concurrency: 20
   state_epics: "epics_data_input"
   state_stories: "stories_data_input"
   state_issues: "issues_data_input"
+
 
 PROMPTS:
   epic: "epic_prompt"
@@ -25,6 +32,12 @@ PROMPTS:
   graph_epic: "epic_graph_prompt"
   graph_story: "story_graph_prompt"
   graph_issue: "issue_graph_prompt"
+
+  repo: "repo_prompt"
+  pr: "pr_prompt"
+  review: "review_prompt"
+  commit: "commit_prompt"
+
 
 MCP_SERVERS:
   github: "mcp/github-mcp-server:latest"
