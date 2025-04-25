@@ -39,7 +39,7 @@ PROMPTS:
   commit: "commit_prompt"
 
 GITHUB:
-  org: "omantra"
+  org: "xpander-ai"
 
 
 MCP_SERVERS:
