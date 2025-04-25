@@ -8,7 +8,7 @@ from agents import build_issue_agent
 from models.schemas import IssueList
 from utils.callbacks import log_agno_callbacks
 from tools.tool_jira_issue import jira_get_issue_loop
-from utils.helpers import load_config, resolve_model
+from utils.helpers import load_config, resolve_model, validate_output
 
 
 log = logging.getLogger(__name__)
@@ -90,25 +90,8 @@ async def run_issue_agent_test():
             f"Output validation successful (type: IssueList). Found {len(output_content.issues)} issues."
         )
 
-        try:
-            # Save the validated Pydantic model data
-            with open(OUTPUT_FILE, "w") as f:
-                json.dump(output_content.model_dump(), f, indent=4)
-                log.info(f"Saved structured output to {OUTPUT_FILE}")
-        except IOError as e:
-            log.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
-
-        # Handle case if content isn't a Pydantic model after all
-        except AttributeError:
-            log.error("Output content does not have model_dump method.")
-
-            # Fallback: try saving raw content if content exists
-            if not isinstance(output_content, IssueList):
-                try:
-                    with open(OUTPUT_FILE.with_suffix(".raw.json"), "w") as f:
-                        json.dump(output_content, f, indent=4)
-                except Exception:
-                    log.error("Could not save raw output content.")
+        # Validate and save output
+        validate_output(OUTPUT_FILE, output_content, IssueList)
 
     else:
         log.error("IssueAgent did not produce a final response content.")

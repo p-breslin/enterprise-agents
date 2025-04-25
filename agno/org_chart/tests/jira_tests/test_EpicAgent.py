@@ -1,4 +1,3 @@
-import json
 import logging
 import asyncio
 import pathlib
@@ -8,13 +7,14 @@ from agents import build_epic_agent
 from models.schemas import EpicList
 from utils.callbacks import log_agno_callbacks
 from tools.tool_jira_search import jira_search
-from utils.helpers import load_config, resolve_model
+from utils.helpers import load_config, resolve_model, validate_output
 
 
 log = logging.getLogger(__name__)
 
 
 # === Runtime params ===
+DEBUG = False
 runtime_params = load_config("runtime")
 TEST_SESSION_ID = "test_session_epic_agent_agno"
 
@@ -37,7 +37,7 @@ async def run_epic_agent_test():
         tools=[jira_search],
     )
     # Enable debugging during test development
-    agent.debug_mode = True
+    agent.debug_mode = DEBUG
     agent.show_tool_calls = True
     log.info(f"Built Agno EpicAgent using model {model_id}")
 
@@ -70,25 +70,8 @@ async def run_epic_agent_test():
             f"Output validation successful (type: EpicList). Found {len(output_content.epics)} epics."
         )
 
-        try:
-            # Save the validated Pydantic model data
-            with open(OUTPUT_FILE, "w") as f:
-                json.dump(output_content.model_dump(), f, indent=4)
-                log.info(f"Saved structured output to {OUTPUT_FILE}")
-        except IOError as e:
-            log.error(f"Failed to write output file {OUTPUT_FILE}: {e}")
-
-        # Handle case if content isn't a Pydantic model after all
-        except AttributeError:
-            log.error("Output content does not have model_dump method.")
-
-            # Fallback: try saving raw content if content exists
-            if not isinstance(output_content, EpicList):
-                try:
-                    with open(OUTPUT_FILE.with_suffix(".raw.json"), "w") as f:
-                        json.dump(output_content, f, indent=4)
-                except Exception:
-                    log.error("Could not save raw output content.")
+        # Validate and save output
+        validate_output(OUTPUT_FILE, output_content, EpicList)
 
     else:
         log.error("EpicAgent did not produce a final response content.")
