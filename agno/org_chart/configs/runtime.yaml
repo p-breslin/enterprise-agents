@@ -5,6 +5,11 @@ MODELS:
     issue: "gemini-2.0-flash"
     graph: "gemini-2.0-flash-lite"
 
+    repo: "gemini-2.0-flash"
+    pr: "gemini-2.0-flash"
+    review: "gemini-2.0-flash"
+    commit: "gemini-2.0-flash"
+
   openai:
     epic: "gpt-4.1-nano"
     story: "gpt-4.1-nano"
@@ -39,7 +44,7 @@ PROMPTS:
   commit: "commit_prompt"
 
 GITHUB:
-  org: "xpander-ai"
+  org: "omantra"
 
 
 MCP_SERVERS:
