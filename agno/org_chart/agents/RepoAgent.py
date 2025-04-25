@@ -1,5 +1,7 @@
 from typing import List, Any
+from models.schemas import RepoList
 from .BaseAgent import _build_base_agent
+
 
 def build_repo_agent(
     model: str,
@@ -18,7 +20,7 @@ def build_repo_agent(
         name="RepoAgent",
         description="Discovers GitHub repositories and branches using MCP repo-level tools.",
         prompt_key=prompt,
-        response_model=None,      # keep as raw JSON until a schema is added
+        response_model=RepoList,
         markdown=False,
         debug=debug,
     )
