@@ -7,7 +7,7 @@ load_dotenv()
 log = logging.getLogger(__name__)
 
 
-def get_github_mcp_config():
+def get_github_mcp_config(toolsets=True):
     """
     Returns the command string and environment dict for the GitHub MCP.
     """
@@ -20,22 +20,18 @@ def get_github_mcp_config():
     docker_image = cfg["github"]
 
     # Set environment variables
-    docker_command_base = "docker run -i --rm"
     docker_env_vars = ["-e GITHUB_PERSONAL_ACCESS_TOKEN"]
+    process_env = {**os.environ, "GITHUB_PERSONAL_ACCESS_TOKEN": token}
 
-    # --- Optional: add toolset configuration here ---
-    # toolsets = os.getenv("GITHUB_MCP_TOOLSETS") # e.g., "repos, issues"
-    # if toolsets:
-    #    docker_env_vars.append(f'-e GITHUB_TOOLSETS="{toolsets}"')
+    # Toolset configuration
+    if toolsets:
+        tools = os.getenv("GITHUB_TOOLSETS")
+        docker_env_vars.append("-e GITHUB_TOOLSETS")
+        process_env["GITHUB_TOOLSETS"] = tools
+        log.info(f"Toolset specified: {tools}")
 
     mcp_command_string = (
-        f"{docker_command_base} {' '.join(docker_env_vars)} {docker_image}"
+        f"docker run -i --rm {' '.join(docker_env_vars)} {docker_image}"
     )
-
-    process_env = {
-        **os.environ,
-        "GITHUB_PERSONAL_ACCESS_TOKEN": token,
-    }
-
     log.info(f"MCP Config: Command='{mcp_command_string}'")
     return mcp_command_string, process_env
