@@ -20,7 +20,7 @@ def build_repo_agent(
         name="RepoAgent",
         description="Discovers GitHub repositories and branches using MCP repo-level tools.",
         prompt_key=prompt,
-        response_model=RepoList,
+        response_model=None,  # mcp issues with openai when outputs structured..
         markdown=False,
         debug=debug,
     )

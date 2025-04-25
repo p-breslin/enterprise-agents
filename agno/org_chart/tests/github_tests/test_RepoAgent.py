@@ -10,7 +10,7 @@ from agents import build_repo_agent
 from models.schemas import RepoList
 from utils.logging_setup import setup_logging
 from integrations.github_mcp import get_github_mcp_config
-from utils.helpers import load_config, resolve_model, validate_output
+from utils.helpers import load_config, resolve_model, validate_output, parse_json
 
 load_dotenv()
 setup_logging()
@@ -20,10 +20,11 @@ log = logging.getLogger(__name__)
 DEBUG = False
 CFG = load_config("runtime")
 ORG = CFG["GITHUB"]["org"]
-MODEL = resolve_model("openai", CFG["MODELS"]["openai"]["repo"])
+MODEL_ID = CFG["MODELS"]["google"]["repo"]
+MODEL = resolve_model("google", MODEL_ID)
 
 # Paths
-SAVENAME = f"test_RepoAgent_{MODEL}.json"
+SAVENAME = f"test_RepoAgent_{MODEL_ID}.json"
 TEST_DIR = pathlib.Path(__file__).parent
 OUTPUT_DIR = TEST_DIR / "../test_output"
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -34,10 +35,6 @@ MCP_CMD, MCP_ENV = get_github_mcp_config()
 
 async def run_repo_agent_test():
     async with MCPTools(MCP_CMD, env=MCP_ENV) as mcp_tools:
-        for tool in mcp_tools.tools:
-            if "parameters" in tool.schema:
-                tool.schema["parameters"].setdefault("additionalProperties", False)
-
         agent = build_repo_agent(
             model=MODEL,
             tools=[mcp_tools],
@@ -51,7 +48,10 @@ async def run_repo_agent_test():
 
         # Validate and save output
         outfile = OUTPUT_DIR / SAVENAME
-        validate_output(outfile, resp.content.repos, RepoList)
+
+        # Structured outputs off for now
+        json_obj = parse_json(resp.content)
+        validate_output(outfile, json_obj, RepoList)
 
 
 if __name__ == "__main__":
