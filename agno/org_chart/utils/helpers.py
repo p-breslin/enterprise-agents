@@ -90,3 +90,19 @@ def parse_json(json_string: str):
         return json.loads(text)
     except (json.JSONDecodeError, TypeError):
         return None
+
+
+def inject_state(input_file, state_key):
+    """Injects data into the session state for an Agno agent."""
+    state = {}
+    try:
+        with open(input_file, "r") as f:
+            raw_input_data = json.load(f)
+            state[state_key] = json.dumps(raw_input_data, indent=2)
+            log.info(
+                f"Loaded input data from {input_file} into state key '{state_key}'."
+            )
+            return state
+    except Exception as e:
+        log.critical(f"Failed to load input file {input_file}: {e}")
+        raise
