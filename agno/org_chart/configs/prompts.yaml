@@ -446,7 +446,7 @@ repo_prompt: |
   **Strict Rules:**
   - Make precisely *one* `search_repositories` call and *one* `list_branches` call per repository.
   - Base every field strictly on returned tool data; do not invent default branches.
-  - Output must be valid JSON, no markdown or comments.
+  - **DO NOT** include any explanations, comments, or markdown outside the final JSON object.
   - If any tool call returns an object containing "error", output only that error object and stop.
 
 pr_prompt: |
@@ -496,7 +496,7 @@ pr_prompt: |
   **Strict Rules:**
   - *One* `list_pull_requests` call per repo.
   - Use *only* the fields returned by the tool.
-  - Valid JSON only; no extra keys.
+  - **DO NOT** include any explanations, comments, or markdown outside the final JSON object.
   - Abort and output the error object if a tool call returns "error".
 
   **Input Repositories data:**
@@ -536,7 +536,7 @@ review_prompt: |
   **Strict Rules:**
   - Exactly *two* tool calls per PR (one for reviews, one for comments).
   - Do not fabricate data.
-  - Valid JSON only.
+  - **DO NOT** include any explanations, comments, or markdown outside the final JSON object.
   - On any "error" in a tool response, surface that error object and stop.
 
   **Input Pull Requests data:**
@@ -584,7 +584,7 @@ commit_prompt: |
   - One `list_commits` and one `get_pull_request_files` call per PR.
   - Totals (`additions`, `deletions`, `files_changed`) come only from `get_pull_request_files`.
   - If either call returns an "error" key, output that error object and stop.
-  - Output must be valid JSON—no markdown, comments, or extra keys.
+  - **DO NOT** include any explanations, comments, or markdown outside the final JSON object.
 
   **Input Pull Requests data:**
     ```json
