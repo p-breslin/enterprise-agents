@@ -3,9 +3,7 @@ import json
 import yaml
 import logging
 from pathlib import Path
-from pydantic import BaseModel
 from dotenv import load_dotenv
-from typing import Any, Union
 
 from agno.models.google import Gemini
 from agno.models.openai import OpenAIChat
@@ -56,7 +54,10 @@ def validate_output(ouutput_path, output_content, schema):
     Validates an agent's structured response to the predefined schema. Response then saved to a JSON file (in test_outputs/ by default).
     """
     try:
-        # Save the validated Pydantic model data
+        # Ensure JSON object is a Pydantic model instance
+        if not isinstance(output_content, schema):
+            output_content = schema(**output_content)
+
         with open(ouutput_path, "w") as f:
             json.dump(output_content.model_dump(), f, indent=4)
             log.info(f"Saved structured output to {ouutput_path}")
@@ -65,12 +66,27 @@ def validate_output(ouutput_path, output_content, schema):
 
     # Handle case if content isn't a Pydantic model
     except AttributeError:
-        log.error("Output content does not have model_dump method.")
+        log.warning("Output content does not have model_dump method.")
 
-        # Fallback: try saving raw content if content exists
-        if not isinstance(output_content, schema):
-            try:
-                with open(ouutput_path.with_suffix(".raw.json"), "w") as f:
-                    json.dump(output_content, f, indent=4)
-            except Exception:
-                log.error("Could not save raw output content.")
+        # Fallback: try saving raw content
+        try:
+            with open(ouutput_path.with_suffix(".raw.json"), "w") as f:
+                json.dump(output_content, f, indent=4)
+        except Exception:
+            log.error("Could not save raw output content.")
+
+
+def parse_json(json_string: str):
+    """Tries to parse a string as JSON."""
+    try:
+        # Strip whitespace
+        text = json_string.strip()
+
+        # Remove ticks if necessary
+        text = text.strip().strip("`")
+        if text.startswith("json"):
+            text = text[4:].strip()
+
+        return json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return None
