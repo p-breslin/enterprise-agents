@@ -18,10 +18,11 @@ log = logging.getLogger(__name__)
 
 # Runtime setup
 DEBUG = False
+PROVIDER = "google"
 CFG = load_config("runtime")
 ORG = CFG["GITHUB"]["org"]
-MODEL_ID = CFG["MODELS"]["google"]["repo"]
-MODEL = resolve_model("google", MODEL_ID)
+MODEL_ID = CFG["MODELS"][PROVIDER]["repo"]
+MODEL = resolve_model(PROVIDER, MODEL_ID)
 
 # Paths
 SAVENAME = f"test_RepoAgent_{MODEL_ID}.json"
