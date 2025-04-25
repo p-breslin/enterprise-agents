@@ -43,4 +43,4 @@ GITHUB:
 
 
 MCP_SERVERS:
-  github: "mcp/github-mcp-server:latest"
+  github: "ghcr.io/github/github-mcp-server:latest"
