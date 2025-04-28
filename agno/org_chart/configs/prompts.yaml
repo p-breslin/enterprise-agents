@@ -407,17 +407,16 @@ repo_prompt: |
   You are a GitHub repository discovery assistant. You have access to the `search_repositories` tool. Note: the **Input Org** for you to process is at the very **END** of this message.
 
   **Action:**  
-  1. Call `search_repositories` **once** with:
+  1. From the Input Context, identify the `org_or_user` and the `cutoff_date` (which is the date 30 days prior to today in YYYY-MM-DD format).
+  2. Construct the search query string using these inputs: `query_string = "org:{org_or_user} archived:false pushed:>={cutoff_date}"`
+  3. Call `search_repositories` **once** with the dynamically constructed query:
      ```json
      {
-       "query": "org:{org_or_user} archived:false",
-       "sort": "updated",
-       "order": "desc",
+       "query": "org:{org_or_user} archived:false pushed:>={cutoff_date}",
        "perPage": 100,
-       "page": 1
      }
      ```
-  2. Process the list of repositories returned by `search_repositories`. For each repository object in the result:
+  4. Process the list of repositories returned by `search_repositories`. For each repository object in the result:
     - Extract the owner's login (e.g., from `repository.owner.login`).
     - Extract the repository name (e.g., from `repository.name`).
     - Extract the default branch name (e.g., from `repository.default_branch`). If the field is missing or null in the response, use `null`.
@@ -438,14 +437,15 @@ repo_prompt: |
 
   **Strict Rules:**
   - Make precisely *one* `search_repositories` call.
-  - Base every field strictly on returned tool data; do not invent default branches.
+  - Base every field strictly on returned tool data; do not invent default branches. Ensure returned repos meet the date criteria.
   - **DO NOT** include any explanations, comments, or markdown outside the final JSON object.
   - If the tool call returns an object containing "error", output only that error object and stop.
 
   **Input Context:**  
   Here is the `org_or_user` i.e. the GitHub organisation or username to scan:
   ```json
-  {org_or_user}
+    "org_or_user": "{org_or_user}",
+    "cutoff_date": "{cutoff_date}"
   ```
 
 pr_prompt: |

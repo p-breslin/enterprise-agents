@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Dict, Optional
 from models.schemas import RepoList
 from .BaseAgent import _build_base_agent
 
@@ -6,6 +6,7 @@ from .BaseAgent import _build_base_agent
 def build_repo_agent(
     model: str,
     tools: List[Any],
+    initial_state: Optional[Dict[str, Any]] = None,
     prompt: str = "repo_prompt",
     debug: bool = False,
 ):
@@ -20,6 +21,7 @@ def build_repo_agent(
         name="RepoAgent",
         description="Discovers GitHub repositories and branches using MCP repo-level tools.",
         prompt_key=prompt,
+        initial_state=initial_state,
         response_model=None,  # mcp issues with openai when outputs structured..
         markdown=False,
         debug=debug,
