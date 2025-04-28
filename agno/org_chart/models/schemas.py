@@ -2,11 +2,12 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Union
 
 
-# --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Jira models
-# --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 
+# Basic info about org Epics ---------------------------------------------------
 class Epic(BaseModel):
     epic_key: str = Field(description="Unique key of the epic")
     epic_summary: str = Field(description="Title or summary of the epic")
@@ -17,6 +18,7 @@ class EpicList(BaseModel):
     epics: List[Epic]
 
 
+# Story keys for each Epic -----------------------------------------------------
 class Story(BaseModel):
     story_key: str = Field(description="Unique key of the story")
     epic_key: str = Field(description="Key of the parent epic")
@@ -26,6 +28,7 @@ class StoryList(BaseModel):
     stories: List[Story]
 
 
+# Additional detail for each Story ---------------------------------------------
 class Issue(BaseModel):
     story_key: str
     epic_key: Optional[str]
@@ -50,14 +53,13 @@ class IssueList(BaseModel):
     issues: List[Issue]
 
 
-# --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # GitHub models
-# --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 
+# Basic org repositories search ------------------------------------------------
 class Repo(BaseModel):
-    """A GitHub repository entry produced by RepoAgent."""
-
     owner: str = Field(description="GitHub username or organisation")
     repo: str = Field(description="Repository name")
     default_branch: Optional[str] = Field(
@@ -73,9 +75,8 @@ class RepoList(BaseModel):
     repos: List[Repo]
 
 
-class PullRequest(BaseModel):
-    """A pull-request entry produced by PRAgent."""
-
+# Pull-request entry -----------------------------------------------------------
+class PR(BaseModel):
     owner: str
     repo: str
     pr_number: int = Field(description="Pull request number")
@@ -90,10 +91,11 @@ class PullRequest(BaseModel):
     base_branch: Optional[str]
 
 
-class PullRequestList(BaseModel):
-    pull_requests: List[PullRequest]
+class PRList(BaseModel):
+    pull_requests: List[PR]
 
 
+# Pull-request review ----------------------------------------------------------
 class Review(BaseModel):
     """A review on a PR, produced by ReviewAgent."""
 
@@ -111,6 +113,7 @@ class ReviewList(BaseModel):
     reviews: List[Review]
 
 
+# Commit belonging to a pull-request -------------------------------------------
 class Commit(BaseModel):
     """A commit belonging to a PR, produced by CommitAgent."""
 
