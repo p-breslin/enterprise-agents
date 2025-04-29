@@ -75,6 +75,21 @@ class RepoList(BaseModel):
     repos: List[Repo]
 
 
+# Identifies a specific branch within a repo -----------------------------------
+class Branch(BaseModel):
+    owner: str = Field(description="Repository owner (user or org)")
+    repo: str = Field(description="Repository name")
+    branch_name: str = Field(
+        description="Name of the discovered branch matching the criteria"
+    )
+
+
+class BranchList(BaseModel):
+    target_branches: List[Branch] = Field(
+        description="List of branches matching the specified criteria across the input repositories"
+    )
+
+
 # Pull-request numbers ---------------------------------------------------------
 class PRDiscovery(BaseModel):
     owner: str = Field(description="Repository owner (user or org)")
