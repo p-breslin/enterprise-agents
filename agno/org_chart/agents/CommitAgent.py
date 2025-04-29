@@ -6,7 +6,7 @@ def build_commit_agent(
     model: str,
     tools: List[Any],
     initial_state: Optional[Dict[str, Any]] = None,  # expects PR context
-    prompt: str = "commit_prompt",
+    prompt: str = "pr_commit_prompt",
     debug: bool = False,
 ):
     """

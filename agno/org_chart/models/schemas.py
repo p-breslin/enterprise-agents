@@ -202,39 +202,23 @@ class PREnrichment(BaseModel):
 # ==============================================================================
 
 
-# Pull-request review ----------------------------------------------------------
-class Review(BaseModel):
-    """A review on a PR, produced by ReviewAgent."""
-
-    owner: str
-    repo: str
-    pr_number: int
-    reviewer: str
-    state: str = Field(description="APPROVED / CHANGES_REQUESTED / COMMENTED")
-    submitted_at: str
-    body: Optional[str]
-    commit_id: Optional[str]
-
-
-class ReviewList(BaseModel):
-    reviews: List[Review]
+# Details of a single commit associated with a specific PR ---------------------
+class PRCommitDetail(BaseModel):
+    owner: str = Field(description="Repository owner (user or org) from input context")
+    repo: str = Field(description="Repository name from input context")
+    pr_number: int = Field(description="Pull request number from input context")
+    sha: str = Field(description="The 40-character commit SHA")
+    message: str = Field(description="The commit message")
+    author_login: Optional[str] = Field(
+        default=None,
+        description="Username login of the commit author (if available, otherwise may be derived from author name)",
+    )
+    committed_date: Optional[str] = Field(
+        default=None, description="ISO-8601 timestamp when the commit was committed"
+    )
 
 
-# Commit belonging to a pull-request -------------------------------------------
-class Commit(BaseModel):
-    """A commit belonging to a PR, produced by CommitAgent."""
-
-    owner: str
-    repo: str
-    pr_number: int
-    sha: str = Field(description="40-char commit SHA")
-    author: Optional[str]
-    message: str
-    date: str = Field(description="Commit timestamp (ISO-8601)")
-    files_changed: Optional[int]
-    additions: Optional[int]
-    deletions: Optional[int]
-
-
-class CommitList(BaseModel):
-    commits: List[Commit]
+class PRCommitList(BaseModel):
+    commits: List[PRCommitDetail] = Field(
+        description="List of commit details associated with the specified PR(s)"
+    )
