@@ -8,7 +8,7 @@ from agno.tools.mcp import MCPTools
 from agno.utils.pprint import pprint_run_response
 from integrations.github_mcp import get_github_mcp_config
 
-from agents import build_pr_agent
+from agents import build_commit_agent
 from utils.helpers import (
     load_config,
     resolve_model,
@@ -54,7 +54,7 @@ async def run_pr_agent_test():
     initial_state = inject_state(INPUT_FILE, INPUT_STATE_KEY)
 
     async with MCPTools(MCP_CMD, env=MCP_ENV) as mcp_tools:
-        agent = build_pr_agent(
+        agent = build_commit_agent(
             model=MODEL,
             tools=[mcp_tools],
             initial_state=initial_state,
