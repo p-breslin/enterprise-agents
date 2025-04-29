@@ -5,8 +5,8 @@ MODELS:
     issue: "gemini-2.0-flash"
     graph: "gemini-2.0-flash-lite"
 
-    repo: "gemini-2.0-flash"
-    pr: "gemini-2.0-flash"
+    repo: "gemini-2.5-flash-preview-04-17"
+    pr: "gemini-2.5-flash-preview-04-17"
     review: "gemini-2.0-flash"
     commit: "gemini-2.0-flash"
 
