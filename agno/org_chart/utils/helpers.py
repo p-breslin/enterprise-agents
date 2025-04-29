@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from agno.models.google import Gemini
 from agno.models.openai import OpenAIChat
+from agno.models.openrouter import OpenRouter
 
 
 load_dotenv()
@@ -44,9 +45,13 @@ def save_yaml(filepath, data):
 
 def resolve_model(provider: str, model_id: str):
     if provider == "google":
-        return Gemini(id=model_id)
+        return Gemini(id=model_id, temperature=0)
     if provider == "openai":
         return OpenAIChat(id=model_id, temperature=0)
+    if provider == "openrouter":
+        return OpenRouter(
+            id=model_id, api_key=os.getenv("OPENROUTER_API_KEY"), temperature=0
+        )
 
 
 def validate_output(ouutput_path, output_content, schema):
