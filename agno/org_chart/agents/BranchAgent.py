@@ -2,22 +2,22 @@ from typing import List, Any, Dict, Optional
 from .BaseAgent import _build_base_agent
 
 
-def build_review_agent(
+def build_branch_agent(
     model: str,
     tools: List[Any],
-    initial_state: Optional[Dict[str, Any]] = None,  # expects PR context
-    prompt: str = "review_prompt",
+    initial_state: Optional[Dict[str, Any]] = None,
+    prompt: str = "branch_prompt",
     debug: bool = False,
 ):
     """
-    Constructs the ReviewAgent using the base agent.
-     - Fetches reviews + review comments given a PR number.
+    Constructs the BranchAgent using the base agent.
+     - Dynamically discovers relevant branches within the given repositories.
     """
     return _build_base_agent(
         model=model,
         tools=tools,
-        name="ReviewAgent",
-        description="Collects review decisions and comments for pull requests.",
+        name="BranchAgent",
+        description="Discovers branches for the given GitHub repository.",
         prompt_key=prompt,
         initial_state=initial_state,
         response_model=None,
