@@ -65,7 +65,7 @@ async def active_branches_async(repo_slug: str, concurrency: int):
 
     # filter by cutoff while skipping any failed fetches
     active = []
-    for br, date in zip(branches[:200], dates[:200]):
+    for br, date in zip(branches, dates):
         if isinstance(date, datetime):
             if date >= CUTOFF:
                 log.info("Active: Branch %-30s  date %s", br.name, date)
@@ -88,3 +88,12 @@ if branches:
         print(f"    - {b}")
 else:
     print("No branches updated in the last 30 days.")
+
+
+def list_branches():
+    token = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+    gh = Github(token)
+    repo = gh.get_repo("omantra/om")
+    branches = list(repo.get_branches())
+    for b in branches:
+        print(b.name)
