@@ -18,7 +18,7 @@ def build_pr_agent(
         model=model,
         tools=tools,
         name="PRAgent",
-        description="Retrieves pull-request metadata from GitHub via MCP.",
+        description="Retrieves GitHu pull-request information.",
         prompt_key=prompt,
         initial_state=initial_state,
         response_model=None,

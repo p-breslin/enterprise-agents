@@ -75,24 +75,65 @@ class RepoList(BaseModel):
     repos: List[Repo]
 
 
-# Pull-request entry -----------------------------------------------------------
-class PR(BaseModel):
-    owner: str
-    repo: str
-    pr_number: int = Field(description="Pull request number")
-    title: Optional[str]
-    state: Optional[str] = Field(description="open / closed / merged", default=None)
-    created_at: Optional[str]
-    updated_at: Optional[str]
-    head_sha: Optional[str] = Field(
-        default=None, description="Current HEAD SHA of the PR"
+# Pull-request numbers ---------------------------------------------------------
+class PRDiscovery(BaseModel):
+    owner: str = Field(description="Repository owner (user or org)")
+    repo: str = Field(description="Repository name")
+    relevant_pr_numbers: List[int] = Field(
+        description="List of PR numbers updated since the specified cutoff time"
     )
-    user: Optional[str] = Field(default=None, description="Author username")
-    base_branch: Optional[str]
 
 
-class PRList(BaseModel):
-    pull_requests: List[PR]
+# Pull-request entry -----------------------------------------------------------
+class PREnrichment(BaseModel):
+    owner: str = Field(description="Repository owner (user or org)")
+    repo: str = Field(description="Repository name")
+    pr_number: int = Field(description="Pull request number within the repository")
+    title: Optional[str] = Field(default=None, description="Title of the pull request")
+    body: Optional[str] = Field(
+        default=None,
+        description="Body/description of the pull request (may require get_pull_request for full content)",
+    )
+    state: Optional[str] = Field(
+        default=None, description="State of the pull request (e.g., 'open', 'closed')"
+    )
+    created_at: Optional[str] = Field(
+        default=None, description="ISO-8601 timestamp when the PR was created"
+    )
+    updated_at: Optional[str] = Field(
+        default=None, description="ISO-8601 timestamp when the PR was last updated"
+    )
+    closed_at: Optional[str] = Field(
+        default=None,
+        description="ISO-8601 timestamp when the PR was closed (if not merged)",
+    )
+    merged_at: Optional[str] = Field(
+        default=None, description="ISO-8601 timestamp when the PR was merged"
+    )
+
+    head_ref: Optional[str] = Field(
+        default=None, description="Name of the source branch (head)"
+    )
+    head_sha: Optional[str] = Field(
+        default=None, description="Current HEAD SHA of the source branch"
+    )
+    base_ref: Optional[str] = Field(
+        default=None, description="Name of the target branch (base)"
+    )
+
+    user_login: Optional[str] = Field(
+        default=None, description="Username of the PR author"
+    )
+    draft: Optional[bool] = Field(
+        default=None, description="Indicates if the PR is a draft"
+    )
+    merge_commit_sha: Optional[str] = Field(
+        default=None, description="SHA of the merge commit, if merged"
+    )
+
+
+# class PRList(BaseModel):
+#     pull_requests: List[PR]
 
 
 # Pull-request review ----------------------------------------------------------
