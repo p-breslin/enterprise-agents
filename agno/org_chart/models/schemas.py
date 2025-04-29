@@ -84,18 +84,76 @@ class PRDiscovery(BaseModel):
     )
 
 
-# Pull-request entry -----------------------------------------------------------
+# Pull-request Enrichment ======================================================
+
+
+# Simplified info for a single PR review ---------------------------------------
+class ReviewDetail(BaseModel):
+    reviewer_login: Optional[str] = Field(
+        default=None, description="Username of the reviewer"
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="Review state (e.g., 'APPROVED', 'CHANGES_REQUESTED', 'COMMENTED')",
+    )
+    submitted_at: Optional[str] = Field(
+        default=None, description="ISO-8601 timestamp when the review was submitted"
+    )
+
+
+# Simplified info for a file change in a PR ------------------------------------
+class FileChangeDetail(BaseModel):
+    filename: Optional[str] = Field(
+        default=None, description="Path of the changed file"
+    )
+    status: Optional[str] = Field(
+        default=None,
+        description="Status of the file (e.g., 'added', 'modified', 'removed')",
+    )
+    additions: Optional[int] = Field(default=None, description="Number of lines added")
+    deletions: Optional[int] = Field(
+        default=None, description="Number of lines deleted"
+    )
+
+
+# Simplified info of an individual status check/commit status ------------------
+class StatusCheckDetail(BaseModel):
+    id: Optional[int] = Field(
+        default=None, description="The unique ID of the status check"
+    )
+    context: Optional[str] = Field(
+        default=None, description="The name/context of the status check"
+    )
+    state: Optional[str] = Field(
+        default=None,
+        description="State of the check (e.g., 'success', 'failure', 'pending', 'error')",
+    )
+    target_url: Optional[str] = Field(
+        default=None, description="URL link to the details of the check"
+    )
+    description: Optional[str] = Field(
+        default=None, description="A short description of the status"
+    )
+
+
+# Comprehensive details for a single PR ----------------------------------------
 class PREnrichment(BaseModel):
+    # --- Identifiers ---
     owner: str = Field(description="Repository owner (user or org)")
     repo: str = Field(description="Repository name")
     pr_number: int = Field(description="Pull request number within the repository")
+
+    # --- Core PR Details (from get_pull_request) ---
     title: Optional[str] = Field(default=None, description="Title of the pull request")
     body: Optional[str] = Field(
-        default=None,
-        description="Body/description of the pull request (may require get_pull_request for full content)",
+        default=None, description="Body/description of the pull request"
     )
     state: Optional[str] = Field(
-        default=None, description="State of the pull request (e.g., 'open', 'closed')"
+        default=None,
+        description="State of the pull request (e.g., 'open', 'closed', 'merged')",
+    )
+    author_login: Optional[str] = Field(
+        default=None, description="Username of the PR author (from user.login)"
     )
     created_at: Optional[str] = Field(
         default=None, description="ISO-8601 timestamp when the PR was created"
@@ -104,13 +162,11 @@ class PREnrichment(BaseModel):
         default=None, description="ISO-8601 timestamp when the PR was last updated"
     )
     closed_at: Optional[str] = Field(
-        default=None,
-        description="ISO-8601 timestamp when the PR was closed (if not merged)",
+        default=None, description="ISO-8601 timestamp when the PR was closed"
     )
     merged_at: Optional[str] = Field(
         default=None, description="ISO-8601 timestamp when the PR was merged"
     )
-
     head_ref: Optional[str] = Field(
         default=None, description="Name of the source branch (head)"
     )
@@ -121,19 +177,29 @@ class PREnrichment(BaseModel):
         default=None, description="Name of the target branch (base)"
     )
 
-    user_login: Optional[str] = Field(
-        default=None, description="Username of the PR author"
+    # --- Status Check Details (from get_pull_request_status) ---
+    status_check_state: Optional[str] = Field(
+        default=None,
+        description="Overall combined status state for the head commit (e.g., 'success', 'failure', 'pending')",
     )
-    draft: Optional[bool] = Field(
-        default=None, description="Indicates if the PR is a draft"
+    status_checks: List[StatusCheckDetail] = Field(
+        default_factory=list,
+        description="List of individual status checks run on the head commit",
     )
-    merge_commit_sha: Optional[str] = Field(
-        default=None, description="SHA of the merge commit, if merged"
+
+    # --- Review Details (from get_pull_request_reviews) ---
+    reviews: List[ReviewDetail] = Field(
+        default_factory=list,
+        description="List of reviews submitted for the pull request",
+    )
+
+    # --- File Change Details (from get_pull_request_files) ---
+    files_changed: List[FileChangeDetail] = Field(
+        default_factory=list, description="List of files changed in the pull request"
     )
 
 
-# class PRList(BaseModel):
-#     pull_requests: List[PR]
+# ==============================================================================
 
 
 # Pull-request review ----------------------------------------------------------

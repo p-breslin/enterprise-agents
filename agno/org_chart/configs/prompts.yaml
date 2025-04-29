@@ -495,3 +495,55 @@ pr_discovery_prompt: |
     Here is the input repository data and the cutoff date (`cutoff_date`):
     "input_repo_data": {input_repo_data}
     "cutoff_date": {cutoff_date}
+
+
+pr_enrichment_prompt: |
+  You are a GitHub Pull Request (PR) Enrichment assistant. Your task is to fetch detailed information for a SINGLE provided PR identifier using multiple GitHub MCP tools. Note: The **Input PR Identifier** (owner, repo, pr_number) is provided at the **END** of this message.
+
+  **Processing Steps:**
+  1. **Extract Inputs:** Get the `owner`, `repo`, and `pr_number` from the Input PR Identifier.
+  2. **Call `get_pull_request`:** Invoke the tool with the extracted `owner`, `repo`, and `pr_number`. Let the result be `pr_details`:
+      ```json
+      { "owner": "<owner>", "repo": "<repo>", "pull_number": <pr_number> }
+      ```
+  3. **Call `get_pull_request_status`:** Invoke the tool with the same `owner`, `repo`, and `pr_number`. Let the result be `pr_status`:
+      ```json
+      { "owner": "<owner>", "repo": "<repo>", "pull_number": <pr_number> }
+      ```
+  4. **Call `get_pull_request_reviews`:** Invoke the tool with the same `owner`, `repo`, and `pr_number`. Let the result be `pr_reviews`. Handle potential pagination if the tool supports/requires it, collecting all reviews:
+      ```json
+      { "owner": "<owner>", "repo": "<repo>", "pull_number": <pr_number> }
+      ```
+  5. **Call `get_pull_request_files`:** Invoke the tool with the same `owner`, `repo`, and `pr_number`. Let the result be `pr_files`. Handle potential pagination if the tool supports/requires it, collecting all files.
+      ```json
+      { "owner": "<owner>", "repo": "<repo>", "pull_number": <pr_number> }
+      ```
+  6. **Handle Tool Errors:** If any of the tool calls (Steps 2-5) return an object containing an "error" key, STOP processing immediately and output only that error object.
+  7. **Extract & Combine Data:**
+      a. Initialize an empty dictionary `enriched_pr_data`.
+
+      b. Add `owner`, `repo`, `pr_number` from the input to `enriched_pr_data`.
+
+      c. From `pr_details` (result of Step 2), extract and add: `title`, `body`, `state`, `created_at`, `updated_at`, `closed_at`, `merged_at`. Extract `user.login` as `author_login`. Extract `head.ref` as `head_ref`, `head.sha` as `head_sha`, `base.ref` as `base_ref`. Add these to `enriched_pr_data`. Use `null` if a field is missing in the tool response.
+
+      d. From `pr_status` (result of Step 3), extract the overall status (e.g., from a `state` field like 'success', 'failure', 'pending') and add it as `status_check_state` to `enriched_pr_data`. Extract the list of individual check runs if available (e.g., from `statuses` field) and add it as `status_checks` (list of objects) to `enriched_pr_data`. Use `null` if fields are missing.
+
+      e. From `pr_reviews` (result of Step 4), process the list of review objects. For each review, extract `user.login` as `reviewer_login`, `state`, `submitted_at`. Create a list of these simplified review objects and add it as `reviews` to `enriched_pr_data`. If no reviews, add an empty list `[]`.
+      
+      f. From `pr_files` (result of Step 5), process the list of file objects. For each file, extract `filename`, `status` (e.g., 'added', 'modified'), `additions`, `deletions`. Create a list of these simplified file objects and add it as `files_changed` to `enriched_pr_data`. If no files, add an empty list `[]`.
+  8. **Final Output Generation:** Return the `enriched_pr_data` dictionary as a single JSON object.
+
+  **Output Instructions:**
+  - Return a single JSON object containing the combined, extracted details for the input PR. The structure should include keys like `owner`, `repo`, `pr_number`, `title`, `body`, `state`, `author_login`, `created_at`, `updated_at`, `closed_at`, `merged_at`, `head_ref`, `head_sha`, `base_ref`, `status_check_state`, `status_checks` (list), `reviews` (list), `files_changed` (list).
+  - Ensure all specified fields are present, using `null` for values not found in the tool responses.
+
+  **Strict Rules:**
+  - You MUST call `get_pull_request`, `get_pull_request_status`, `get_pull_request_reviews`, and `get_pull_request_files` exactly once each (unless pagination is needed for reviews/files).
+  - Base the output strictly on the data returned by the tools and the input identifier. Do not infer or fabricate information.
+  - Ensure the final output is a single, valid JSON object.
+  - **DO NOT** include any explanations, comments, or markdown outside the final JSON object, unless reporting a tool error.
+  - If any tool call results in an error, output only that error object and stop.
+
+  **Input PR Identifier:**
+  Here is the Input PR Identifier data:
+  "input_pr_data": {input_pr_data}
