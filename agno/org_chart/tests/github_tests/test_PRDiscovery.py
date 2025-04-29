@@ -38,10 +38,10 @@ INPUT_DIR = pathlib.Path(__file__).parent / "../test_data"
 INPUT_FILE = INPUT_DIR / "test_repo_data.json"
 INPUT_STATE_KEY = "input_repo_data"
 
-SAVENAME = f"test_PRAgent_{MODEL_ID}.json"
+SAVENAME = f"test_PRDAgent_{MODEL_ID}.json"
 OUTPUT_DIR = pathlib.Path(__file__).parent / "../test_output"
 OUTPUT_DIR.mkdir(exist_ok=True)
-OUTPUT_FILE = OUTPUT_DIR / f"PR_output_{MODEL_ID}.json"
+OUTPUT_FILE = OUTPUT_DIR / f"PRD_output_{MODEL_ID}.json"
 
 # Docker command for MCP tools
 MCP_CMD, MCP_ENV = get_github_mcp_config()
