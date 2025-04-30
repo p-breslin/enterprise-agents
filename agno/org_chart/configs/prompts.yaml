@@ -442,8 +442,10 @@ repo_prompt: |
 
   **Input Context:**  
   Here is the org or user name (`org_or_user`) and the cutoff date (`cutoff_date`):
-  "org_or_user": {org_or_user}
-  "cutoff_date": {cutoff_date}
+    ```json
+    {org_or_user}
+    ```
+    "cutoff_date": {cutoff_date}
 
 
 branch_prompt: |
@@ -490,7 +492,7 @@ branch_prompt: |
   "input_repo_data": {input_repo_data}
 
 
-pr_discovery_prompt: |
+pr_numbers_prompt: |
   You are a focused GitHub Pull Request discovery assistant. Your ONLY task is to find the numbers of all pull requests within a specific repository that have been updated on or after a given cutoff date. You MUST use the `search_issues` tool. Note: the **Input Repository Data** (owner, repo) and the **Cutoff Date** are provided at the **END** of this message.
 
   **Processing Steps:**
@@ -541,7 +543,7 @@ pr_discovery_prompt: |
     "cutoff_date": {cutoff_date}
 
 
-pr_enrichment_prompt: |
+pr_details_prompt: |
   You are a GitHub Pull Request (PR) Enrichment assistant. Your task is to fetch detailed information for a SINGLE provided PR identifier using multiple GitHub MCP tools. Note: The **Input PR Identifier** (owner, repo, pr_number) is provided at the **END** of this message.
 
   **Processing Steps:**
@@ -590,7 +592,7 @@ pr_enrichment_prompt: |
 
   **Input PR Identifier:**
   Here is the Input PR Identifier data:
-  "input_pr_data": {input_pr_data}
+  "input_pr_number_data": {input_pr_number_data}
 
 pr_commit_prompt: |
   You are a GitHub Commit Collector focused on Pull Requests (PRs). Your task is to list all commits associated with a SINGLE provided PR using its head SHA. You MUST use the `list_commits` tool. Note: The **Input PR Context** (owner, repo, pr_number, head_sha) is provided at the **END** of this message.
@@ -649,4 +651,4 @@ pr_commit_prompt: |
 
   **Input PR Context:**
   Here is the Input PR Context data:
-  "input_pr_data": {input_pr_data}
+  "input_pr_details_data": {input_pr_details_data}
