@@ -3,11 +3,20 @@ import json
 import yaml
 import logging
 from pathlib import Path
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from typing import Optional, Dict, Type
 
 from agno.models.google import Gemini
 from agno.models.openai import OpenAIChat
 from agno.models.openrouter import OpenRouter
+
+from models.schemas import (
+    RepoList,
+    PRNumbers,
+    PRDetails,
+    PRCommits,
+)
 
 
 load_dotenv()
@@ -27,9 +36,7 @@ def load_config(file):
 
 
 def save_yaml(filepath, data):
-    """
-    Saves data to a YAML file.
-    """
+    """Saves data to a YAML file."""
     try:
         # Ensure the directory exists
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -54,7 +61,7 @@ def resolve_model(provider: str, model_id: str):
         )
 
 
-def validate_output(ouutput_path, output_content, schema):
+def validate_output(output_path, output_content, schema):
     """
     Validates an agent's structured response to the predefined schema. Response then saved to a JSON file (in test_outputs/ by default).
     """
@@ -63,11 +70,11 @@ def validate_output(ouutput_path, output_content, schema):
         if not isinstance(output_content, schema):
             output_content = schema(**output_content)
 
-        with open(ouutput_path, "w") as f:
+        with open(output_path, "w") as f:
             json.dump(output_content.model_dump(), f, indent=4)
-            log.info(f"Saved structured output to {ouutput_path}")
+            log.info(f"Saved structured output to {output_path}")
     except IOError as e:
-        log.error(f"Failed to write output file {ouutput_path}: {e}")
+        log.error(f"Failed to write output file {output_path}: {e}")
 
     # Handle case if content isn't a Pydantic model
     except AttributeError:
@@ -75,7 +82,7 @@ def validate_output(ouutput_path, output_content, schema):
 
         # Fallback: try saving raw content
         try:
-            with open(ouutput_path.with_suffix(".raw.json"), "w") as f:
+            with open(output_path.with_suffix(".raw.json"), "w") as f:
                 json.dump(output_content, f, indent=4)
         except Exception:
             log.error("Could not save raw output content.")
@@ -111,3 +118,17 @@ def inject_state(input_file, state_key):
     except Exception as e:
         log.critical(f"Failed to load input file {input_file}: {e}")
         raise
+
+
+def resolve_output_schema(schema_name: str) -> Optional[Type[BaseModel]]:
+    """Resolves a schema name string (from config) to a Pydantic class."""
+    SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
+        "RepoList": RepoList,
+        "PRNumbers": PRNumbers,
+        "PRDetails": PRDetails,
+        "PRCommits": PRCommits,
+    }
+    schema_model = SCHEMA_MAP.get(schema_name)
+    if not schema_model:
+        log.warning(f"Output schema '{schema_name}' not found.")
+    return schema_model
