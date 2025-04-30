@@ -91,7 +91,7 @@ class BranchList(BaseModel):
 
 
 # Pull-request numbers ---------------------------------------------------------
-class PRDiscovery(BaseModel):
+class PRNumbers(BaseModel):
     owner: str = Field(description="Repository owner (user or org)")
     repo: str = Field(description="Repository name")
     relevant_pr_numbers: List[int] = Field(
@@ -152,7 +152,7 @@ class StatusCheckDetail(BaseModel):
 
 
 # Comprehensive details for a single PR ----------------------------------------
-class PREnrichment(BaseModel):
+class PRDetails(BaseModel):
     # --- Identifiers ---
     owner: str = Field(description="Repository owner (user or org)")
     repo: str = Field(description="Repository name")
@@ -218,7 +218,7 @@ class PREnrichment(BaseModel):
 
 
 # Details of a single commit associated with a specific PR ---------------------
-class PRCommitDetail(BaseModel):
+class PRCommits(BaseModel):
     owner: str = Field(description="Repository owner (user or org) from input context")
     repo: str = Field(description="Repository name from input context")
     pr_number: int = Field(description="Pull request number from input context")
@@ -233,7 +233,7 @@ class PRCommitDetail(BaseModel):
     )
 
 
-class PRCommitList(BaseModel):
-    commits: List[PRCommitDetail] = Field(
+class CommitList(BaseModel):
+    commits: List[PRCommits] = Field(
         description="List of commit details associated with the specified PR(s)"
     )

@@ -1,0 +1,59 @@
+# Global Test Setup Params -----------------------------------------------------
+
+provider: google
+debug: true
+input_dir: ../test_data
+output_dir: ../test_output
+
+
+# GitHub Agent Tests -----------------------------------------------------------
+
+repo:
+  agent_type: repo
+  model_key: repo
+  session_id: test_session_RepoAgent
+  input_file: test_org_data.json
+  input_state_key: org_or_user
+  trigger_message: Scan GitHub org for active repos
+  output_schema: RepoList
+  cutoff: 30
+
+branch:
+  agent_type: branch
+  model_key: pr
+  session_id: test_session_BranchAgent
+  input_file: test_repo_data.json
+  input_state_key: repo_data_input
+  trigger_message: Fetch branches for the given repository
+  output_schema: BranchList
+  cutoff: null
+
+pr_numbers:
+  agent_type: pr_numbers
+  model_key: pr
+  session_id: test_session_PRNumbersAgent
+  input_file: test_repo_data.json
+  input_state_key: input_repo_data
+  trigger_message: Discover pull requests for the given repo since cutoff date
+  output_schema: PRNumbers
+  cutoff: 1
+
+pr_details:
+  agent_type: pr_details
+  model_key: pr
+  session_id: test_session_PRDetailsAgent
+  input_file: test_pr_number_data.json
+  input_state_key: input_pr_number_data
+  trigger_message: Fetch detailed PR information for the given PR numbers
+  output_schema: PRDetails
+  cutoff: null
+
+commit:
+  agent_type: pr_commits
+  model_key: pr
+  session_id: test_session_PRCommitsAgent
+  input_file: test_pr_details_data.json
+  input_state_key: input_pr_details_data
+  trigger_message: Fetch commit information for the given PR data
+  output_schema: PRCommits
+  cutoff: null
