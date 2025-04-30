@@ -7,8 +7,6 @@ MODELS:
 
     repo: "gemini-2.5-flash-preview-04-17"
     pr: "gemini-2.5-flash-preview-04-17"
-    review: "gemini-2.0-flash"
-    commit: "gemini-2.0-flash"
 
   openai:
     epic: "gpt-4.1-nano"
@@ -18,8 +16,6 @@ MODELS:
 
     repo: "gpt-4.1-nano"
     pr: "gpt-4.1-nano"
-    review: "gpt-4.1-nano"
-    commit: "gpt-4.1-nano"
 
 
 SESSION:
@@ -40,8 +36,6 @@ PROMPTS:
 
   repo: "repo_prompt"
   pr: "pr_prompt"
-  review: "review_prompt"
-  commit: "commit_prompt"
 
 GITHUB:
   org: "omantra"
