@@ -12,6 +12,9 @@ from agno.models.openai import OpenAIChat
 from agno.models.openrouter import OpenRouter
 
 from models.schemas import (
+    EpicList,
+    StoryList,
+    IssueList,
     RepoList,
     PRNumbers,
     PRDetails,
@@ -123,6 +126,9 @@ def inject_state(input_file, state_key):
 def resolve_output_schema(schema_name: str) -> Optional[Type[BaseModel]]:
     """Resolves a schema name string (from config) to a Pydantic class."""
     SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
+        "EpicList": EpicList,
+        "StoryList": StoryList,
+        "IssueList": IssueList,
         "RepoList": RepoList,
         "PRNumbers": PRNumbers,
         "PRDetails": PRDetails,

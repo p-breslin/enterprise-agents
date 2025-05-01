@@ -6,10 +6,43 @@ input_dir: ../test_data
 output_dir: ../test_output
 
 
+# Jira Agent Tests -----------------------------------------------------------
+
+epic:
+  agent_type: EpicAgent
+  model_key: epic
+  tools: jira_search
+  session_id: test_session_EpicAgent
+  input_file: null
+  input_state_key: null
+  trigger_message: Get Epics for the Jira org
+  output_schema: EpicList
+
+story:
+  agent_type: StoryAgent
+  model_key: story
+  tools: jira_epic_issues
+  session_id: test_session_StoryAgent
+  input_file: test_epic_data.json
+  input_state_key: epics_data_input
+  trigger_message: Get stories/tasks from the input Jira Epics
+  output_schema: StoryList
+
+issue:
+  agent_type: IssueAgent
+  model_key: issue
+  tools: jira_get_issue
+  session_id: test_session_IssueAgent
+  input_file: test_story_data.json
+  input_state_key: stories_data_input
+  trigger_message:  Find issue details based on input data
+  output_schema: IssueList
+
+
 # GitHub Agent Tests -----------------------------------------------------------
 
 repo:
-  agent_type: repo
+  agent_type: RepoAgent
   model_key: repo
   session_id: test_session_RepoAgent
   input_file: test_org_data.json
@@ -19,7 +52,7 @@ repo:
   cutoff: 30
 
 branch:
-  agent_type: branch
+  agent_type: BranchAgent
   model_key: pr
   session_id: test_session_BranchAgent
   input_file: test_repo_data.json
@@ -29,7 +62,7 @@ branch:
   cutoff: null
 
 pr_numbers:
-  agent_type: pr_numbers
+  agent_type: PRNAgent
   model_key: pr
   session_id: test_session_PRNumbersAgent
   input_file: test_repo_data.json
@@ -39,7 +72,7 @@ pr_numbers:
   cutoff: 1
 
 pr_details:
-  agent_type: pr_details
+  agent_type: PRDAgent
   model_key: pr
   session_id: test_session_PRDetailsAgent
   input_file: test_pr_number_data.json
@@ -49,7 +82,7 @@ pr_details:
   cutoff: null
 
 commit:
-  agent_type: pr_commits
+  agent_type: PRCAgent
   model_key: pr
   session_id: test_session_PRCommitsAgent
   input_file: test_pr_details_data.json

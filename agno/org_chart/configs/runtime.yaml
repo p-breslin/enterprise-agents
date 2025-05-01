@@ -1,10 +1,9 @@
 MODELS:
   google:
-    epic: "gemini-2.0-flash"
+    epic: "gemini-2.5-flash-preview-04-17"
     story: "gemini-2.5-pro-exp-03-25"
-    issue: "gemini-2.0-flash"
+    issue: "gemini-2.5-flash-preview-04-17"
     graph: "gemini-2.0-flash-lite"
-
     repo: "gemini-2.5-flash-preview-04-17"
     pr: "gemini-2.5-flash-preview-04-17"
 
@@ -13,7 +12,6 @@ MODELS:
     story: "gpt-4.1-nano"
     issue: "gpt-4.1-nano"
     graph: "gpt-4o-mini"
-
     repo: "gpt-4.1-nano"
     pr: "gpt-4.1-nano"
 
@@ -33,9 +31,9 @@ PROMPTS:
   graph_epic: "epic_graph_prompt"
   graph_story: "story_graph_prompt"
   graph_issue: "issue_graph_prompt"
-
   repo: "repo_prompt"
   pr: "pr_prompt"
+
 
 GITHUB:
   org: "omantra"

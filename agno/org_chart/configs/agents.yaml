@@ -1,6 +1,6 @@
 # Jira Agent Configurations ----------------------------------------------------
 
-epic:
+EpicAgent:
   name: EpicAgent
   description: Fetches all Jira Epics.
   prompt_key: epic_prompt
@@ -8,7 +8,7 @@ epic:
   requires_initial_state: false
   markdown: false
 
-story:
+StoryAgent:
   name: StoryAgent
   description: Reads Epic data and retrieves Stories/tasks under each Epic.
   prompt_key: story_prompt
@@ -16,7 +16,7 @@ story:
   requires_initial_state: true
   markdown: false
 
-issue:
+IssueAgent:
   name: IssueAgent
   description: Reads Story data provided and fetches metadata from Jira Issues.
   prompt_key: issue_prompt
@@ -27,7 +27,7 @@ issue:
 
 # GitHub Agent Configurations --------------------------------------------------
 
-repo:
+RepoAgent:
   name: RepoAgent
   description: Discovers GitHub repositories for the given org/user.
   prompt_key: repo_prompt
@@ -35,7 +35,7 @@ repo:
   requires_initial_state: false
   markdown: false
 
-branch:
+BranchAgent:
   name: BranchAgent
   description: Discovers branches for the given GitHub repository via PRs.
   prompt_key: branch_prompt
@@ -43,24 +43,24 @@ branch:
   requires_initial_state: false
   markdown: false
 
-pr_numbers:
-  name: PRListAgent
+PRNAgent:
+  name: PRNumbersAgent
   description: Identifies relevant PR numbers for a repo based on update time.
   prompt_key: pr_numbers_prompt
   schema: null
   requires_initial_state: false
   markdown: false
 
-pr_details:
-  name: PRDetailAgent
+PRDAgent:
+  name: PRDetailsAgent
   description: Fetches detailed information for a list of PR numbers.
   prompt_key: pr_details_prompt
   schema: null
   requires_initial_state: false
   markdown: false
 
-commit:
-  name: CommitAgent
+PRCAgent:
+  name: PRCommitsAgent
   description: Gathers commit objects and status-check results for a PR.
   prompt_key: pr_commit_prompt
   schema: null
@@ -70,7 +70,7 @@ commit:
 
 # ArangoDB Agent Configurations ------------------------------------------------
 
-graph:
+GraphAgent:
   name: GraphAgent
   description: Updates the ArangoDB graph with the input data.
   prompt_key: null
