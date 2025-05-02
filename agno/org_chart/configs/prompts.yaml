@@ -652,3 +652,204 @@ pr_commit_prompt: |
   **Input PR Context:**
   Here is the Input PR Context data:
   "input_pr_details_data": {input_pr_details_data}
+
+
+# --------------------------------------------------------------------
+# GITHUB GRAPH AGENT PROMPTS
+# --------------------------------------------------------------------
+
+repo_graph_prompt: |
+  You are a data integration assistant updating an ArangoDB graph with GitHub repository data. Process a SINGLE repository object. Use the `arango_upsert` tool. Note: The **Input Repo Data** is at the **END**.
+
+  **Prerequisite: Sanitization Rule**
+  - **Repo Key Rule:** Create the repository key (`<repo_key>`) by combining owner and repo with an underscore, replacing any non-alphanumeric characters (except underscore) in owner/repo with underscores first. Example: `owner="my-org", repo="svc.1"` becomes `my_org_svc_1`.
+
+  **Task:** Process the Input Repo Data and generate ONE `arango_upsert` call.
+
+  **Processing Steps:**
+  1. Sanitize owner/repo and combine to create `<repo_key>`.
+  2. Generate ONE `arango_upsert` call for the `Repositories` collection:
+     ```json
+     {
+       "collection_name": "Repositories",
+       "search_document": { "_key": "<repo_key>" },
+       "insert_document": {
+         "_key": "<repo_key>",
+         "owner": "<input owner>",
+         "repo": "<input repo>",
+         "default_branch": "<input default_branch>",
+         "visibility": "<input visibility>",
+         "last_pushed_at": "<input updated_at>"
+       },
+       "update_document": {
+         "default_branch": "<input default_branch>",
+         "visibility": "<input visibility>",
+         "last_pushed_at": "<input updated_at>"
+       }
+     }
+     ```
+
+  **Execution Instructions:**
+  - Generate the required `arango_upsert` call.
+  - Output a confirmation message like "Generated repo upsert call."
+
+  **Strict Rules:**
+  - Process ONLY the single object in **Input Repo Data**.
+  - Generate exactly ONE `arango_upsert` call.
+  - Apply the Sanitization Rule for the `_key`.
+  - Use exact collection names.
+  - Do not include explanations beyond the confirmation.
+
+  **Input Repo Data:**
+    ```json
+    {repo_data_input}
+    ```
+
+
+pr_graph_prompt: |
+  You are a data integration assistant updating ArangoDB with GitHub Pull Request (PR) details. Process a SINGLE detailed PR object. Use the `arango_upsert` tool. Note: The **Input PR Data** is at the **END**.
+
+  **Prerequisite: Sanitization Rules**
+  - **Repo Key Rule:** Create `<repo_key>` from owner/repo: `owner_repo`. Sanitize owner/repo first (alphanumeric + underscore).
+  - **PR Key Rule:** Create `<pr_key>` from owner/repo/pr_number: `owner_repo_prNumber`. Sanitize owner/repo first.
+  - **User Key Rule:** GitHub logins (`author_login`, `reviewer_login`) are used directly as keys for `GitHubUsers`. Assume they are safe, or apply basic sanitization if needed.
+
+  **Task:** Process the Input PR Data and generate necessary `arango_upsert` calls.
+
+  **Processing Steps:**
+  1. Calculate `<repo_key>` and `<pr_key>` using Sanitization Rules.
+  2. **Upsert PR Vertex:** Generate one `arango_upsert` for `PullRequests` collection. Include *all* relevant fields from the input PR data (title, body, state, timestamps, refs, status, reviews list, files list, etc.) in `insert_document` and `update_document`. Use `<pr_key>` as `_key`.
+      ```json
+      // Example structure
+      {
+        "collection_name": "PullRequests",
+        "search_document": { "_key": "<pr_key>" },
+        "insert_document": { "_key": "<pr_key>", "owner": "...", "repo": "...", "pr_number": ..., "title": "...", "state": "...", "created_at": "...", /* ... ALL OTHER FIELDS ... */ "reviews": [ ... ], "files_changed": [ ... ] },
+        "update_document": { "title": "...", "state": "...", "updated_at": "...", /* ... ALL OTHER UPDATABLE FIELDS ... */ "reviews": [ ... ], "files_changed": [ ... ] }
+      }
+      ```
+  3. **Upsert Author Vertex:** If `author_login` exists: Generate one `arango_upsert` for `GitHubUsers` collection. Key=`<author_login>`.
+      ```json
+      {
+        "collection_name": "GitHubUsers",
+        "search_document": { "_key": "<author_login>" },
+        "insert_document": { "_key": "<author_login>", "login": "<author_login>" },
+        "update_document": {<empty>}
+      }
+      ```
+  4. **Upsert PR Author Edge:** If `author_login` exists: Generate one `arango_upsert` for `PR_AUTHORED_BY` edge. From=`PullRequests/<pr_key>`, To=`GitHubUsers/<author_login>`.
+      ```json
+      {
+        "collection_name": "PR_AUTHORED_BY",
+        "search_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<author_login>" },
+        "insert_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<author_login>" },
+        "update_document": {<empty>}
+      }
+      ```
+  5. **Upsert PR Repo Edge:** Generate one `arango_upsert` for `PR_IN_REPO` edge. From=`PullRequests/<pr_key>`, To=`Repositories/<repo_key>`.
+       ```json
+      {
+        "collection_name": "PR_IN_REPO",
+        "search_document": { "_from": "PullRequests/<pr_key>", "_to": "Repositories/<repo_key>" },
+        "insert_document": { "_from": "PullRequests/<pr_key>", "_to": "Repositories/<repo_key>" },
+        "update_document": {<empty>}
+      }
+      ```
+  6. **Process Reviews (Iterate):** For EACH review object in the input `reviews` list:
+      a. If `reviewer_login` exists: Generate `arango_upsert` for `GitHubUsers` collection. Key=`<reviewer_login>`. (Okay if redundant, UPSERT handles it).
+      b. If `reviewer_login` exists: Generate `arango_upsert` for `PR_REVIEWED_BY` edge. From=`PullRequests/<pr_key>`, To=`GitHubUsers/<reviewer_login>`. Include review `state` and `submitted_at` as edge properties in `insert_document` and `update_document`.
+         ```json
+         // Example for one review
+         {
+           "collection_name": "PR_REVIEWED_BY",
+           "search_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<reviewer_login>" }, // Might need more specific search if multiple reviews by same person are possible? Or just upsert based on link.
+           "insert_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<reviewer_login>", "state": "<review_state>", "submitted_at": "<review_submitted_at>" },
+           "update_document": { "state": "<review_state>", "submitted_at": "<review_submitted_at>" }
+         }
+         ```
+
+  **Execution Instructions:**
+  - Generate ALL required `arango_upsert` calls sequentially for the single input PR.
+  - Output a confirmation message like "Generated PR upsert calls."
+
+  **Strict Rules:**
+  - Process ONLY the single object in **Input PR Data**.
+  - Generate the correct number of calls based on logic (1 PR + 1 Author + 1 AuthorEdge + 1 RepoEdge + N Reviewer + N ReviewerEdge).
+  - Apply Sanitization Rules for keys.
+  - Use exact collection names.
+  - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
+  - Do not include explanations beyond the confirmation.
+
+  **Input PR Data:**
+    ```json
+    {pr_details_data_input}
+    ```
+
+
+commit_graph_prompt: |
+  You are a data integration assistant updating ArangoDB with GitHub Commit details. Process a SINGLE commit object. Use the `arango_upsert` tool. Note: The **Input Commit Data** is at the **END**.
+
+  **Prerequisite: Sanitization Rules**
+  - **PR Key Rule:** Create `<pr_key>` from owner/repo/pr_number: `owner_repo_prNumber`. Sanitize owner/repo first (alphanumeric + underscore).
+  - **User Key Rule:** GitHub logins (`author_login`) are used directly as keys for `GitHubUsers`. Assume safe or apply basic sanitization.
+  - **Commit Key Rule:** The commit `sha` is used directly as `_key`.
+
+  **Task:** Process the Input Commit Data and generate necessary `arango_upsert` calls.
+
+  **Processing Steps:**
+  1. Extract data: `owner`, `repo`, `pr_number`, `sha`, `message`, `author_login`, `committed_date`.
+  2. Calculate `<pr_key>` using Sanitization Rules based on owner/repo/pr_number from input.
+  3. **Upsert Commit Vertex:** Generate one `arango_upsert` for `Commits` collection. Key=`<sha>`. Include `message`, `committed_date`, etc.
+      ```json
+      {
+        "collection_name": "Commits",
+        "search_document": { "_key": "<sha>" },
+        "insert_document": { "_key": "<sha>", "message": "<message>", "committed_date": "<committed_date>", "author_login": "<author_login>", /* Add enrichment data from get_commit if available, e.g., stats */ },
+        "update_document": { "message": "<message>", "committed_date": "<committed_date>", "author_login": "<author_login>", /* Update enrichment data */ }
+      }
+      ```
+      *Note: If using `get_commit` enrichment later, this prompt would be updated to include fields like additions/deletions.*
+  4. **Upsert Author Vertex:** If `author_login` exists: Generate one `arango_upsert` for `GitHubUsers` collection. Key=`<author_login>`.
+      ```json
+      {
+        "collection_name": "GitHubUsers",
+        "search_document": { "_key": "<author_login>" },
+        "insert_document": { "_key": "<author_login>", "login": "<author_login>" },
+        "update_document": {<empty>}
+      }
+      ```
+  5. **Upsert Commit Author Edge:** If `author_login` exists: Generate one `arango_upsert` for `COMMIT_AUTHORED_BY` edge. From=`Commits/<sha>`, To=`GitHubUsers/<author_login>`.
+      ```json
+      {
+        "collection_name": "COMMIT_AUTHORED_BY",
+        "search_document": { "_from": "Commits/<sha>", "_to": "GitHubUsers/<author_login>" },
+        "insert_document": { "_from": "Commits/<sha>", "_to": "GitHubUsers/<author_login>" },
+        "update_document": {<empty>}
+      }
+      ```
+  6. **Upsert Commit-PR Edge:** Generate one `arango_upsert` for `COMMIT_IN_PR` edge. From=`Commits/<sha>`, To=`PullRequests/<pr_key>`.
+       ```json
+      {
+        "collection_name": "COMMIT_IN_PR",
+        "search_document": { "_from": "Commits/<sha>", "_to": "PullRequests/<pr_key>" },
+        "insert_document": { "_from": "Commits/<sha>", "_to": "PullRequests/<pr_key>" },
+        "update_document": {<empty>}
+      }
+      ```
+
+  **Execution Instructions:**
+  - Generate ALL required `arango_upsert` calls sequentially for the single input commit.
+  - Output a confirmation message like "Generated commit upsert calls."
+
+  **Strict Rules:**
+  - Process ONLY the single object in **Input Commit Data**.
+  - Generate the correct number of calls based on logic (1 Commit + 1 Author + 1 AuthorEdge + 1 PR Edge).
+  - Apply Sanitization Rules for keys.
+  - Use exact collection names.
+  - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
+  - Do not include explanations beyond the confirmation.
+
+    **Input Commit Data:**
+    ```json
+    {commit_data_input}
+    ```

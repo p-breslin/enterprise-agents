@@ -1,4 +1,6 @@
 vertex_collections:
+
+  # Jira nodes -----------------------------------------------------------------
   - Epics
   - Projects
   - Stories
@@ -6,7 +8,17 @@ vertex_collections:
   - Teams
   - Sprints
 
+  # GitHub nodes ---------------------------------------------------------------
+  - Branches
+  - Commits
+  - GitHubUsers
+  - PullRequests
+  - Repositories
+
+
 edge_collections:
+
+  # Jira Edges -----------------------------------------------------------------
   - name: epic_of_project
     from: [Epics]
     to: [Projects]
@@ -38,3 +50,43 @@ edge_collections:
   - name: issue_in_sprint
     from: [Stories]
     to: [Sprints]
+
+
+  # GitHub Edges ---------------------------------------------------------------
+  - name: PR_IN_REPO
+    from: [PullRequests]
+    to: [Repositories]
+
+  - name: PR_AUTHORED_BY
+    from: [PullRequests]
+    to: [GitHubUsers]
+
+  - name: PR_REVIEWED_BY
+    from: [PullRequests]
+    to: [GitHubUsers]
+
+  - name: COMMIT_IN_PR
+    from: [Commits]
+    to: [PullRequests]
+
+  - name: COMMIT_ON_BRANCH
+    from: [Commits]
+    to: [Branches]
+
+  - name: COMMIT_AUTHORED_BY
+    from: [Commits]
+    to: [GitHubUsers]
+
+
+  # Cross-System Edges ---------------------------------------------------------
+  - name: PR_FOR_ISSUE
+    from: [PullRequests]
+    to: [Stories]
+
+  - name: COMMIT_FOR_ISSUE 
+    from: [Commits]
+    to: [Stories]
+
+  - name: SAME_AS
+    from: [Persons]
+    to: [GitHubUsers]
