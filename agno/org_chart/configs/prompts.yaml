@@ -217,7 +217,7 @@ epic_graph_prompt: |
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
   - Do not provide explanations beyond the final confirmation message.
 
-  **Input Epic Data (Single Object):**
+  **Input Epic Data:**
   Here is the JSON object for the Epic you need to process:
   ```json
   {epics_data_input}
@@ -265,7 +265,7 @@ story_graph_prompt: |
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
   - Do not provide explanations beyond the final confirmation message.
 
-  **Input Story Data (Single Object):**
+  **Input Story Data:**
   Here is the JSON object for the story (containing `story_key` and `epic_key`) you need to process:
   ```json
   {stories_data_input}
@@ -276,11 +276,13 @@ issue_graph_prompt: |
   You are a data integration assistant responsible for updating an ArangoDB knowledge graph by processing a **single** detailed Jira issue. You MUST use the `arango_upsert` tool for all database operations. **For every `arango_upsert` call, you MUST generate all four required arguments: `collection_name`, `search_document`, `insert_document`, and `update_document`.** Note: the **Input Story Data** for you to process is at the very **END** of this message.
 
   **Task:**
-  Process the detailed input Jira issue data provided and generate all necessary `arango_upsert` tool calls to update the graph, including handling the assignee, reporter, and sprint.
+  Process the detailed input Jira issue data provided and generate all necessary `arango_upsert` tool calls to update the graph, including handling the assignee, reporter, sprint, team, and linking the team to the existing project.
 
   **Important Prerequisites: Sanitization Rules for ArangoDB Keys**
   - **Assignee/Reporter Rule**: Before using an assignee or reporter name in ArangoDB keys (`_key`) or edge references (`_from`, `_to`), replace all spaces with underscores (`_`). Example: "First Last" becomes "First_Last". Apply this only if the name is not null.
   - **Sprint Rule**: Before using a sprint name in ArangoDB keys (`_key`) or edge references (`_to`), replace all spaces AND periods (`.`) with underscores (`_`). Example: "Team Platform Sprint 2025.14" becomes "Team_Platform_Sprint_2025_14". Apply this only if the sprint name is not null or empty.
+  - **Team Key Rule**: Before using a team name in ArangoDB keys (`_key`) or edge references (`_to`), replace all spaces with underscores (`_`). Example: "Platform Team" becomes "Platform_Team". Apply this only if the team name is not null or empty.
+  - **Project Key Rule**: The project key (e.g., "PROJ") is used directly as the `_key` for the `Projects` collection.
 
   **Processing Steps for the Input Issue:**
   Process the single issue object provided in the **Input Issue Data** according to the following steps. Remember to provide all four arguments for every `arango_upsert` call:
@@ -377,8 +379,31 @@ issue_graph_prompt: |
           }
           ```
 
+  5. **Process Team and Project Link (Conditional):** If the input issue's `team` field is not null/empty AND the `project` field is not null/empty:
+      a. Extract original team name -> `<original_team_name>`.
+      b. Sanitize the team name using the **Team Key Rule** -> `<sanitized_team_name>`.
+      c. Extract project key -> `<project_key>`.
+      d. Generate one `arango_upsert` call for the `Teams` collection using `<sanitized_team_name>` as `_key` and `<original_team_name>` as `name`. Provide all 4 arguments:
+          ```json
+          {
+            "collection_name": "Teams",
+            "search_document": { "_key": "<sanitized_team_name>" },
+            "insert_document": { "_key": "<sanitized_team_name>", "name": "<original_team_name>" },
+            "update_document": {<empty>}
+          }
+          ```
+      f. Generate one `arango_upsert` call for the `team_works_on_project` edge linking the Team to the Project using the sanitized team key and the project key. Provide all 4 arguments:
+          ```json
+          {
+            "collection_name": "team_works_on_project",
+            "search_document": { "_from": "Teams/<sanitized_team_name>", "_to": "Projects/<project_key>" },
+            "insert_document": { "_from": "Teams/<sanitized_team_name>", "_to": "Projects/<project_key>" },
+            "update_document": {<empty>}
+          }
+          ```
+
   **Execution Instructions:**
-  - Generate ALL the required `arango_upsert` calls (1 to 7 calls depending on assignee/reporter/sprint) sequentially for the single input issue based on the steps above.
+  - Generate ALL the required `arango_upsert` calls (1 to 9 calls depending on assignee/reporter/sprint/team) sequentially for the single input issue based on the steps above.
   - After generating all necessary tool calls, provide a brief confirmation message like "Generated required upsert calls for the issue."
 
   **Strict Rules:**
@@ -389,10 +414,10 @@ issue_graph_prompt: |
   - Use exact collection names/case sensitivity.
   - CRITICAL: Skip upserting the Reporter into Persons if their sanitized key is the same as the Assignee's sanitized key already processed for this issue.
   - CRITICAL: When the instructions state update_document: {<empty>}, you MUST generate exactly an **empty curly braces** as the value for the update_document argument. Do NOT generate 0, 1, null, or any other value within the curly braces.
-  - Process the sprint only if the `sprint` field in the input is present and not null/empty. Use the **sanitized** sprint name for the `Sprints` vertex `_key` and in the `_to` part of the `issue_in_sprint` edge.
+  - Process sprint/team links only if the corresponding fields exist and are not null/empty in the input. Use **sanitized** keys for vertices and edges.
   - Do not provide explanations beyond the final confirmation message.
 
-  **Input Issue Data (Single Object):**
+  **Input Issue Data:**
   Here is the JSON object for the detailed issue you need to process:
   ```json
   {issues_data_input}
