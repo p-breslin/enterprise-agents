@@ -69,6 +69,10 @@ def validate_output(output_path, output_content, schema):
     Validates an agent's structured response to the predefined schema. Response then saved to a JSON file (in test_outputs/ by default).
     """
     try:
+        # Convert to JSON if response not structured (like Google)
+        if isinstance(output_content, str):
+            output_content = parse_json(output_content)
+
         # Ensure JSON object is a Pydantic model instance
         if not isinstance(output_content, schema):
             output_content = schema(**output_content)
