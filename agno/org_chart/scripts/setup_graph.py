@@ -10,6 +10,9 @@ load_dotenv()
 setup_logging()
 log = logging.getLogger(__name__)
 
+runtime = load_config("runtime")
+database_name = "ARANGO_DB_ORG"
+
 
 # First deleting the database (starting fresh)
 try:
@@ -22,7 +25,7 @@ try:
             "_system", username="root", password=os.getenv("ARANGO_PASSWORD")
         )
 
-        db_name = os.getenv("ARANGO_DB_JIRA")
+        db_name = os.getenv(database_name)
 
         # Check if the database exists, then delete it
         if sys_db.has_database(db_name):
@@ -47,7 +50,7 @@ except Exception as e:
 cfg = load_config(file="graph")
 client = ArangoClient(hosts=os.getenv("ARANGO_HOST"))
 db = client.db(
-    os.getenv("ARANGO_DB_JIRA"),
+    os.getenv(database_name),
     username=os.getenv("ARANGO_USERNAME"),
     password=os.getenv("ARANGO_PASSWORD"),
 )

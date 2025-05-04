@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 from dotenv import load_dotenv
 from arango import ArangoClient
+from utils.helpers import load_config
 from arango.database import StandardDatabase
 
 load_dotenv()
@@ -13,7 +14,7 @@ log = logging.getLogger(__name__)
 _cached_arango_conn: Optional[StandardDatabase] = None
 
 
-def arango_connect(db_name="ARANGO_DB_JIRA") -> Optional[StandardDatabase]:
+def arango_connect() -> Optional[StandardDatabase]:
     """
     Returns a cached ArangoDB database connection (initializes it on first call)
     """
@@ -26,6 +27,8 @@ def arango_connect(db_name="ARANGO_DB_JIRA") -> Optional[StandardDatabase]:
 
     # Initialize connection if not cached
     log.info("Initializing new ArangoDB connection...")
+    runtime = load_config("runtime")
+    db_name = runtime["ArangoDB"]["name"]
     try:
         DB = os.getenv(db_name)
         HST = os.getenv("ARANGO_HOST")
