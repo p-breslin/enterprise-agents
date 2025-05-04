@@ -39,7 +39,7 @@ edge_collections:
     from: [Persons]
     to: [Teams]
 
-  - name: team_owns_epic
+  - name: team_works_on_epic
     from: [Teams]
     to: [Epics]
 
@@ -53,40 +53,40 @@ edge_collections:
 
 
   # GitHub Edges ---------------------------------------------------------------
-  - name: PR_IN_REPO
+  - name: pr_in_repo
     from: [PullRequests]
     to: [Repositories]
 
-  - name: PR_AUTHORED_BY
+  - name: pr_authored_by
     from: [PullRequests]
     to: [GitHubUsers]
 
-  - name: PR_REVIEWED_BY
+  - name: pr_reviewed_by
     from: [PullRequests]
     to: [GitHubUsers]
 
-  - name: COMMIT_IN_PR
+  - name: commit_in_pr
     from: [Commits]
     to: [PullRequests]
 
-  - name: COMMIT_ON_BRANCH
+  - name: commit_on_branch
     from: [Commits]
     to: [Branches]
 
-  - name: COMMIT_AUTHORED_BY
+  - name: commit_authored_by
     from: [Commits]
     to: [GitHubUsers]
 
 
   # Cross-System Edges ---------------------------------------------------------
-  - name: PR_FOR_ISSUE
+  - name: pr_for_issue
     from: [PullRequests]
     to: [Stories]
 
-  - name: COMMIT_FOR_ISSUE 
+  - name: commit_for_issue 
     from: [Commits]
     to: [Stories]
 
-  - name: SAME_AS
+  - name: same_as
     from: [Persons]
     to: [GitHubUsers]
