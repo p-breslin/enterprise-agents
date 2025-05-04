@@ -485,9 +485,7 @@ repo_prompt: |
 
   **Input Context:**  
   Here is the org or user name (`org_or_user`) and the cutoff date (`cutoff_date`):
-    ```json
-    {org_or_user}
-    ```
+    "org_or_user": {org_or_user}
     "cutoff_date": {cutoff_date}
 
 
@@ -561,13 +559,13 @@ pr_numbers_prompt: |
 
     **Output Instructions:**
     - Use the `owner` and `repo` values directly from the **Input Repository Data**.
-    - The `relevant_pr_numbers` field must contain the list of unique integers collected in Step 3.c.ii.
+    - The `pr_numbers` field must contain the list of unique integers collected in Step 3.c.ii.
     - Return a single JSON object matching the following precisely:
         ```json
         {
           "owner": "<input owner>",
           "repo": "<input repo>",
-          "relevant_pr_numbers": [ /* list of collected integers */ ]
+          "pr_numbers": [ /* list of collected integers */ ]
         }
         ```
 

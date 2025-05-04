@@ -94,7 +94,7 @@ class BranchList(BaseModel):
 class PRNumbers(BaseModel):
     owner: str = Field(description="Repository owner (user or org)")
     repo: str = Field(description="Repository name")
-    relevant_pr_numbers: List[int] = Field(
+    pr_numbers: List[int] = Field(
         description="List of PR numbers updated since the specified cutoff time"
     )
 
