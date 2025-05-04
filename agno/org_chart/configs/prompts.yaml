@@ -392,7 +392,7 @@ issue_graph_prompt: |
             "update_document": {<empty>}
           }
           ```
-      f. Generate one `arango_upsert` call for the `team_works_on_project` edge linking the Team to the Project using the sanitized team key and the project key. Provide all 4 arguments:
+      e. Link Team to Project (Conditional): Generate one `arango_upsert` call for the `team_works_on_project` edge linking the Team to the Project using the sanitized team key and the project key. Provide all 4 arguments:
           ```json
           {
             "collection_name": "team_works_on_project",
@@ -400,10 +400,28 @@ issue_graph_prompt: |
             "insert_document": { "_from": "Teams/<sanitized_team_name>", "_to": "Projects/<project_key>" },
             "update_document": {<empty>}
           }
+            ```
+      f. **Link Person to Team (Conditional):** If an assignee was processed for this issue (i.e., `assignee` was not null, resulting in `<sanitized_assignee>`): Generate one `arango_upsert` call for the `member_of` edge linking the Person (using the assignee's sanitized key) to the Team. Provide all 4 arguments:
+          ```json
+          {
+            "collection_name": "member_of",
+            "search_document": { "_from": "Persons/<sanitized_assignee>", "_to": "Teams/<sanitized_team_name>" },
+            "insert_document": { "_from": "Persons/<sanitized_assignee>", "_to": "Teams/<sanitized_team_name>" },
+            "update_document": {<empty>}
+          }
+          ```
+      g. **Link Team to Epic (Conditional):** If the input issue's `epic_key` field is not null/empty: Generate one `arango_upsert` call for the `team_works_on_epic` edge linking the Team (`sanitized_team_name`) to the Epic (`<epic_key>`). Provide all 4 arguments:
+          ```json
+          {
+            "collection_name": "team_works_on_epic",
+            "search_document": { "_from": "Teams/<sanitized_team_name>", "_to": "Epics/<epic_key>" },
+            "insert_document": { "_from": "Teams/<sanitized_team_name>", "_to": "Epics/<epic_key>" },
+            "update_document": {<empty>}
+          }
           ```
 
   **Execution Instructions:**
-  - Generate ALL the required `arango_upsert` calls (1 to 9 calls depending on assignee/reporter/sprint/team) sequentially for the single input issue based on the steps above.
+  - Generate ALL the required `arango_upsert` calls (1 to 11 calls depending on assignee/reporter/sprint/team/project/epic presence) sequentially for the single input issue based on the steps above.
   - After generating all necessary tool calls, provide a brief confirmation message like "Generated required upsert calls for the issue."
 
   **Strict Rules:**
@@ -762,19 +780,19 @@ pr_graph_prompt: |
         "update_document": {<empty>}
       }
       ```
-  4. **Upsert PR Author Edge:** If `author_login` exists: Generate one `arango_upsert` for `PR_AUTHORED_BY` edge. From=`PullRequests/<pr_key>`, To=`GitHubUsers/<author_login>`.
+  4. **Upsert PR Author Edge:** If `author_login` exists: Generate one `arango_upsert` for `pr_authored_by` edge. From=`PullRequests/<pr_key>`, To=`GitHubUsers/<author_login>`.
       ```json
       {
-        "collection_name": "PR_AUTHORED_BY",
+        "collection_name": "pr_authored_by",
         "search_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<author_login>" },
         "insert_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<author_login>" },
         "update_document": {<empty>}
       }
       ```
-  5. **Upsert PR Repo Edge:** Generate one `arango_upsert` for `PR_IN_REPO` edge. From=`PullRequests/<pr_key>`, To=`Repositories/<repo_key>`.
+  5. **Upsert PR Repo Edge:** Generate one `arango_upsert` for `pr_in_repo` edge. From=`PullRequests/<pr_key>`, To=`Repositories/<repo_key>`.
        ```json
       {
-        "collection_name": "PR_IN_REPO",
+        "collection_name": "pr_in_repo",
         "search_document": { "_from": "PullRequests/<pr_key>", "_to": "Repositories/<repo_key>" },
         "insert_document": { "_from": "PullRequests/<pr_key>", "_to": "Repositories/<repo_key>" },
         "update_document": {<empty>}
@@ -782,11 +800,11 @@ pr_graph_prompt: |
       ```
   6. **Process Reviews (Iterate):** For EACH review object in the input `reviews` list:
       a. If `reviewer_login` exists: Generate `arango_upsert` for `GitHubUsers` collection. Key=`<reviewer_login>`. (Okay if redundant, UPSERT handles it).
-      b. If `reviewer_login` exists: Generate `arango_upsert` for `PR_REVIEWED_BY` edge. From=`PullRequests/<pr_key>`, To=`GitHubUsers/<reviewer_login>`. Include review `state` and `submitted_at` as edge properties in `insert_document` and `update_document`.
+      b. If `reviewer_login` exists: Generate `arango_upsert` for `pr_reviewed_by` edge. From=`PullRequests/<pr_key>`, To=`GitHubUsers/<reviewer_login>`. Include review `state` and `submitted_at` as edge properties in `insert_document` and `update_document`.
          ```json
          // Example for one review
          {
-           "collection_name": "PR_REVIEWED_BY",
+           "collection_name": "pr_reviewed_by",
            "search_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<reviewer_login>" }, // Might need more specific search if multiple reviews by same person are possible? Or just upsert based on link.
            "insert_document": { "_from": "PullRequests/<pr_key>", "_to": "GitHubUsers/<reviewer_login>", "state": "<review_state>", "submitted_at": "<review_submitted_at>" },
            "update_document": { "state": "<review_state>", "submitted_at": "<review_submitted_at>" }
@@ -843,19 +861,19 @@ commit_graph_prompt: |
         "update_document": {<empty>}
       }
       ```
-  5. **Upsert Commit Author Edge:** If `author_login` exists: Generate one `arango_upsert` for `COMMIT_AUTHORED_BY` edge. From=`Commits/<sha>`, To=`GitHubUsers/<author_login>`.
+  5. **Upsert Commit Author Edge:** If `author_login` exists: Generate one `arango_upsert` for `commit_authored_by` edge. From=`Commits/<sha>`, To=`GitHubUsers/<author_login>`.
       ```json
       {
-        "collection_name": "COMMIT_AUTHORED_BY",
+        "collection_name": "commit_authored_by",
         "search_document": { "_from": "Commits/<sha>", "_to": "GitHubUsers/<author_login>" },
         "insert_document": { "_from": "Commits/<sha>", "_to": "GitHubUsers/<author_login>" },
         "update_document": {<empty>}
       }
       ```
-  6. **Upsert Commit-PR Edge:** Generate one `arango_upsert` for `COMMIT_IN_PR` edge. From=`Commits/<sha>`, To=`PullRequests/<pr_key>`.
+  6. **Upsert Commit-PR Edge:** Generate one `arango_upsert` for `commit_in_pr` edge. From=`Commits/<sha>`, To=`PullRequests/<pr_key>`.
        ```json
       {
-        "collection_name": "COMMIT_IN_PR",
+        "collection_name": "commit_in_pr",
         "search_document": { "_from": "Commits/<sha>", "_to": "PullRequests/<pr_key>" },
         "insert_document": { "_from": "Commits/<sha>", "_to": "PullRequests/<pr_key>" },
         "update_document": {<empty>}
