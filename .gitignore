@@ -15,3 +15,4 @@ metatool-app
 /agno/org_chart/tests/test_output
 /agno/org_chart/tests/test_data
 /agno/org_chart/tests/test_callbacks
+/agno/org_chart/tests/test_data_par

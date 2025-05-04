@@ -32,6 +32,7 @@ def build_agent(
     tools: List[Any],
     prompt_key: Optional[str] = None,
     initial_state: Optional[Dict[str, Any]] = None,
+    response_model: bool = False,
     debug: bool = False,
 ):
     """
@@ -51,13 +52,14 @@ def build_agent(
 
     log.info(f"Building Agent: {cfg.get('name', agent_type)} (Type: {agent_type})")
 
-    # Resolve schema model name to class type
-    schema_name = cfg.get("schema")
     schema_model = None
-    if schema_name:
-        schema_model = SCHEMA_MAP.get(schema_name)
-        if not schema_model:
-            log.warning(f"'{schema_name}' schema for '{agent_type}' not found.")
+    if response_model:
+        # Resolve Pydantic response model (schema) name to class type
+        schema_name = cfg.get("schema")
+        if schema_name:
+            schema_model = SCHEMA_MAP.get(schema_name)
+            if not schema_model:
+                log.warning(f"'{schema_name}' schema for '{agent_type}' not found.")
 
     # Extract prompt key
     if not prompt_key:
