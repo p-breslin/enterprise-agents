@@ -15,8 +15,10 @@ epic:
   session_id: test_session_EpicAgent
   input_file: null
   input_state_key: null
+  prompt_key: null
   trigger_message: Get Epics for the Jira org
-  output_schema: EpicList
+  response_model: False
+  schema: EpicList
 
 story:
   agent_type: StoryAgent
@@ -25,8 +27,10 @@ story:
   session_id: test_session_StoryAgent
   input_file: test_epic_data.json
   input_state_key: epics_data_input
+  prompt_key: null
   trigger_message: Get stories/tasks from the input Jira Epics
-  output_schema: StoryList
+  response_model: False
+  schema: StoryList
 
 issue:
   agent_type: IssueAgent
@@ -35,8 +39,49 @@ issue:
   session_id: test_session_IssueAgent
   input_file: test_story_data.json
   input_state_key: stories_data_input
-  trigger_message:  Find issue details based on input data
-  output_schema: IssueList
+  prompt_key: null
+  trigger_message: Find issue details based on input data
+  response_model: False
+  schema: IssueList
+
+
+# Jira Graph Agent Tests -------------------------------------------------------
+
+graph_epic:
+  agent_type: GraphAgent
+  model_key: graph
+  tools: arango_upsert
+  session_id: test_session_GraphAgent
+  input_file: test_epic_data.json
+  input_state_key: epics_data_input
+  prompt_key: epic_graph_prompt
+  trigger_message: Add input data to the ArangoDB graph using the available tool
+  response_model: False
+  schema: null
+
+graph_story:
+  agent_type: GraphAgent
+  model_key: graph
+  tools: arango_upsert
+  session_id: test_session_GraphAgent
+  input_file: test_story_data.json
+  input_state_key: stories_data_input
+  prompt_key: story_graph_prompt
+  trigger_message: Add input data to the ArangoDB graph using the available tool
+  response_model: False
+  schema: null
+
+graph_issue:
+  agent_type: GraphAgent
+  model_key: graph
+  tools: arango_upsert
+  session_id: test_session_GraphAgent
+  input_file: test_issue_data.json
+  input_state_key: issues_data_input
+  prompt_key: issue_graph_prompt
+  trigger_message: Add input data to the ArangoDB graph using the available tool
+  response_model: False
+  schema: null
 
 
 # GitHub Agent Tests -----------------------------------------------------------
@@ -48,7 +93,7 @@ repo:
   input_file: test_org_data.json
   input_state_key: org_or_user
   trigger_message: Scan GitHub org for active repos
-  output_schema: RepoList
+  response_model: True
   cutoff: 30
 
 branch:
@@ -58,7 +103,7 @@ branch:
   input_file: test_repo_data.json
   input_state_key: repo_data_input
   trigger_message: Fetch branches for the given repository
-  output_schema: BranchList
+  response_model: True
   cutoff: null
 
 pr_numbers:
@@ -68,7 +113,7 @@ pr_numbers:
   input_file: test_repo_data.json
   input_state_key: input_repo_data
   trigger_message: Discover pull requests for the given repo since cutoff date
-  output_schema: PRNumbers
+  response_model: True
   cutoff: 1
 
 pr_details:
@@ -78,7 +123,7 @@ pr_details:
   input_file: test_pr_number_data.json
   input_state_key: input_pr_number_data
   trigger_message: Fetch detailed PR information for the given PR numbers
-  output_schema: PRDetails
+  response_model: True
   cutoff: null
 
 commit:
@@ -88,5 +133,5 @@ commit:
   input_file: test_pr_details_data.json
   input_state_key: input_pr_details_data
   trigger_message: Fetch commit information for the given PR data
-  output_schema: PRCommits
+  response_model: True
   cutoff: null

@@ -5,12 +5,10 @@ import argparse
 from dotenv import load_dotenv
 from typing import Dict, Any, List
 
-
 from utils.helpers import (
     load_config,
     resolve_model,
     resolve_output_schema,
-    parse_json,
     validate_output,
     inject_state,
 )
@@ -20,7 +18,7 @@ from agno.utils.pprint import pprint_run_response
 
 from agents.agent_factory import build_agent
 from utils.logging_setup import setup_logging
-from tools import jira_search, jira_get_epic_issues, jira_get_issue_loop
+from tools import jira_search, jira_get_epic_issues, jira_get_issue_loop, arango_upsert
 
 
 load_dotenv()
@@ -32,6 +30,7 @@ JIRA_TOOL_SETS: Dict[str, List[Any]] = {
     "jira_search": [jira_search],
     "jira_epic_issues": [jira_get_epic_issues],
     "jira_get_issue": [jira_get_issue_loop],
+    "arango_upsert": [arango_upsert],
 }
 
 
@@ -43,52 +42,45 @@ async def run_test(test_name: str):
     runtime = load_config("runtime")
 
     # Global configuration
-    configs = load_config("test_configs")
-    provider = configs["provider"]
-    debug = configs["debug"]
+    global_cfg = load_config("test_configs")
+    provider = global_cfg["provider"]
 
     # Agent configuration
-    cfg = configs[test_name]
+    cfg = global_cfg[test_name]
     model_key = cfg["model_key"]
     model_id = runtime["MODELS"][provider][model_key]
-    model = resolve_model(provider, model_id)
 
     # Session configuration
     session_id = cfg.get("session_id", f"test_session_{test_name}")
-    agent_type = cfg.get("agent_type")
-    if not agent_type:
-        log.error(f"Missing 'agent_type' in config for test '{test_name}'")
-        return
-
     trigger = cfg.get("trigger_message", "Run agent task based on input.")
-    output_schema_name = cfg.get("output_schema")
-    output_schema_model = resolve_output_schema(output_schema_name)
+    output_schema = cfg["schema"]
+    if output_schema:
+        output_schema_model = resolve_output_schema(output_schema)
 
     # Define output
-    output_dir = pathlib.Path(__file__).parent / configs["output_dir"]
+    output_dir = pathlib.Path(__file__).parent / global_cfg["output_dir"]
     output_dir.mkdir(exist_ok=True)
     output_file = output_dir / f"test_{test_name}_output_{model_id}.json"
 
     # Define Input
     if cfg["input_file"]:
-        input_dir = pathlib.Path(__file__).parent / configs["input_dir"]
+        input_dir = pathlib.Path(__file__).parent / global_cfg["input_dir"]
         input_file = input_dir / cfg["input_file"]
         input_state_key = cfg["input_state_key"]
         initial_state = inject_state(input_file, input_state_key)
     else:
         initial_state = None
 
-    # Tool setup
-    tools = JIRA_TOOL_SETS[cfg["tools"]]
-
     # Execution
     try:
         agent = build_agent(
-            agent_type=agent_type,
-            model=model,
-            tools=tools,
+            agent_type=cfg["agent_type"],
+            model=resolve_model(provider, model_id),
+            tools=JIRA_TOOL_SETS[cfg["tools"]],
             initial_state=initial_state,
-            debug=debug,
+            prompt_key=cfg["prompt_key"],
+            response_model=cfg["response_model"],
+            debug=global_cfg["debug"],
         )
 
         # Run agent
@@ -99,8 +91,8 @@ async def run_test(test_name: str):
 
         # Validate and save output
         log.info(f"Parsing and validating output for {test_name}...")
-        json_obj = parse_json(resp.content)
-        validate_output(output_file, json_obj, output_schema_model)
+        if output_schema:
+            validate_output(output_file, resp.content, output_schema_model)
 
         log.info(f"=== Finished Test: {test_name}. Output saved to {output_file} ===")
 
