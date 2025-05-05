@@ -1,9 +1,10 @@
 MODELS:
+
   google:
-    epic: "gemini-2.5-flash-preview-04-17"
+    epic: "gemini-2.0-flash-lite"
     story: "gemini-2.5-pro-exp-03-25"
     issue: "gemini-2.5-flash-preview-04-17"
-    graph: "gemini-2.0-flash-lite"
+    graph: "gemini-2.5-flash-preview-04-17"
     repo: "gemini-2.5-flash-preview-04-17"
     pr: "gemini-2.5-flash-preview-04-17"
 
@@ -17,22 +18,37 @@ MODELS:
 
 
 SESSION:
+
   session_id: "org_chart_run"
   max_concurrency: 20
+
   state_epics: "epics_data_input"
   state_stories: "stories_data_input"
   state_issues: "issues_data_input"
 
+  state_repos: "repo_data_input"
+  state_pr_details: "pr_details_data_input"
+  state_pr_commits: "pr_commits_data_input"
+
 
 PROMPTS:
+
   epic: "epic_prompt"
   story: "story_prompt"
   issue: "issue_prompt"
+
   graph_epic: "epic_graph_prompt"
   graph_story: "story_graph_prompt"
   graph_issue: "issue_graph_prompt"
+
   repo: "repo_prompt"
-  pr: "pr_prompt"
+  pr_numbers: "pr_numbers_prompt"
+  pr_details: "pr_details_prompt"
+  pr_commits: "pr_commits_prompt"
+
+  graph_repo: "repo_graph_prompt"
+  graph_pr: "pr_graph_prompt"
+  graph_commit: "commit_graph_prompt"
 
 
 GITHUB:
@@ -41,3 +57,7 @@ GITHUB:
 
 MCP_SERVERS:
   github: "ghcr.io/github/github-mcp-server:latest"
+
+
+ArangoDB:
+  name: "ARANGO_DB_ORG"
