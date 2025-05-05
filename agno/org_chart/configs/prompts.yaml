@@ -455,7 +455,7 @@ repo_prompt: |
      ```json
      {
        "query": "org:{org_or_user} archived:false pushed:>={cutoff_date}",
-       "perPage": 100,
+       "per_page": 100,
      }
      ```
   3. Process the list of repositories returned by `search_repositories`. For each repository object in the result:
