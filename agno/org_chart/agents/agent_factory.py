@@ -5,10 +5,13 @@ from typing import List, Any, Dict, Optional, Type
 from utils.helpers import load_config
 from .BaseAgent import _build_base_agent
 from models.schemas import (
-    RepoList,
-    IssueList,
     EpicList,
     StoryList,
+    IssueList,
+    RepoList,
+    PRNumbers,
+    PRDetails,
+    PRCommits,
 )
 
 log = logging.getLogger(__name__)
@@ -16,10 +19,13 @@ log = logging.getLogger(__name__)
 
 # Response model (schema) mapping
 SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
-    "RepoList": RepoList,
-    "IssueList": IssueList,
     "EpicList": EpicList,
     "StoryList": StoryList,
+    "IssueList": IssueList,
+    "RepoList": RepoList,
+    "PRNumbers": PRNumbers,
+    "PRDetails": PRDetails,
+    "PRCommits": PRCommits,
 }
 
 # Load agent configurations

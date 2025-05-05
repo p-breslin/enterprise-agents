@@ -92,8 +92,10 @@ repo:
   session_id: test_session_RepoAgent
   input_file: test_org_data.json
   input_state_key: org_or_user
+  prompt_key: null
   trigger_message: Scan GitHub org for active repos
-  response_model: True
+  response_model: False
+  schema: RepoList
   cutoff: 30
 
 branch:
@@ -102,8 +104,10 @@ branch:
   session_id: test_session_BranchAgent
   input_file: test_repo_data.json
   input_state_key: repo_data_input
+  prompt_key: null
   trigger_message: Fetch branches for the given repository
-  response_model: True
+  response_model: False
+  schema: null
   cutoff: null
 
 pr_numbers:
@@ -112,8 +116,10 @@ pr_numbers:
   session_id: test_session_PRNumbersAgent
   input_file: test_repo_data.json
   input_state_key: input_repo_data
+  prompt_key: null
   trigger_message: Discover pull requests for the given repo since cutoff date
-  response_model: True
+  response_model: False
+  schema: PRNumbers
   cutoff: 1
 
 pr_details:
@@ -122,16 +128,20 @@ pr_details:
   session_id: test_session_PRDetailsAgent
   input_file: test_pr_number_data.json
   input_state_key: input_pr_number_data
-  trigger_message: Fetch detailed PR information for the given PR numbers
-  response_model: True
+  prompt_key: null
+  trigger_message: Fetch detailed PR information for the given PR number
+  response_model: False
+  schema: PRDetails
   cutoff: null
 
-commit:
+pr_commits:
   agent_type: PRCAgent
   model_key: pr
   session_id: test_session_PRCommitsAgent
   input_file: test_pr_details_data.json
   input_state_key: input_pr_details_data
+  prompt_key: null
   trigger_message: Fetch commit information for the given PR data
-  response_model: True
-  cutoff: null
+  response_model: False
+  schema: PRCommits
+  cutoff: 5

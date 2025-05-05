@@ -218,10 +218,7 @@ class PRDetails(BaseModel):
 
 
 # Details of a single commit associated with a specific PR ---------------------
-class PRCommits(BaseModel):
-    owner: str = Field(description="Repository owner (user or org) from input context")
-    repo: str = Field(description="Repository name from input context")
-    pr_number: int = Field(description="Pull request number from input context")
+class Commits(BaseModel):
     sha: str = Field(description="The 40-character commit SHA")
     message: str = Field(description="The commit message")
     author_login: Optional[str] = Field(
@@ -233,7 +230,10 @@ class PRCommits(BaseModel):
     )
 
 
-class CommitList(BaseModel):
-    commits: List[PRCommits] = Field(
-        description="List of commit details associated with the specified PR(s)"
+class PRCommits(BaseModel):
+    owner: str = Field(description="Repository owner (user or org) from input context")
+    repo: str = Field(description="Repository name from input context")
+    pr_number: int = Field(description="Pull request number from input context")
+    commits: List[Commits] = Field(
+        description="List of commit details associated with the specified PR, filtered by cutoff date"
     )
