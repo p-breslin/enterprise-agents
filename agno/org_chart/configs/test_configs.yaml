@@ -138,10 +138,52 @@ pr_commits:
   agent_type: PRCAgent
   model_key: pr
   session_id: test_session_PRCommitsAgent
-  input_file: test_pr_details_data.json
+  input_file: test_red_pr_details_data.json
   input_state_key: input_pr_details_data
   prompt_key: null
   trigger_message: Fetch commit information for the given PR data
   response_model: False
   schema: PRCommits
   cutoff: 5
+
+
+# Jira Graph Agent Tests -------------------------------------------------------
+
+graph_repos:
+  agent_type: GraphAgent
+  model_key: graph
+  tools: arango_upsert
+  session_id: test_session_GraphAgent
+  input_file: test_repo_data.json
+  input_state_key: repo_data_input
+  prompt_key: repo_graph_prompt
+  trigger_message: Add input data to the ArangoDB graph using the available tool
+  response_model: False
+  schema: null
+  cutoff: null
+
+graph_pr_details:
+  agent_type: GraphAgent
+  model_key: graph
+  tools: arango_upsert
+  session_id: test_session_GraphAgent
+  input_file: test_pr_details_data.json
+  input_state_key: pr_details_data_input
+  prompt_key: pr_graph_prompt
+  trigger_message: Add input data to the ArangoDB graph using the available tool
+  response_model: False
+  schema: null
+  cutoff: null
+
+graph_pr_commits:
+  agent_type: GraphAgent
+  model_key: graph
+  tools: arango_upsert
+  session_id: test_session_GraphAgent
+  input_file: test_commit_data.json
+  input_state_key: commit_data_input
+  prompt_key: commit_graph_prompt
+  trigger_message: Add input data to the ArangoDB graph using the available tool
+  response_model: False
+  schema: null
+  cutoff: null

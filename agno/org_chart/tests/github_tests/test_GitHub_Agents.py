@@ -107,7 +107,7 @@ async def run_test(test_name: str):
             if output_schema:
                 validate_output(output_file, resp.content, output_schema_model)
 
-        log.info(f"=== Finished Test: {test_name}. Output saved to {output_file} ===")
+        log.info(f"=== Finished Test: {test_name}. ===")
 
     except FileNotFoundError as e:
         log.error(f"Missing file during test '{test_name}': {e}")
