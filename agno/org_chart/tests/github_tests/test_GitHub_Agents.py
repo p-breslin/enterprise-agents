@@ -5,6 +5,7 @@ import argparse
 import datetime
 from datetime import timedelta
 from dotenv import load_dotenv
+from typing import List, Any, Dict
 
 from utils.helpers import (
     load_config,
@@ -15,22 +16,40 @@ from utils.helpers import (
 )
 
 from agno.agent import RunResponse
-from agno.tools.mcp import MCPTools
 from agno.utils.pprint import pprint_run_response
 
 from agents.agent_factory import build_agent
 from utils.logging_setup import setup_logging
 
 from tools import arango_upsert
-from integrations.github_mcp import get_github_mcp_config
+from tools.tools_github import (
+    list_commits,
+    get_pull_request,
+    get_pull_request_status,
+    get_pull_request_reviews,
+    get_pull_request_files,
+    search_issues,
+    search_repositories,
+)
 
 load_dotenv()
 setup_logging()
 log = logging.getLogger(__name__)
 
-"""
-NOTE: per_page in Repo prompt must be changed to perPage if using GitHub MCP!
-"""
+
+AGENT_TOOL_MAP: Dict[str, List[Any]] = {
+    "RepoAgent": [search_repositories],
+    "PRNAgent": [search_issues],
+    "PRDAgent": [
+        get_pull_request,
+        get_pull_request_status,
+        get_pull_request_reviews,
+        get_pull_request_files,
+    ],
+    "PRCAgent": [list_commits],
+    "GraphAgent": [arango_upsert],
+}
+# -------------------------------------------------------------------
 
 
 async def run_test(test_name: str):
@@ -58,9 +77,9 @@ async def run_test(test_name: str):
         output_schema_model = resolve_output_schema(output_schema)
 
     # Define output
-    output_dir = pathlib.Path(__file__).parent / global_cfg["output_dir"]
+    output_dir = pathlib.Path(__file__).parent.parent / global_cfg["output_dir"]
     output_dir.mkdir(exist_ok=True)
-    output_file = output_dir / f"test_{test_name}_output_{model_id}.json"
+    output_file = output_dir / f"test_{agent_type}_output_{model_id}.json"
 
     # Define Input (different for the first agent i.e. the RepoAgent)
     input_state_key = cfg["input_state_key"]
@@ -82,34 +101,30 @@ async def run_test(test_name: str):
         log.info(f"Cutoff-date passed: {cutoff_date}")
         initial_state["cutoff_date"] = cutoff_date
 
-    # Tool setup
-    mcp_cmd, mcp_env = get_github_mcp_config()
+    # Select the correct set of direct tools
+    tools = AGENT_TOOL_MAP.get(agent_type)
+    log.info(f"Using tools: {[getattr(t, '__name__', repr(t)) for t in tools]}")
 
-    # Execution
     try:
-        async with MCPTools(mcp_cmd, env=mcp_env) as mcp_tools:
-            # For now, only giving arango tool to GraphAgent
-            tools = [arango_upsert] if agent_type == "GraphAgent" else [mcp_tools]
+        agent = build_agent(
+            agent_type=agent_type,
+            model=resolve_model(provider, model_id),
+            tools=tools,
+            initial_state=initial_state,
+            prompt_key=cfg["prompt_key"],
+            debug=global_cfg["debug"],
+        )
 
-            agent = build_agent(
-                agent_type=agent_type,
-                model=resolve_model(provider, model_id),
-                tools=tools,
-                initial_state=initial_state,
-                prompt_key=cfg["prompt_key"],
-                debug=global_cfg["debug"],
-            )
+        # Run agent
+        log.info(f"Running {agent.name} with trigger: '{trigger}'...")
+        resp: RunResponse = await agent.arun(trigger, session_id=session_id)
+        assert resp.content, f"{agent.name} returned empty content"
+        pprint_run_response(resp, markdown=False)
 
-            # Run agent
-            log.info(f"Running {agent.name} with trigger: '{trigger}'...")
-            resp: RunResponse = await agent.arun(trigger, session_id=session_id)
-            assert resp.content, f"{agent.name} returned empty content"
-            pprint_run_response(resp, markdown=False)
-
-            # Validate and save output
-            log.info(f"Parsing and validating output for {test_name}...")
-            if output_schema:
-                validate_output(output_file, resp.content, output_schema_model)
+        # Validate and save output
+        log.info(f"Parsing and validating output for {agent_type}...")
+        if output_schema:
+            validate_output(output_file, resp.content, output_schema_model)
 
         log.info(f"=== Finished Test: {test_name}. ===")
 
