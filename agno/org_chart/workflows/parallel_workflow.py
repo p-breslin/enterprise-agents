@@ -10,12 +10,7 @@ from utils.logging_setup import setup_logging
 from utils.helpers import load_config, resolve_model
 from models.schemas import Epic, EpicList, Story, StoryList, Issue, IssueList
 
-from agents import (
-    build_epic_agent,
-    build_story_agent,
-    build_issue_agent,
-    build_graph_agent,
-)
+from agents.agent_factory import build_agent
 from tools import (
     jira_search,
     jira_get_epic_issues,
@@ -28,7 +23,6 @@ from tools import (
 # Variables
 # ---------------------------------------------------------------------------
 DEBUG = True  # Agno debugging
-PROVIDER = "openai"
 BATCH_SIZE = 25  # for IssueAgent
 
 
@@ -36,14 +30,10 @@ BATCH_SIZE = 25  # for IssueAgent
 # Configuration
 # ---------------------------------------------------------------------------
 CFG = load_config("runtime")
+PROVIDER = CFG["PROVIDER"]
 MODELS = CFG["MODELS"][PROVIDER]
 PROMPTS = CFG["PROMPTS"]
 SESSION_PARAMS = CFG["SESSION"]
-
-MODEL_EPIC = resolve_model(PROVIDER, MODELS["epic"])
-MODEL_STORY = resolve_model(PROVIDER, MODELS["story"])
-MODEL_ISSUE = resolve_model(PROVIDER, MODELS["issue"])
-MODEL_GRAPH = resolve_model(PROVIDER, MODELS["graph"])
 
 MAX_CONCURRENCY = SESSION_PARAMS.get("max_concurrency", 15)
 SESSION_ID = SESSION_PARAMS.get("session_id", "org_chart_tests")
@@ -122,8 +112,13 @@ class JiraGraphWorkflow(Workflow):
     - Prebuilds the EpicAGent as an attribute to save time on first call.
     """
 
-    epic_agent: Agent = build_epic_agent(
-        model=MODEL_EPIC, tools=TOOLS["EPIC"], prompt=PROMPTS["epic"], debug=DEBUG
+    epic_agent: Agent = build_agent(
+        agent_type="EpicAgent",
+        model=resolve_model(PROVIDER, MODELS["epic"]),
+        tools=TOOLS["EPIC"],
+        prompt_key=PROMPTS["epic"],
+        response_model=True,
+        debug=DEBUG,
     )
 
     # -------------------------------------------------------------------
@@ -134,7 +129,6 @@ class JiraGraphWorkflow(Workflow):
         if not isinstance(resp.content, EpicList):
             raise TypeError("Stage 1 returned non-EpicList")
 
-        # log_agno_callbacks(resp, "EpicAgent", SAVE_NAME, overwrite=False)
         self.session_state[STATE_KEYS["EPICS"]] = resp.content
         return resp.content
 
@@ -144,19 +138,22 @@ class JiraGraphWorkflow(Workflow):
     async def _process_epic(self, epic: Epic) -> List[Story]:
         epic_state = {STATE_KEYS["EPICS"]: epic.model_dump()}
 
-        graph_coro = build_graph_agent(
-            model=MODEL_GRAPH,
+        graph_coro = build_agent(
+            agent_type="GraphAgent",
+            model=resolve_model(PROVIDER, MODELS["graph"]),
             tools=TOOLS["GRAPH"],
             initial_state=epic_state,
-            prompt=PROMPTS["graph_epic"],
+            prompt_key=PROMPTS["graph_epic"],
             debug=DEBUG,
         ).arun(f"Update graph for epic {epic.epic_key}.", session_id=self.session_id)
 
-        story_coro = build_story_agent(
-            model=MODEL_STORY,
+        story_coro = build_agent(
+            agent_type="StoryAgent",
+            model=resolve_model(PROVIDER, MODELS["story"]),
             tools=TOOLS["STORY"],
             initial_state=epic_state,
-            prompt=PROMPTS["story"],
+            prompt_key=PROMPTS["story"],
+            response_model=True,
             debug=DEBUG,
         ).arun(f"Fetch stories for epic {epic.epic_key}.", session_id=self.session_id)
 
@@ -171,11 +168,12 @@ class JiraGraphWorkflow(Workflow):
     # -------------------------------------------------------------------
     async def _graph_story(self, story: Story) -> None:
         story_state = {STATE_KEYS["STORIES"]: story.model_dump()}
-        agent = build_graph_agent(
-            model=MODEL_GRAPH,
+        agent = build_agent(
+            agent_type="GraphAgent",
+            model=resolve_model(PROVIDER, MODELS["graph"]),
             tools=TOOLS["GRAPH"],
             initial_state=story_state,
-            prompt=PROMPTS["graph_story"],
+            prompt_key=PROMPTS["graph_story"],
             debug=DEBUG,
         )
         await agent.arun(
@@ -192,11 +190,13 @@ class JiraGraphWorkflow(Workflow):
 
         for idx, chunk in enumerate(chunks, start=1):
             state = {STATE_KEYS["STORIES"]: StoryList(stories=chunk).model_dump()}
-            agent = build_issue_agent(
-                model=MODEL_ISSUE,
+            agent = build_agent(
+                agent_type="IssueAgent",
+                model=resolve_model(PROVIDER, MODELS["issue"]),
                 tools=TOOLS["ISSUE"],
                 initial_state=state,
-                prompt=PROMPTS["issue"],
+                prompt_key=PROMPTS["issue"],
+                response_model=True,
                 debug=DEBUG,
             )
             label = f"issues-batch-{idx}"
@@ -233,11 +233,12 @@ class JiraGraphWorkflow(Workflow):
     # -------------------------------------------------------------------
     async def _graph_issue(self, issue: Issue) -> None:
         state = {STATE_KEYS["ISSUES"]: issue.model_dump()}
-        agent = build_graph_agent(
-            model=MODEL_GRAPH,
+        agent = build_agent(
+            agent_type="GraphAgent",
+            model=resolve_model(PROVIDER, MODELS["graph"]),
             tools=TOOLS["GRAPH"],
             initial_state=state,
-            prompt=PROMPTS["graph_issue"],
+            prompt_key=PROMPTS["graph_issue"],
             debug=DEBUG,
         )
         await agent.arun(
